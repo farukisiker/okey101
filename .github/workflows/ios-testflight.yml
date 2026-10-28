@@ -4,6 +4,10 @@ on:
   workflow_dispatch:
   push:
     tags: ['ios-*']
+    # workflow_dispatch only shows up once this file is on the default branch;
+    # until then, pushes to the app branch build.
+    branches: [feat/okey101-app]
+    paths: [app/**, shared/**, scripts/**, .github/workflows/ios-testflight.yml]
 
 concurrency:
   group: ios-testflight
