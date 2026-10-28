@@ -1,0 +1,11 @@
+{
+  "name": "okey101",
+  "private": true,
+  "packageManager": "pnpm@12.16.1",
+  "scripts": {
+    "test": "pnpm -r --filter shared --filter server test",
+    "typecheck": "pnpm -r typecheck",
+    "dev:server": "pnpm --filter server dev",
+    "dev:app": "pnpm --filter app start"
+  }
+}
