@@ -40,7 +40,8 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
             placeholderTextColor={colors.muted}
             maxLength={20}
           />
-          <Button title="Hızlı Oyun (botlarla)" onPress={() => run(() => client.quickPlay(playerName))} disabled={busy} />
+          <Button title="Hızlı Oyun (botlarla, internetsiz)" onPress={() => run(() => client.quickPlay(playerName))} disabled={busy} />
+          <Text style={styles.hint}>Arkadaşlarla oynamak için sunucu gerekir:</Text>
           <Button title="Oda Kur" variant="secondary" onPress={() => run(() => client.createRoom(playerName))} disabled={busy} />
         </View>
         <View style={styles.col}>
@@ -95,5 +96,6 @@ const styles = StyleSheet.create({
   },
   small: { fontSize: 12, paddingVertical: 6 },
   status: { fontSize: 12 },
+  hint: { color: colors.muted, fontSize: 11, marginTop: 6 },
   error: { color: colors.danger, marginTop: 12, fontWeight: '700' },
 });

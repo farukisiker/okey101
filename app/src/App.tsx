@@ -4,7 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { DropZoneProvider } from './game/dropZones';
-import { useOkey } from './net/useOkey';
+import { useLocalGame } from './net/useLocalGame';
+import { type OkeyClient, useOkey } from './net/useOkey';
 import { GameScreen } from './screens/GameScreen';
 import { Lobby } from './screens/Lobby';
 import { WaitingRoom } from './screens/WaitingRoom';
@@ -15,7 +16,12 @@ const DEFAULT_SERVER = process.env.EXPO_PUBLIC_SERVER_URL || 'http://localhost:3
 
 export default function App() {
   const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER);
-  const client = useOkey(serverUrl);
+  const online = useOkey(serverUrl);
+  const local = useLocalGame();
+  // Quick play runs offline on the device; rooms go through the server.
+  const client: OkeyClient = local.active
+    ? { ...online, ...local, start: online.start, connected: true }
+    : { ...online, quickPlay: local.begin };
 
   let screen;
   if (!client.session) {
