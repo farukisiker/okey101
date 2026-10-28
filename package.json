@@ -3,9 +3,9 @@
   "private": true,
   "packageManager": "pnpm@12.16.1",
   "scripts": {
-    "test": "pnpm -r --filter shared --filter server test",
+    "test": "pnpm -r --filter @okey/shared --filter @okey/server test",
     "typecheck": "pnpm -r typecheck",
-    "dev:server": "pnpm --filter server dev",
-    "dev:app": "pnpm --filter app start"
+    "server": "pnpm --filter @okey/server start",
+    "app": "pnpm --filter app start"
   }
 }
