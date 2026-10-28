@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { type HostInstance, StyleSheet, View } from 'react-native';
+import Animated, { type SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import type { OkeyInfo, Tile } from '@okey/shared';
 import { useDropZones } from '../game/dropZones';
-import { RACK_COLS, RACK_ROWS, type RackSlots, moveTile } from '../game/rackLayout';
+import { RACK_COLS, RACK_ROWS, type RackGeom, type RackSlots, insertTile, slotAt } from '../game/rackLayout';
 import { colors } from '../theme';
-import { DraggableTile } from './DraggableTile';
-import { tileHeight } from './TileView';
+import { DragSource } from './DragSource';
+import { TileView, tileHeight } from './TileView';
 
 interface Props {
   hand: Tile[];
@@ -13,14 +14,20 @@ interface Props {
   slots: RackSlots;
   tileWidth: number;
   selectedId: number | null;
+  rackGeom: SharedValue<RackGeom | null>;
+  hoverSlot: SharedValue<number>;
   onSlotsChange(slots: RackSlots): void;
   onSelect(tileId: number | null): void;
-  /** A tile was dropped on a zone outside the rack (discard pile, a table meld). */
+  /** A tile was dropped outside the rack (discard pile, a table meld). */
   onDropOnZone(tileId: number, zone: string): void;
 }
 
-const PAD = 6;
+export const RACK_PAD = 6;
 const SHELF = 6;
+
+export function rackHeight(tileW: number) {
+  return RACK_ROWS * (tileHeight(tileW) + SHELF) + RACK_PAD * 2 - SHELF + 4;
+}
 
 /** The istaka: two shelves of slots; drag tiles to rearrange, or out to play them. */
 export function Rack(p: Props) {
@@ -31,61 +38,84 @@ export function Rack(p: Props) {
   const w = p.tileWidth;
   const h = tileHeight(w);
   const rowH = h + SHELF;
+  const { rackGeom, hoverSlot } = p;
+
+  const measure = useCallback(() => {
+    ref.current?.measureInWindow((x, y) => {
+      rackGeom.value = { x, y, pad: RACK_PAD, tileW: w, rowH };
+    });
+  }, [rackGeom, w, rowH]);
 
   // Keep the latest props for gesture callbacks without re-creating them.
   const latest = useRef(p);
   latest.current = p;
 
-  const onDragStart = useCallback(() => zones.measureAll(), [zones]);
-  const onTap = useCallback((id: number) => {
-    const { selectedId, onSelect } = latest.current;
-    onSelect(selectedId === id ? null : id);
-  }, []);
-  const onDrop = useCallback(
-    (id: number, x: number, y: number) => {
-      const hit = zones.hitTest(x, y);
-      if (!hit) return;
-      const cur = latest.current;
-      if (hit.key === 'rack') {
-        const col = Math.floor((x - hit.rect.x - PAD) / w);
-        const row = Math.floor((y - hit.rect.y - PAD) / rowH);
-        if (col < 0 || col >= RACK_COLS || row < 0 || row >= RACK_ROWS) return;
-        cur.onSlotsChange(moveTile(cur.slots, id, row * RACK_COLS + col));
-      } else {
-        cur.onDropOnZone(id, hit.key);
-      }
-    },
-    [zones, w, rowH],
-  );
+  const onDragStart = useCallback(() => {
+    measure();
+    zones.measureAll();
+  }, [zones, measure]);
+
+  const handlers = useRef(new Map<number, { tap(): void; drop(x: number, y: number): void }>());
+  const handlersFor = (id: number) => {
+    let hnd = handlers.current.get(id);
+    if (!hnd) {
+      hnd = {
+        tap: () => {
+          const { selectedId, onSelect } = latest.current;
+          onSelect(selectedId === id ? null : id);
+        },
+        drop: (x, y) => {
+          const cur = latest.current;
+          const slot = slotAt(rackGeom.value, x, y);
+          if (slot >= 0) return cur.onSlotsChange(insertTile(cur.slots, id, slot));
+          const hit = zones.hitTest(x, y);
+          if (hit && hit.key !== 'rack') cur.onDropOnZone(id, hit.key);
+        },
+      };
+      handlers.current.set(id, hnd);
+    }
+    return hnd;
+  };
+
+  const marker = useAnimatedStyle(() => {
+    const s = hoverSlot.value;
+    if (s < 0) return { opacity: 0 };
+    return {
+      opacity: 1,
+      left: RACK_PAD + (s % RACK_COLS) * w,
+      top: RACK_PAD + Math.floor(s / RACK_COLS) * rowH,
+    };
+  });
 
   const byId = new Map(p.hand.map((t) => [t.id, t]));
 
   return (
     <View
       ref={ref}
-      style={[styles.rack, { width: RACK_COLS * w + PAD * 2, height: RACK_ROWS * rowH + PAD * 2 - SHELF + 4 }]}
+      collapsable={false}
+      onLayout={measure}
+      style={[styles.rack, { width: RACK_COLS * w + RACK_PAD * 2, height: rackHeight(w) }]}
     >
       {Array.from({ length: RACK_ROWS }, (_, r) => (
-        <View key={r} style={[styles.shelf, { top: PAD + r * rowH + h - 2, width: RACK_COLS * w }]} />
+        <View key={r} style={[styles.shelf, { top: RACK_PAD + r * rowH + h - 2, width: RACK_COLS * w }]} />
       ))}
+      <Animated.View pointerEvents="none" style={[styles.marker, { width: w - 2, height: h - 2 }, marker]} />
       {p.slots.map((id, i) => {
         const tile = id === null ? undefined : byId.get(id);
         if (!tile) return null;
-        const row = Math.floor(i / RACK_COLS);
-        const col = i % RACK_COLS;
+        const hnd = handlersFor(tile.id);
         return (
-          <DraggableTile
+          <DragSource
             key={tile.id}
-            tile={tile}
-            okey={p.okey}
-            width={w}
-            left={PAD + col * w}
-            top={PAD + row * rowH}
-            selected={p.selectedId === tile.id}
-            onTap={onTap}
+            style={{ position: 'absolute', left: RACK_PAD + (i % RACK_COLS) * w, top: RACK_PAD + Math.floor(i / RACK_COLS) * rowH }}
+            rackGeom={rackGeom}
+            hoverSlot={hoverSlot}
+            onTap={hnd.tap}
             onDragStart={onDragStart}
-            onDrop={onDrop}
-          />
+            onDrop={hnd.drop}
+          >
+            <TileView tile={tile} okey={p.okey} width={w} selected={p.selectedId === tile.id} />
+          </DragSource>
         );
       })}
     </View>
@@ -102,9 +132,17 @@ const styles = StyleSheet.create({
   },
   shelf: {
     position: 'absolute',
-    left: PAD,
+    left: RACK_PAD,
     height: 6,
     backgroundColor: colors.woodDark,
     borderRadius: 3,
+  },
+  marker: {
+    position: 'absolute',
+    margin: 1,
+    borderRadius: 6,
+    borderWidth: 3,
+    borderColor: colors.accent,
+    backgroundColor: 'rgba(242,182,50,0.25)',
   },
 });
