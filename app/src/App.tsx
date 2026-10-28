@@ -11,7 +11,7 @@ import { WaitingRoom } from './screens/WaitingRoom';
 import { colors } from './theme';
 
 // On a device, point this at the machine running the server (e.g. http://192.168.1.20:3001).
-const DEFAULT_SERVER = process.env.EXPO_PUBLIC_SERVER_URL ?? 'http://localhost:3001';
+const DEFAULT_SERVER = process.env.EXPO_PUBLIC_SERVER_URL || 'http://localhost:3001';
 
 export default function App() {
   const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER);
