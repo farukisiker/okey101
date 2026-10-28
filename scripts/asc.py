@@ -199,7 +199,14 @@ def get_group(app_id, name, internal):
         "relationships": {"app": {"data": {"type": "apps", "id": app_id}}}}})["data"]
 
 
+def group_emails(group_id):
+    testers = call("GET", f"/betaGroups/{group_id}/betaTesters?limit=200")["data"]
+    return {(t["attributes"].get("email") or "").lower() for t in testers}
+
+
 def add_tester(group_id, email):
+    if email.lower() in group_emails(group_id):
+        return True
     try:
         call("POST", "/betaTesters", {"data": {
             "type": "betaTesters", "attributes": {"email": email},
@@ -240,7 +247,7 @@ def cmd_testflight(args):
         internal = get_group(app["id"], "Dahili Test", True)
         for email in members:
             if add_tester(internal["id"], email):
-                log(f"Dahili teste eklendi: {email}")
+                log(f"Dahili testte: {email}")
             else:
                 pending.append(email)
     if not pending:
@@ -253,16 +260,16 @@ def cmd_testflight(args):
          {"data": [{"type": "builds", "id": build["id"]}]})
     for email in pending:
         if add_tester(external["id"], email):
-            log(f"Harici teste eklendi: {email}")
+            log(f"Harici testte: {email}")
     what = "Okey 101: 4 kişilik çok oyunculu Okey 101, boş koltuklarda bot."
     locs = call("GET", f"/builds/{build['id']}/betaBuildLocalizations")["data"]
     try:
         if locs:
             call("PATCH", f"/betaBuildLocalizations/{locs[0]['id']}", {"data": {
-                "type": "betaBuildLocalizations", "id": locs[0]["id"], "attributes": {"whatToTest": what}}})
+                "type": "betaBuildLocalizations", "id": locs[0]["id"], "attributes": {"whatsNew": what}}})
         else:
             call("POST", "/betaBuildLocalizations", {"data": {
-                "type": "betaBuildLocalizations", "attributes": {"locale": "tr", "whatToTest": what},
+                "type": "betaBuildLocalizations", "attributes": {"locale": "tr", "whatsNew": what},
                 "relationships": {"build": {"data": {"type": "builds", "id": build["id"]}}}}})
     except ApiError as e:
         log(f"::warning::'Neyi test etmeli' metni yazılamadı: {e}")
