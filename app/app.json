@@ -7,12 +7,21 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0b3d2e",
     "ios": {
-      "bundleIdentifier": "com.okey101.app",
+      "bundleIdentifier": "com.farukisiker.okey101",
       "supportsTablet": true,
-      "requireFullScreen": true
+      "requireFullScreen": true,
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocalNetworkUsageDescription": "Yerel ağdaki Okey 101 sunucusuna bağlanmak için.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      }
     },
     "android": {
-      "package": "com.okey101.app"
-    }
+      "package": "com.farukisiker.okey101"
+    },
+    "icon": "./assets/icon.png"
   }
 }
