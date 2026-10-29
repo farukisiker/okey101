@@ -90,6 +90,7 @@ describe('bot', () => {
     expect(new Set(names).size).toBe(3);
     expect(names).not.toContain('Ayşe');
     expect(names.every((n) => !/bot/i.test(n))).toBe(true);
+    for (let i = 0; i < 20; i++) expect(pickBotNames(3, ['Hasan Amca'])).not.toContain('Hasan');
   });
 
   it('never throws the okey and drops the loneliest tile', () => {

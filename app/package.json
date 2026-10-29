@@ -11,7 +11,11 @@
   },
   "dependencies": {
     "@okey/shared": "workspace:*",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~58.0.21",
+    "expo-audio": "~58.0.10",
+    "expo-haptics": "~58.0.7",
+    "expo-keep-awake": "~58.0.3",
     "expo-screen-orientation": "~58.0.3",
     "expo-status-bar": "~58.0.4",
     "react": "19.3.0",
