@@ -12,6 +12,9 @@ export function WaitingRoom({ client }: { client: OkeyClient }) {
 
   return (
     <View style={styles.root}>
+      <View style={styles.back}>
+        <Button title="‹ Çık" variant="secondary" onPress={client.leave} style={{ minWidth: 120 }} />
+      </View>
       <Text style={styles.label}>Oda kodu</Text>
       <Text style={styles.code}>{room.id}</Text>
       <View style={styles.seats}>
@@ -33,7 +36,6 @@ export function WaitingRoom({ client }: { client: OkeyClient }) {
       ) : (
         <Text style={styles.label}>Oda sahibinin başlatması bekleniyor…</Text>
       )}
-      <Button title="Çık" variant="secondary" onPress={client.leave} style={{ marginTop: 8 }} />
       {error && <Text style={styles.error}>{error}</Text>}
     </View>
   );
@@ -41,6 +43,7 @@ export function WaitingRoom({ client }: { client: OkeyClient }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  back: { position: 'absolute', top: 8, left: 12 },
   label: { color: colors.muted, fontSize: font.body },
   code: { color: colors.accent, fontSize: 40, fontWeight: '900', letterSpacing: 6 },
   seats: { flexDirection: 'row', gap: 10, marginVertical: 12 },

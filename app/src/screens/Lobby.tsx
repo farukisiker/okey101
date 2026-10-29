@@ -80,47 +80,54 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
   if (friends) {
     const offline = !client.connected;
     return (
-      <ScrollView contentContainerStyle={styles.root}>
-        <Text style={styles.heading}>Arkadaşlarla Oyna</Text>
-        {offline ? (
-          <Text style={styles.warn}>
-            Oyun sunucusuna bağlanılamadı. Arkadaşlarla oynamak için sunucu gerekir.{'\n'}
-            Bilgisayara karşı her zaman oynayabilirsin.
-          </Text>
-        ) : null}
-        <View style={styles.friendsRow}>
-          <View style={styles.col}>
-            <Button title="Yeni Oda Kur" onPress={() => run(() => client.createRoom(name))} disabled={busy || offline} />
-          </View>
-          <View style={styles.col}>
-            <TextInput
-              style={styles.codeInput}
-              value={code}
-              onChangeText={(t) => setCode(t.toUpperCase())}
-              placeholder="Oda kodu"
-              placeholderTextColor={colors.muted}
-              autoCapitalize="characters"
-              maxLength={5}
-            />
-            <Button
-              title="Odaya Katıl"
-              onPress={() => run(() => client.joinRoom(name, code))}
-              disabled={busy || offline || code.length < 5}
-            />
-          </View>
+      <View style={{ flex: 1 }}>
+        {/* Back is always in the top-left corner, never scrolled out of sight. */}
+        <View style={styles.header}>
+          <Button title="‹ Geri" variant="secondary" onPress={() => setFriends(false)} style={{ minWidth: 120 }} />
+          <Text style={styles.heading}>Arkadaşlarla Oyna</Text>
+          <View style={{ width: 120 }} />
         </View>
-        <Text style={styles.label}>Sunucu adresi</Text>
-        <TextInput
-          style={styles.urlInput}
-          value={url}
-          onChangeText={setUrl}
-          onEndEditing={() => onServerUrlChange(url.trim())}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        {error && <Text style={styles.warn}>{error}</Text>}
-        <Button title="Geri" variant="secondary" onPress={() => setFriends(false)} />
-      </ScrollView>
+        <ScrollView contentContainerStyle={styles.friendsBody} keyboardShouldPersistTaps="handled">
+          {offline ? (
+            <Text style={styles.warn}>
+              Oyun sunucusuna bağlanılamadı. Bilgisayara karşı her zaman oynayabilirsin.
+            </Text>
+          ) : null}
+          <View style={styles.friendsRow}>
+            <View style={styles.col}>
+              <Button title="Yeni Oda Kur" onPress={() => run(() => client.createRoom(name))} disabled={busy || offline} />
+            </View>
+            <View style={[styles.col, styles.joinRow]}>
+              <TextInput
+                style={styles.codeInput}
+                value={code}
+                onChangeText={(t) => setCode(t.toUpperCase())}
+                placeholder="Oda kodu"
+                placeholderTextColor={colors.muted}
+                autoCapitalize="characters"
+                maxLength={5}
+              />
+              <Button
+                title="Katıl"
+                onPress={() => run(() => client.joinRoom(name, code))}
+                disabled={busy || offline || code.length < 5}
+              />
+            </View>
+          </View>
+          {error && <Text style={styles.warn}>{error}</Text>}
+          <View style={styles.urlRow}>
+            <Text style={styles.label}>Sunucu adresi</Text>
+            <TextInput
+              style={styles.urlInput}
+              value={url}
+              onChangeText={setUrl}
+              onEndEditing={() => onServerUrlChange(url.trim())}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+        </ScrollView>
+      </View>
     );
   }
 
@@ -161,8 +168,12 @@ const styles = StyleSheet.create({
     minHeight: 56,
     textAlign: 'center',
   },
-  friendsRow: { flexDirection: 'row', gap: 32, alignItems: 'flex-end' },
-  col: { width: 260, gap: 10 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingTop: 8 },
+  friendsBody: { alignItems: 'center', padding: 12, gap: 14 },
+  friendsRow: { flexDirection: 'row', gap: 32, alignItems: 'center' },
+  col: { gap: 10 },
+  joinRow: { flexDirection: 'row', alignItems: 'center' },
+  urlRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   codeInput: {
     backgroundColor: 'rgba(0,0,0,0.3)',
     color: colors.text,
@@ -172,6 +183,8 @@ const styles = StyleSheet.create({
     fontSize: 24,
     textAlign: 'center',
     letterSpacing: 4,
+    width: 170,
+    minHeight: 56,
   },
   urlInput: {
     backgroundColor: 'rgba(0,0,0,0.3)',
