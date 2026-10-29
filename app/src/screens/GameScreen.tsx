@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { type Action, type PlayerView, type RoomInfo, type Tile, OPEN_THRESHOLD, leftOf } from '@okey/shared';
+import { type Action, type PlayerView, type RoomInfo, type Tile, OPEN_THRESHOLD, addableTiles, leftOf } from '@okey/shared';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DragSource } from '../components/DragSource';
@@ -16,6 +16,7 @@ import { OpponentPanel } from '../components/OpponentPanel';
 import { RACK_PAD, Rack, rackHeight } from '../components/Rack';
 import { RoundResult } from '../components/RoundResult';
 import { TableMelds } from '../components/TableMelds';
+import { TableOverlay } from '../components/TableOverlay';
 import { TileBack, TileView, tileHeight } from '../components/TileView';
 import { buzz, feedback, isSoundOn, play, setSoundOn } from '../feedback';
 import { useDropZones } from '../game/dropZones';
@@ -184,6 +185,14 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   const groupPoints = groups.reduce((s, g) => s + g.points, 0);
   const canOpen = canPlay && !me.opened && groupPoints >= OPEN_THRESHOLD;
 
+  // "İşlek" tiles: hand tiles that fit a meld on the table. Marked on the rack;
+  // selecting one lights up the melds it fits.
+  const addable = useMemo(() => addableTiles(view.hand, view.table, view.okey), [view.hand, view.table, view.okey]);
+  const addableIds = useMemo(() => new Set(addable.keys()), [addable]);
+  const highlight = useMemo(() => new Set(selected === null ? [] : (addable.get(selected) ?? [])), [addable, selected]);
+  const [zoomed, setZoomed] = useState(false);
+  const [confirmIslek, setConfirmIslek] = useState<number | null>(null);
+
   const reachedOpen = useRef(false);
   useEffect(() => {
     if (canOpen && !reachedOpen.current) buzz('success');
@@ -207,17 +216,33 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
     [client, showToast],
   );
 
-  const discard = (tileId: number) => {
-    if (!canPlay) return showToast(canDraw ? 'Önce taş çek' : 'Sıra sende değil');
+  const doDiscard = (tileId: number) => {
     setSelected(null);
     void send({ type: 'discard', tileId });
   };
+  const discard = (tileId: number) => {
+    if (!canPlay) return showToast(canDraw ? 'Önce taş çek' : 'Sıra sende değil');
+    // Throwing a tile that fits a meld on the table usually helps the next player: ask first.
+    if (addable.has(tileId)) return setConfirmIslek(tileId);
+    doDiscard(tileId);
+  };
+
+  const addToMeld = (tileId: number, meldId: number) => {
+    if (!canPlay) return showToast(canDraw ? 'Önce taş çek' : 'Sıra sende değil');
+    if (!me.opened) return showToast('Pere taş eklemek için önce açmalısın');
+    setSelected(null);
+    void send({ type: 'addToMeld', meldId, tileIds: [tileId] });
+  };
+
+  // Tapping a meld with a fitting tile selected adds it; otherwise opens the large view.
+  const onMeldPress = (meldId: number) => {
+    if (selected !== null && highlight.has(meldId)) return addToMeld(selected, meldId);
+    setZoomed(true);
+  };
 
   const onDropOnZone = (tileId: number, zone: string) => {
-    if (zone !== 'discard' && !zone.startsWith('meld:')) return;
     if (zone === 'discard') discard(tileId);
-    else if (!canPlay) showToast(canDraw ? 'Önce taş çek' : 'Sıra sende değil');
-    else void send({ type: 'addToMeld', meldId: Number(zone.slice(5)), tileIds: [tileId] });
+    else if (zone.startsWith('meld:')) addToMeld(tileId, Number(zone.slice(5)));
   };
 
   const draw = (source: 'deck' | 'discard', slot: number | null = null) => {
@@ -249,7 +274,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   useEffect(() => zones.register('discard', discardRef), [zones]);
 
   const totals = room.totals;
-  const status = statusText(view, myTurn);
+  const status = statusText(view, myTurn, addable.size > 0);
   const okeyText = `Okey: ${colorNames[view.okey.color]} ${view.okey.value}`;
   const openTitle = me.opened ? 'Per İndir' : `Aç ${groupPoints}/${OPEN_THRESHOLD}`;
   const openSub = me.opened
@@ -356,10 +381,13 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
               <TableMelds
                 table={view.table}
                 players={view.players}
-                myName={me.name}
+                mySeat={view.seat}
                 okey={view.okey}
-                tileWidth={meldTileW}
+                maxTileWidth={meldTileW}
                 emptyText={`Açmak için ${OPEN_THRESHOLD} sayı gerekir`}
+                highlight={highlight}
+                onMeldPress={onMeldPress}
+                onZoom={() => view.table.length > 0 && setZoomed(true)}
               />
             </View>
           </View>
@@ -423,6 +451,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
           tileWidth={tileW}
           selectedId={selected}
           freshId={fresh}
+          addableIds={addableIds}
           rackGeom={rackGeom}
           hoverSlot={hoverSlot}
           onSlotsChange={moveOnRack}
@@ -447,6 +476,38 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
         />
       )}
 
+      {zoomed && (
+        <TableOverlay
+          table={view.table}
+          players={view.players}
+          mySeat={view.seat}
+          okey={view.okey}
+          selected={view.hand.find((t) => t.id === selected) ?? null}
+          highlight={highlight}
+          onMeldPress={(meldId) => {
+            if (selected !== null && highlight.has(meldId)) {
+              addToMeld(selected, meldId);
+              setZoomed(false);
+            }
+          }}
+          onClose={() => setZoomed(false)}
+        />
+      )}
+
+      {confirmIslek !== null && (
+        <ConfirmDialog
+          message="Bu taş yerdeki bir pere işlenebilir. Yine de atmak istiyor musun?"
+          confirm="Evet, at"
+          cancel="Hayır"
+          onConfirm={() => {
+            const id = confirmIslek;
+            setConfirmIslek(null);
+            doDiscard(id);
+          }}
+          onCancel={() => setConfirmIslek(null)}
+        />
+      )}
+
       {confirmLeave && (
         <ConfirmDialog
           message="Masadan kalkmak istiyor musun?"
@@ -464,11 +525,12 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
 }
 
 /** Short, plain instructions; while others play, say what they just did. */
-function statusText(view: PlayerView, myTurn: boolean): string {
+function statusText(view: PlayerView, myTurn: boolean, hasAddable: boolean): string {
   if (view.phase === 'finished') return 'El bitti';
   if (myTurn) {
     if (view.turnPhase === 'draw') return 'SIRA SENDE — TAŞ ÇEK';
     if (view.mustUseTileId !== null) return 'Yerden aldığın taşı kullan';
+    if (hasAddable && view.players[view.seat].opened) return '"+" işaretli taşı pere ekleyebilirsin';
     return 'SIRA SENDE — BİR TAŞ AT';
   }
   return lastActionText(view) ?? `${view.players[view.turn].name} oynuyor…`;

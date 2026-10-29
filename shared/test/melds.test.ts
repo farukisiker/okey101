@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeMeld, meldPoints, type Color, type OkeyInfo, type Tile } from '../src';
+import { addableTiles, analyzeMeld, meldPoints, type Color, type OkeyInfo, type Tile } from '../src';
 
 let nextId = 1000;
 const t = (color: Color, value: number): Tile => ({ id: nextId++, kind: 'normal', color, value });
@@ -84,5 +84,19 @@ describe('101 toplamı', () => {
     ];
     expect(meldPoints(groups, okey)).toBe(102);
     expect(meldPoints([...groups, [t('blue', 1), t('blue', 3), t('blue', 5)]], okey)).toBeNull();
+  });
+});
+
+describe('işlek taşlar', () => {
+  it('finds hand tiles that extend table melds', () => {
+    const run = { id: 1, type: 'run' as const, tiles: [t('blue', 3), t('blue', 4), t('blue', 5)] };
+    const set = { id: 2, type: 'set' as const, tiles: [t('blue', 9), t('black', 9), t('yellow', 9)] };
+    const b6 = t('blue', 6), b2 = t('blue', 2), r9 = t('red', 9), r8 = t('red', 8), j = joker();
+    const map = addableTiles([b6, b2, r9, r8, j], [run, set], okey);
+    expect(map.get(b6.id)).toEqual([1]);
+    expect(map.get(b2.id)).toEqual([1]);
+    expect(map.get(r9.id)).toEqual([2]);
+    expect(map.has(r8.id)).toBe(false);
+    expect(map.has(j.id)).toBe(false);
   });
 });

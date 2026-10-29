@@ -101,3 +101,22 @@ export function meldPoints(groups: Tile[][], okey: OkeyInfo): number | null {
   }
   return sum;
 }
+
+/**
+ * Tiles in a hand that can be added to melds on the table ("işlek" tiles):
+ * tile id -> ids of the melds that accept it. Jokers are left out; they fit
+ * almost anywhere and are better kept.
+ */
+export function addableTiles(
+  hand: Tile[],
+  table: { id: number; type: MeldType; tiles: Tile[] }[],
+  okey: OkeyInfo,
+): Map<number, number[]> {
+  const out = new Map<number, number[]>();
+  for (const tile of hand) {
+    if (isJoker(tile, okey)) continue;
+    const fits = table.filter((m) => analyzeMeld([...m.tiles, tile], okey)?.type === m.type).map((m) => m.id);
+    if (fits.length) out.set(tile.id, fits);
+  }
+  return out;
+}

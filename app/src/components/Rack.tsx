@@ -16,6 +16,8 @@ interface Props {
   selectedId: number | null;
   /** The tile just drawn; it glows for a moment. */
   freshId: number | null;
+  /** Tiles that fit a meld on the table; they get a small "+" mark. */
+  addableIds: Set<number>;
   rackGeom: SharedValue<RackGeom | null>;
   hoverSlot: SharedValue<number>;
   /** The player moved a tile to an empty slot. */
@@ -142,7 +144,7 @@ export function Rack(p: Props) {
             onDragStart={onDragStart}
             onDrop={hnd.drop}
           >
-            <TileView tile={tile} okey={p.okey} width={w} selected={p.selectedId === tile.id} fresh={p.freshId === tile.id} />
+            <TileView tile={tile} okey={p.okey} width={w} selected={p.selectedId === tile.id} fresh={p.freshId === tile.id} addable={p.addableIds.has(tile.id)} />
           </DragSource>
         );
       })}

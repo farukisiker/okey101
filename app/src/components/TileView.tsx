@@ -10,12 +10,14 @@ interface Props {
   dim?: boolean;
   /** Briefly glows, e.g. the tile just drawn. */
   fresh?: boolean;
+  /** Fits a meld on the table ("işlek"): small green plus in the corner. */
+  addable?: boolean;
   style?: ViewStyle;
 }
 
 export const tileHeight = (width: number) => Math.round(width * 1.38);
 
-export function TileView({ tile, okey, width, selected, dim, fresh, style }: Props) {
+export function TileView({ tile, okey, width, selected, dim, fresh, addable, style }: Props) {
   const height = tileHeight(width);
   const joker = okey ? isJoker(tile, okey) : false;
   return (
@@ -38,6 +40,11 @@ export function TileView({ tile, okey, width, selected, dim, fresh, style }: Pro
             {colorMarks[tile.color]}
           </Text>
         </>
+      )}
+      {addable && (
+        <View style={styles.addBadge}>
+          <Text style={styles.addText}>+</Text>
+        </View>
       )}
       {joker && (
         <View style={styles.jokerBadge}>
@@ -81,6 +88,18 @@ const styles = StyleSheet.create({
   value: { fontWeight: '800', marginTop: -4 },
   mark: { marginTop: -4 },
   fake: { color: '#2e7d32', fontWeight: '900' },
+  addBadge: {
+    position: 'absolute',
+    top: 1,
+    left: 1,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.ok,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addText: { color: '#0b3d2e', fontSize: 14, fontWeight: '900', lineHeight: 16 },
   jokerBadge: {
     position: 'absolute',
     top: 1,
