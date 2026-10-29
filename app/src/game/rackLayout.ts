@@ -30,8 +30,11 @@ export function syncRack(slots: RackSlots, hand: Tile[], preferSlot: number | nu
 export interface RackGeom {
   x: number;
   y: number;
-  pad: number;
+  /** Offset of slot 0 inside the measured view. */
+  padX: number;
+  padY: number;
   tileW: number;
+  /** Row pitch: tile height plus the gap to the next row. */
   rowH: number;
 }
 
@@ -39,8 +42,8 @@ export interface RackGeom {
 export function slotAt(g: RackGeom | null, px: number, py: number): number {
   'worklet';
   if (!g) return -1;
-  const col = Math.floor((px - g.x - g.pad) / g.tileW);
-  const row = Math.floor((py - g.y - g.pad) / g.rowH);
+  const col = Math.floor((px - g.x - g.padX) / g.tileW);
+  const row = Math.floor((py - g.y - g.padY) / g.rowH);
   if (row < 0 || row >= RACK_ROWS || col < -1 || col > RACK_COLS) return -1;
   return row * RACK_COLS + Math.min(RACK_COLS - 1, Math.max(0, col));
 }

@@ -61,6 +61,7 @@ export function TableOverlay({ table, players, mySeat, okey, selected, highlight
                     okey={okey}
                     tileWidth={w}
                     lit={highlight.has(m.id)}
+                    dim={selected !== null && !highlight.has(m.id)}
                     onPress={() => onMeldPress(m.id)}
                     dropTarget={false}
                   />

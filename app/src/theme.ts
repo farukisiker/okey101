@@ -12,6 +12,11 @@ export const colors = {
   accent: '#f2b632',
   danger: '#e45858',
   ok: '#5fd07d',
+  /** Panels on the felt: opponents, draw/discard zones, okey box. */
+  panel: '#07301f',
+  /** Opponent whose turn it is. */
+  activePanel: '#3a3415',
+  tileBack: '#e8dcc0',
 };
 
 export const tileColors: Record<Color, string> = {

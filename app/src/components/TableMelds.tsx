@@ -6,48 +6,70 @@ import { colors, font } from '../theme';
 import { TileView, tileHeight } from './TileView';
 
 const GAP = 6;
-const MELD_PAD = 4;
+const INSET = 4;
+/** Meld box chrome around its tiles: padding 2 + border 2 on each side, plus the owner line. */
+const MELD_X = 8;
 const LABEL_H = 18;
-/** A strip on the right kept free for the zoom button, so it never covers a meld. */
-const ZOOM_W = 58;
+const meldHeight = (w: number) => tileHeight(w) + 8 + LABEL_H;
 
-/**
- * Largest tile width (≤ max) at which every meld fits the area without
- * scrolling, packing melds left to right into rows.
- */
-export function fitTileWidth(sizes: number[], areaW: number, areaH: number, max: number, min = 16): number {
-  return fitTiles(sizes, areaW, areaH, max, min).w;
+/** Rows of melds laid left to right at tile width `w`. */
+function pack(sizes: number[], areaW: number, w: number): number[][] {
+  const rows: number[][] = [];
+  let row: number[] = [];
+  let x = 0;
+  sizes.forEach((n, i) => {
+    const mw = n * w + MELD_X;
+    if (row.length && x + mw > areaW) {
+      rows.push(row);
+      row = [];
+      x = 0;
+    }
+    row.push(i);
+    x += mw + GAP;
+  });
+  if (row.length) rows.push(row);
+  return rows;
 }
 
-/** Like fitTileWidth, and says whether everything fits even at the smallest size. */
-export function fitTiles(sizes: number[], areaW: number, areaH: number, max: number, min = 16) {
-  for (let w = max; w >= min; w--) {
-    const meldH = tileHeight(w) + MELD_PAD * 2 + LABEL_H;
-    let rows = 1;
-    let x = 0;
-    for (const n of sizes) {
-      const mw = n * w + MELD_PAD * 2;
-      if (x > 0 && x + mw > areaW) {
-        rows++;
-        x = 0;
-      }
-      x += mw + GAP;
-    }
-    if (rows * (meldH + GAP) <= areaH) return { w, fits: true };
+/** Largest tile width (≤ max) at which every meld fits the area; used by the large view. */
+export function fitTileWidth(sizes: number[], areaW: number, areaH: number, max: number, min = 16): number {
+  for (let w = max; w > min; w--) {
+    if (pack(sizes, areaW, w).length * (meldHeight(w) + GAP) <= areaH) return w;
   }
-  return { w: min, fits: false };
+  return min;
+}
+
+/**
+ * Inline table sizing (TASARIM.md §8): the largest tile that puts the most
+ * melds (up to 3) on the first row; then as many whole rows as fit. Melds
+ * that don't fit are hidden, never cut in half.
+ */
+function inlineFit(sizes: number[], areaW: number, areaH: number, max: number, min: number) {
+  let best = { w: max, firstRow: 0 };
+  for (let w = max; w >= min; w--) {
+    const first = Math.min(3, pack(sizes, areaW, w)[0]?.length ?? 0);
+    if (first > best.firstRow) best = { w, firstRow: first };
+  }
+  const rows = pack(sizes, areaW, best.w);
+  const fitRows = Math.max(1, Math.floor((areaH + GAP) / (meldHeight(best.w) + GAP)));
+  const shown = rows.slice(0, fitRows).flat().length;
+  return { w: best.w, shown };
 }
 
 export function ownerLabel(meld: TableMeld, players: PublicPlayer[], mySeat: number) {
   return meld.owner === mySeat ? 'Sen' : (players[meld.owner]?.name ?? '');
 }
 
-/** Melds sorted so each player's melds sit together, the player's own first. */
-export function sortMelds(table: TableMeld[], mySeat: number) {
+/** Player's own melds first, then left, across, right — the seating order. */
+const SEAT_ORDER = [0, 3, 2, 1];
+
+export function sortMelds(table: TableMeld[], mySeat: number, first: Set<number> = new Set()) {
   return [...table].sort((a, b) => {
-    const oa = (a.owner - mySeat + 4) % 4;
-    const ob = (b.owner - mySeat + 4) % 4;
-    return oa - ob || a.id - b.id;
+    const fa = first.has(a.id) ? 0 : 1;
+    const fb = first.has(b.id) ? 0 : 1;
+    const oa = SEAT_ORDER[(a.owner - mySeat + 4) % 4];
+    const ob = SEAT_ORDER[(b.owner - mySeat + 4) % 4];
+    return fa - fb || oa - ob || a.id - b.id;
   });
 }
 
@@ -57,62 +79,68 @@ interface Props {
   mySeat: number;
   okey: OkeyInfo;
   maxTileWidth: number;
+  /** Width of the "Tümü" button on the right. */
+  zoomWidth: number;
   emptyText: string;
-  /** Melds the selected tile can be added to; they glow and can be tapped. */
+  /** Melds the selected tile can be added to: sorted first, glow, can be tapped. */
   highlight: Set<number>;
   onMeldPress(meldId: number): void;
-  /** Tap on the table itself: open the large view. */
   onZoom(): void;
 }
 
-/**
- * Every meld on the table, shrunk just enough to fit the area so nothing is
- * hidden behind a scroll. Each meld is also a drop target for adding a tile.
- */
-export function TableMelds({ table, players, mySeat, okey, maxTileWidth, emptyText, highlight, onMeldPress, onZoom }: Props) {
+/** The melds on the table, as many as fit readably, plus a button for the large view. */
+export function TableMelds(p: Props) {
+  const { table, players, mySeat, okey, highlight } = p;
   const [area, setArea] = useState({ w: 0, h: 0 });
-  const melds = useMemo(() => sortMelds(table, mySeat), [table, mySeat]);
-  // Below ~20pt a tile can't be read; then the rest is clipped and the large view takes over.
-  const { w, fits } = useMemo(
-    () => fitTiles(melds.map((m) => m.tiles.length), area.w - 12 - ZOOM_W, area.h - 12, maxTileWidth, 20),
-    [melds, area, maxTileWidth],
+  const melds = useMemo(() => sortMelds(table, mySeat, highlight), [table, mySeat, highlight]);
+  const usableW = area.w - INSET * 2 - p.zoomWidth - GAP;
+  const { w, shown } = useMemo(
+    () => inlineFit(melds.map((m) => m.tiles.length), usableW, area.h - INSET * 2, p.maxTileWidth, 30),
+    [melds, usableW, area.h, p.maxTileWidth],
   );
+  const hidden = melds.length - shown;
+  const hiddenLit = melds.slice(shown).some((m) => highlight.has(m.id));
 
   return (
     <Pressable
       style={styles.area}
-      onPress={onZoom}
+      onPress={p.onZoom}
       onLayout={(e) => setArea({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
     >
       {table.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyText}>{emptyText}</Text>
+          <Text style={styles.emptyText}>{p.emptyText}</Text>
         </View>
       ) : (
         <>
-          <View style={styles.wrap}>
-            {melds.map((m) => (
-              <MeldView
-                key={m.id}
-                meld={m}
-                owner={ownerLabel(m, players, mySeat)}
-                okey={okey}
-                tileWidth={w}
-                lit={highlight.has(m.id)}
-                onPress={() => onMeldPress(m.id)}
-              />
-            ))}
+          <View style={[styles.wrap, { width: usableW + INSET * 2 }]}>
+            {area.w > 0 &&
+              melds.slice(0, shown).map((m) => (
+                <MeldView
+                  key={m.id}
+                  meld={m}
+                  owner={ownerLabel(m, players, mySeat)}
+                  okey={okey}
+                  tileWidth={w}
+                  lit={highlight.has(m.id)}
+                  onPress={() => p.onMeldPress(m.id)}
+                />
+              ))}
           </View>
-          {/* When melds are clipped and the selected tile fits one, the button turns green: look here. */}
-          <View
-            style={[styles.zoomHint, !fits && styles.zoomHintMore, !fits && highlight.size > 0 && styles.zoomHintLit]}
-            pointerEvents="none"
+          <Pressable
+            onPress={p.onZoom}
+            style={[
+              styles.zoom,
+              { width: p.zoomWidth, maxHeight: 86 },
+              hidden > 0 && styles.zoomMore,
+              hiddenLit && styles.zoomLit,
+            ]}
           >
             <Text style={styles.zoomIcon}>🔍</Text>
-            <Text style={[styles.zoomText, !fits && { color: '#2b1d00' }]}>
-              {fits ? 'Büyüt' : highlight.size > 0 ? 'Uyan per\nburada' : `Tümü\n(${table.length})`}
+            <Text style={[styles.zoomText, hidden > 0 && { color: '#2b1d00' }]}>
+              {hiddenLit ? 'Uyan\nper' : hidden > 0 ? `Tümü\n(${melds.length})` : 'Büyüt'}
             </Text>
-          </View>
+          </Pressable>
         </>
       )}
     </Pressable>
@@ -125,24 +153,25 @@ interface MeldProps {
   okey: OkeyInfo;
   tileWidth: number;
   lit: boolean;
+  dim?: boolean;
   onPress(): void;
   /** Registered as a drop target (only the in-table copy, not the large view). */
   dropTarget?: boolean;
 }
 
-export function MeldView({ meld, owner, okey, tileWidth, lit, onPress, dropTarget = true }: MeldProps) {
+export function MeldView({ meld, owner, okey, tileWidth, lit, dim, onPress, dropTarget = true }: MeldProps) {
   const zones = useDropZones();
   const ref = useRef<HostInstance>(null);
   useEffect(() => (dropTarget ? zones.register(`meld:${meld.id}`, ref) : undefined), [zones, meld.id, dropTarget]);
   const byId = new Map<number, Tile>(meld.tiles.map((t) => [t.id, t]));
   return (
-    <Pressable ref={ref} onPress={onPress} style={[styles.meld, lit && styles.lit]} collapsable={false}>
+    <Pressable ref={ref} onPress={onPress} style={[styles.meld, lit && styles.lit, dim && { opacity: 0.45 }]} collapsable={false}>
       <View style={{ flexDirection: 'row' }}>
         {meld.ordered.map((id) => (
           <TileView key={id} tile={byId.get(id)!} okey={okey} width={tileWidth} />
         ))}
       </View>
-      <Text style={[styles.owner, tileWidth < 26 && { fontSize: 12 }]} numberOfLines={1}>
+      <Text style={styles.owner} numberOfLines={1}>
         {owner} · {meld.points}
       </Text>
     </Pressable>
@@ -150,33 +179,39 @@ export function MeldView({ meld, owner, okey, tileWidth, lit, onPress, dropTarge
 }
 
 const styles = StyleSheet.create({
-  area: { flex: 1, overflow: 'hidden', borderRadius: 10 },
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP, padding: 6, paddingRight: 6 + ZOOM_W, alignContent: 'flex-start' },
+  area: {
+    flex: 1,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    borderRadius: 12,
+    backgroundColor: colors.feltLight,
+    padding: INSET,
+  },
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP, alignContent: 'flex-start', marginLeft: -INSET, paddingLeft: INSET },
   meld: {
     backgroundColor: 'rgba(0,0,0,0.18)',
     borderRadius: 8,
-    padding: MELD_PAD - 2,
+    padding: 2,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
   },
   lit: { borderColor: colors.ok, backgroundColor: 'rgba(95,208,125,0.25)' },
-  owner: { color: colors.muted, fontSize: 14, height: LABEL_H },
+  owner: { color: colors.muted, fontSize: font.small, fontWeight: '600', height: LABEL_H, lineHeight: LABEL_H },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 8 },
   emptyText: { color: colors.text, fontSize: font.body, textAlign: 'center' },
-  zoomHint: {
+  zoom: {
     position: 'absolute',
-    right: 4,
-    top: 4,
-    bottom: 4,
-    width: ZOOM_W - 6,
+    right: INSET,
+    top: INSET,
+    bottom: INSET,
     backgroundColor: 'rgba(0,0,0,0.35)',
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  zoomMore: { backgroundColor: colors.accent },
+  zoomLit: { backgroundColor: colors.ok },
   zoomIcon: { fontSize: 20 },
-  zoomHintMore: { backgroundColor: colors.accent },
-  zoomHintLit: { backgroundColor: colors.ok },
-  zoomText: { color: colors.text, fontSize: 13, fontWeight: '800', textAlign: 'center' },
+  zoomText: { color: colors.text, fontSize: font.small, fontWeight: '800', textAlign: 'center' },
 });

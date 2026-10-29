@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Okey 101 — Oyun Ekranı Taslağı</title>
+<style>
+  :root{
+    --zemin:#082e22; --cuha:#0b3d2e; --cuha-acik:#145a43; --panel:#07301f;
+    --ahsap:#6d4c2f; --ahsap-koyu:#4a321e; --tas:#fbf6e9; --tas-kenar:#c9bfa6; --tas-arka:#e8dcc0;
+    --yazi:#f4f1e8; --soluk:#a9c2b6; --vurgu:#f2b632; --basari:#5fd07d; --basari-koyu:#2e8b57; --hata:#e45858;
+    --kirmizi:#d0312d; --sari:#b57400; --mavi:#1f5fbf; --siyah:#1d1d1d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#1a1a1a;color:#eee;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:24px}
+  h1{font-size:20px;margin:0 0 4px}
+  p.note{color:#aaa;font-size:14px;margin:0 0 20px;max-width:900px}
+  h2{font-size:16px;color:#ccc;margin:28px 0 8px;font-weight:600}
+  .frame{position:relative;overflow:hidden;background:var(--cuha);border-radius:18px;box-shadow:0 0 0 6px #000,0 12px 40px rgba(0,0,0,.6);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--yazi)}
+  .abs{position:absolute}
+  .safe{position:absolute;border:0 dashed rgba(255,255,255,.45);pointer-events:none}
+  .home{position:absolute;left:50%;transform:translateX(-50%);width:140px;height:5px;border-radius:3px;background:rgba(255,255,255,.85)}
+  /* paneller */
+  .opp{background:var(--panel);border-radius:12px;border:3px solid transparent;padding:4px 8px;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+  .opp .name{font-size:18px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:22px;display:flex;align-items:center;gap:6px}
+  .opp .meta{font-size:15px;font-weight:600;color:var(--soluk);white-space:nowrap;line-height:18px}
+  .opp.active{border-color:var(--vurgu);background:#3a3415}
+  .opp.active .name{color:var(--vurgu)}
+  .chip{display:inline-block;background:var(--basari);color:#0b3d2e;font-size:15px;font-weight:800;line-height:20px;padding:0 6px;border-radius:6px}
+  .btn{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:12px;border:2px solid transparent;font-weight:800;font-size:20px;line-height:24px;color:#2b1d00;background:var(--vurgu);white-space:nowrap}
+  .btn .sub{font-size:15px;font-weight:600;line-height:18px}
+  .btn.sec{background:rgba(0,0,0,.25);border-color:var(--soluk);color:var(--yazi)}
+  .btn.ghost{background:rgba(0,0,0,.18);border-color:rgba(169,194,182,.45);color:var(--yazi)}
+  .btn.off{background:rgba(0,0,0,.25);border-color:rgba(169,194,182,.6);color:var(--yazi);opacity:.75}
+  .btn.ok{background:var(--basari);color:#0b3d2e}
+  .zone{background:var(--panel);border-radius:12px}
+  .cap{position:absolute;font-size:15px;font-weight:700;text-align:center;white-space:nowrap;line-height:18px}
+  .status{display:flex;align-items:center;justify-content:center;text-align:center;font-weight:800;font-size:22px;line-height:26px;color:var(--vurgu);letter-spacing:.2px}
+  .table{background:var(--cuha-acik);border-radius:12px;overflow:hidden}
+  .meld{position:absolute;background:rgba(0,0,0,.18);border-radius:8px;border:2px solid transparent;display:flex;flex-direction:column;align-items:center;padding:2px}
+  .meld.lit{border-color:var(--basari);background:rgba(95,208,125,.25)}
+  .meld .own{font-size:15px;font-weight:600;color:var(--soluk);line-height:18px;white-space:nowrap}
+  .tumu{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;background:var(--vurgu);color:#2b1d00;font-weight:800;font-size:15px;line-height:17px;text-align:center}
+  /* taş */
+  .tile{position:absolute;background:var(--tas);border:1px solid var(--tas-kenar);display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 2px 2px rgba(0,0,0,.35);line-height:1}
+  .tile .v{font-weight:800;letter-spacing:-.5px}
+  .tile .m{line-height:1;margin-top:1px}
+  .tile.sel{border:4px solid var(--vurgu);box-shadow:0 0 10px 3px rgba(242,182,50,.9);transform:translateY(-8px) scale(1.06);z-index:5}
+  .tile.back{background:var(--tas-arka);border-color:#cbbd9a}
+  .tile .cnt{font-weight:900;color:#5a4a2a}
+  .badge{position:absolute;top:1px;right:1px;background:var(--vurgu);color:#3b2a00;font-size:12px;font-weight:900;line-height:15px;padding:0 3px;border-radius:4px}
+  .plus{position:absolute;top:1px;left:1px;width:18px;height:18px;border-radius:9px;background:var(--basari);color:#0b3d2e;font-size:15px;font-weight:900;line-height:18px;text-align:center}
+  .slot{position:absolute;border:2px dashed rgba(242,182,50,.7);background:rgba(242,182,50,.08);border-radius:6px}
+  .rack{position:absolute;background:var(--ahsap);border-top:2px solid var(--ahsap-koyu)}
+  .shelf{position:absolute;height:5px;background:var(--ahsap-koyu);border-radius:3px}
+  .okbox{display:flex;align-items:center;gap:6px;padding:0 6px;background:var(--panel);border-radius:12px}
+  .okbox .t1{font-size:15px;font-weight:600;color:var(--soluk);line-height:17px}
+  .okbox .t2{font-size:17px;font-weight:800;line-height:20px;white-space:nowrap}
+  .legend{font-size:13px;color:#999;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>Okey 101 — oyun ekranı taslağı</h1>
+<p class="note">Bir oyun anı: sol rakip Elif açmış (masada 6 peri var), sıra sende, "BİR TAŞ AT" aşamasındasın, ıstakada 21 taş var; Sarı 6 seçili ve işlek (yeşil +), uyduğu iki per yeşil yanıyor ve ilk sıraya alındı. Kesik beyaz çizgiler güvenli alan sınırları. 1 px = 1 pt. Her iki çerçeve de aynı <code>layout()</code> fonksiyonundan hesaplanır; fonksiyon TASARIM.md'deki formüllerin birebir karşılığıdır.</p>
+
+<h2>1 · iPhone X/11 yatay — 812×375 pt (güvenli alan: sol/sağ 44, alt 21)</h2>
+<div id="f1"></div>
+<div class="legend">Istaka taşı 48×66 · deste/yer taşı 49×68 · masa per taşı 36×50 · başlık şeridi 48 pt · eylem satırı 54 pt</div>
+
+<h2>2 · iPhone SE yatay — 667×375 pt (güvenli alan yok)</h2>
+<div id="f2"></div>
+<div class="legend">Istaka taşı 44×61 · deste/yer taşı 56×77 · masa per taşı 30×41 · aynı şerit ve satır yükseklikleri</div>
+
+<script>
+// ---------- ölçü hesabı (TASARIM.md "Ölçeklenme kuralları" ile aynı) ----------
+function layout(W, H, ins) {
+  const s = Math.min(1.6, Math.max(1, W / 852));           // tablet ölçeği
+  const x0 = ins.l, usable = W - ins.l - ins.r;
+  const tileW = Math.max(40, Math.min(72, Math.floor((usable - 4) / 15)));
+  const tileH = Math.round(tileW * 1.38);
+  const rackH = 2 * tileH + 12;                              // 4 + taş + 4 + taş + 4
+  const rackTop = H - ins.b - rackH;
+  const g = 4, r = (v) => Math.round(v * s);
+  const headH = r(48), actH = r(54);
+  const headTop = g, zoneTop = g + headH + g;
+  const actTop = rackTop - 2 - actH;
+  const zoneH = actTop - g - zoneTop;
+  // başlık şeridi
+  const cikW = r(64), sesW = r(48), okW = r(104);
+  const oppW = Math.floor((usable - cikW - sesW - okW - r(42)) / 3);
+  const head = { cik: [x0, cikW], ses: [x0 + cikW + r(6), sesW] };
+  head.opp = [0, 1, 2].map(i => [x0 + cikW + r(6) + sesW + r(10) + i * (oppW + r(8)), oppW]);
+  head.ok = [x0 + usable - okW, okW];
+  // bölge satırı
+  const drawW = r(160), discW = r(110);
+  const tableX = x0 + drawW + 6, tableW = usable - drawW - discW - 12;
+  const pileW = Math.min(r(56), Math.floor((zoneH - 26) / 1.38));
+  const pileH = Math.round(pileW * 1.38);
+  const meldCap = Math.min(r(40), Math.floor((zoneH - 32) / 1.38));
+  // eylem satırı
+  const dizW = r(110), atW = r(100), acW = r(164), ag = r(8);
+  const act = { diz: [x0, dizW], status: [x0 + dizW + ag, usable - dizW - atW - acW - 3 * ag],
+                at: [x0 + usable - acW - ag - atW, atW], ac: [x0 + usable - acW, acW] };
+  const rackX = x0 + 2 + Math.floor((usable - 4 - 15 * tileW) / 2);
+  return { s, x0, usable, tileW, tileH, rackH, rackTop, rackX, headTop, headH, zoneTop, zoneH, actTop, actH,
+           head, drawW, discW, tableX, tableW, pileW, pileH, meldCap, act };
+}
+
+// ---------- çizim yardımcıları ----------
+const COL = { r: 'var(--kirmizi)', y: 'var(--sari)', b: 'var(--mavi)', k: 'var(--siyah)' };
+const MARK = { r: '●', y: '▲', b: '■', k: '◆' };
+function tile(x, y, w, t, o = {}) {           // t = { v:6, c:'y' } | 'back'
+  const h = Math.round(w * 1.38);
+  let cls = 'tile' + (o.sel ? ' sel' : '') + (t === 'back' ? ' back' : '');
+  let inner = '';
+  if (t === 'back') inner = `<div class="cnt" style="font-size:${Math.round(w*0.44)}px">${o.count ?? ''}</div>`;
+  else inner = `<div class="v" style="color:${COL[t.c]};font-size:${Math.round(w*0.5)}px">${t.v}</div>
+                <div class="m" style="color:${COL[t.c]};font-size:${Math.max(10, Math.round(w*0.22))}px">${MARK[t.c]}</div>`;
+  if (o.plus) inner += `<div class="plus">+</div>`;
+  if (o.ok) inner += `<div class="badge">OK</div>`;
+  return `<div class="${cls}" style="left:${x}px;top:${y}px;width:${w-2}px;height:${h-2}px;border-radius:${Math.round(w*0.12)}px;margin:1px">${inner}</div>`;
+}
+const T = (v, c) => ({ v, c });
+
+function frame(id, W, H, ins, data) {
+  const L = layout(W, H, ins);
+  const s = L.s;
+  const px = (n) => n + 'px';
+  let h = '';
+  // güvenli alan çizgileri
+  if (ins.l) h += `<div class="safe" style="left:${ins.l}px;top:0;height:${H}px;border-left-width:1px"></div>`;
+  if (ins.r) h += `<div class="safe" style="left:${W-ins.r}px;top:0;height:${H}px;border-left-width:1px"></div>`;
+  if (ins.b) h += `<div class="safe" style="left:0;width:${W}px;top:${H-ins.b}px;border-top-width:1px"></div>`;
+
+  // ---- başlık şeridi
+  const hd = L.head, ht = L.headTop, hh = L.headH;
+  h += `<div class="abs btn ghost" style="left:${hd.cik[0]}px;top:${ht}px;width:${hd.cik[1]}px;height:${hh}px">Çık</div>`;
+  h += `<div class="abs btn ghost" style="left:${hd.ses[0]}px;top:${ht}px;width:${hd.ses[1]}px;height:${hh}px;font-size:22px">🔊</div>`;
+  data.opp.forEach((o, i) => {
+    const [x, w] = hd.opp[i];
+    h += `<div class="abs opp${o.active ? ' active' : ''}" style="left:${x}px;top:${ht}px;width:${w}px;height:${hh}px">
+      <div class="name">${o.active ? '▶ ' : ''}${o.name}${o.opened ? ' <span class="chip">AÇTI</span>' : ''}</div>
+      <div class="meta">${o.tiles} taş · ${o.total}</div></div>`;
+  });
+  {
+    const [x, w] = hd.ok; const iw = 28;
+    h += `<div class="abs okbox" style="left:${x}px;top:${ht}px;width:${w}px;height:${hh}px">
+      <div style="position:relative;width:${iw}px;height:${Math.round(iw*1.38)}px">${tile(-1, -1, iw, data.indicator)}</div>
+      <div><div class="t1">Okey</div><div class="t2">${data.okey}</div></div></div>`;
+  }
+
+  // ---- çekme bölgesi (tablette bölge satırı taşa göre sınırlanır ve üste yaslanır)
+  const zt = L.zoneTop, zh = L.zoneH, sideH = Math.min(zh, L.pileH + 26);
+  h += `<div class="abs zone" style="left:${L.x0}px;top:${zt}px;width:${L.drawW}px;height:${sideH}px"></div>`;
+  const cellW = Math.floor((L.drawW - 12) / 2);
+  const c1 = L.x0 + 4, c2 = L.x0 + 4 + cellW + 4;
+  const pileY = zt + 4;
+  // deste: yığın hissi için altta ikinci bir sırt
+  h += tile(c1 + (cellW - L.pileW) / 2 + 3, pileY + 3, L.pileW, 'back', {});
+  h += tile(c1 + (cellW - L.pileW) / 2, pileY, L.pileW, 'back', { count: data.deck });
+  h += `<div class="cap" style="left:${c1}px;width:${cellW}px;top:${pileY + L.pileH + 2}px">Deste</div>`;
+  h += tile(c2 + (cellW - L.pileW) / 2, pileY, L.pileW, data.leftTop);
+  h += `<div class="cap" style="left:${c2}px;width:${cellW}px;top:${pileY + L.pileH + 2}px">Soldan al</div>`;
+
+  // ---- masa
+  const tx = L.tableX, tw = L.tableW;
+  h += `<div class="abs table" style="left:${tx}px;top:${zt}px;width:${tw}px;height:${zh}px"></div>`;
+  const tumuW = Math.round(56 * s), tumuH = Math.min(zh - 8, Math.round(86 * s)), GAP = 6, PAD = 4;
+  const innerW = tw - 2 * PAD - tumuW - GAP, innerH = zh - 2 * PAD;
+  // per taşı: üst sınırdan 30'a kadar küçült; ilk satıra en çok per sığdıran (en fazla 3) en büyük taşı seç
+  const meldW = (n, w) => n * w + 8, meldH = (w) => Math.round(w * 1.38) + 6 + 18;
+  const countFit = (w) => { let x = 0, n = 0; for (const m of data.melds.slice(0, 3)) { const mw = meldW(m.t.length, w); if (x + mw > innerW) break; x += mw + GAP; n++; } return n; };
+  let mw = L.meldCap, best = countFit(mw);
+  for (let w = L.meldCap; w >= 30; w--) { const n = countFit(w); if (n > best) { best = n; mw = w; } }
+  const rowsFit = Math.max(1, Math.floor((innerH + GAP) / (meldH(mw) + GAP)));
+  let cx = tx + PAD, cy = zt + PAD, row = 0, shown = 0;
+  for (const m of data.melds) {
+    const w = meldW(m.t.length, mw);
+    if (cx + w > tx + PAD + innerW) { row++; cx = tx + PAD; cy += meldH(mw) + GAP; }
+    if (row >= rowsFit) break;
+    let tiles = '';
+    m.t.forEach((t, i) => tiles += tile(i * mw, 0, mw, t, { ok: t.ok }));
+    h += `<div class="meld${m.lit ? ' lit' : ''}" style="left:${cx}px;top:${cy}px;width:${w}px;height:${meldH(mw)}px">
+      <div style="position:relative;width:${m.t.length * mw}px;height:${Math.round(mw*1.38)}px">${tiles}</div>
+      <div class="own">${m.owner} · ${m.pts}</div></div>`;
+    cx += w + GAP; shown++;
+  }
+  const hidden = data.melds.length - shown;
+  h += `<div class="tumu" style="left:${tx + tw - PAD - tumuW}px;top:${zt + PAD}px;width:${tumuW}px;height:${tumuH}px">
+    <div style="font-size:20px;line-height:22px">🔍</div><div>Tümü<br>(${data.melds.length})</div></div>`;
+
+  // ---- atma bölgesi
+  const dx = L.x0 + L.usable - L.discW;
+  h += `<div class="abs zone" style="left:${dx}px;top:${zt}px;width:${L.discW}px;height:${sideH}px;border:3px solid var(--vurgu);box-shadow:0 0 10px rgba(242,182,50,.55)"></div>`;
+  h += tile(dx + (L.discW - L.pileW) / 2, pileY, L.pileW, data.myTop);
+  h += `<div class="cap" style="left:${dx}px;width:${L.discW}px;top:${pileY + L.pileH + 2}px">Buraya at</div>`;
+
+  // ---- eylem satırı
+  const a = L.act, at = L.actTop, ah = L.actH;
+  h += `<div class="abs btn sec" style="left:${a.diz[0]}px;top:${at}px;width:${a.diz[1]}px;height:${ah}px">Diz</div>`;
+  // durum: 22 pt tek satır; kutu 320 pt'den darsa 19 pt (ikisi de sığmazsa 17 pt iki satır)
+  const stFs = a.status[1] >= 320 ? 22 : 19;
+  h += `<div class="abs status" style="left:${a.status[0]}px;top:${at}px;width:${a.status[1]}px;height:${ah}px;font-size:${stFs}px">${data.status}</div>`;
+  h += `<div class="abs btn" style="left:${a.at[0]}px;top:${at}px;width:${a.at[1]}px;height:${ah}px">At</div>`;
+  h += `<div class="abs btn off" style="left:${a.ac[0]}px;top:${at}px;width:${a.ac[1]}px;height:${ah}px">Aç ${data.pts}/101<div class="sub">${101 - data.pts} sayı daha</div></div>`;
+
+  // ---- ıstaka
+  h += `<div class="rack" style="left:0;top:${L.rackTop}px;width:${W}px;height:${H - L.rackTop}px"></div>`;
+  const rowH = L.tileH + 4;
+  for (let r = 0; r < 2; r++) {
+    const ry = L.rackTop + 4 + r * rowH;
+    h += `<div class="shelf" style="left:${L.rackX}px;top:${ry + L.tileH - 3}px;width:${15 * L.tileW}px"></div>`;
+    for (let c = 0; c < 15; c++) {
+      const t = data.rack[r][c], x = L.rackX + c * L.tileW;
+      if (!t) h += `<div class="slot" style="left:${x+1}px;top:${ry+1}px;width:${L.tileW-4}px;height:${L.tileH-4}px"></div>`;
+      else h += tile(x, ry, L.tileW, t, { sel: t.sel, plus: t.plus, ok: t.ok });
+    }
+  }
+  if (ins.b) h += `<div class="home" style="top:${H - 8}px"></div>`;
+
+  document.getElementById(id).innerHTML = `<div class="frame" style="width:${W}px;height:${H}px">${h}</div>`;
+  window.__layouts = Object.assign(window.__layouts || {}, { [W + 'x' + H]: Object.assign({ meldTile: mw, rowsFit, shown }, L) });
+}
+
+// ---------- oyun anı ----------
+const O = (v, c, o) => Object.assign(T(v, c), o || {});
+const data = {
+  opp: [
+    { name: 'Elif', tiles: 9, total: 52, opened: true },
+    { name: 'Melek', tiles: 21, total: 16 },
+    { name: 'Hasan', tiles: 22, total: 202 },
+  ],
+  indicator: T(3, 'y'), okey: 'Sarı 4',
+  deck: 13, leftTop: T(9, 'r'), myTop: T(7, 'b'),
+  status: 'SIRA SENDE · BİR TAŞ AT', pts: 60,
+  melds: [   // uyan (lit) perler başa alınmış
+    { t: [T(6,'r'), T(6,'b'), T(6,'k')], owner: 'Elif', pts: 18, lit: true },
+    { t: [T(6,'b'), T(6,'k'), O(4,'y',{ok:true})], owner: 'Elif', pts: 18, lit: true },
+    { t: [T(13,'r'), T(13,'y'), T(13,'k'), T(13,'b')], owner: 'Elif', pts: 52 },
+    { t: [T(11,'r'), T(11,'y'), T(11,'k')], owner: 'Elif', pts: 33 },
+    { t: [T(8,'r'), T(8,'y'), T(8,'b')], owner: 'Elif', pts: 24 },
+    { t: [T(3,'r'), T(4,'r'), T(5,'r')], owner: 'Elif', pts: 12 },
+  ],
+  rack: [
+    [T(12,'r'), T(12,'b'), T(12,'k'), O(4,'y',{ok:true}), null, T(10,'r'), T(10,'y'), T(10,'b'), null, T(9,'r'), T(9,'y'), T(9,'k'), null, null, null],
+    [T(3,'y'), T(3,'b'), T(3,'k'), null, O(6,'y',{sel:true, plus:true}), T(2,'b'), T(5,'b'), T(13,'b'), null, O(8,'k',{plus:true}), T(4,'r'), T(7,'y'), null, null, null],
+  ],
+};
+frame('f1', 812, 375, { l: 44, r: 44, b: 21 }, data);
+frame('f2', 667, 375, { l: 0, r: 0, b: 0 }, data);
+</script>
+</body>
+</html>
