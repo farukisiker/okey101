@@ -12,7 +12,7 @@ import {
 } from '@okey/shared';
 import type { Session } from './useOkey';
 
-const BOT_DELAY_MS = 1000;
+const BOT_DELAY_MS = 1300;
 const ME = 0;
 
 type Result = { ok: true } | { ok: false; error: string };

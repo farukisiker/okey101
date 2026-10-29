@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
+import { useKeepAwake } from 'expo-keep-awake';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { initFeedback } from './feedback';
 import { DropZoneProvider } from './game/dropZones';
 import { useLocalGame } from './net/useLocalGame';
 import { type OkeyClient, useOkey } from './net/useOkey';
@@ -15,6 +17,11 @@ import { colors } from './theme';
 const DEFAULT_SERVER = process.env.EXPO_PUBLIC_SERVER_URL || 'http://localhost:3001';
 
 export default function App() {
+  // A slow game shouldn't let the screen go dark mid-turn.
+  useKeepAwake();
+  useEffect(() => {
+    void initFeedback();
+  }, []);
   const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER);
   const online = useOkey(serverUrl);
   const local = useLocalGame();

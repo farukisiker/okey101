@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { OkeyInfo, PublicPlayer, SeatInfo } from '@okey/shared';
-import { colors } from '../theme';
+import { colors, font } from '../theme';
 import { TileView } from './TileView';
 
 interface Props {
@@ -19,33 +19,36 @@ export function OpponentPanel({ player, seatInfo, total, active, okey, horizonta
   return (
     <View style={[styles.panel, horizontal && styles.horizontal, active && styles.active]}>
       <View style={{ alignItems: horizontal ? 'flex-start' : 'center' }}>
-        <Text style={styles.name} numberOfLines={1}>
+        <Text style={[styles.name, active && { color: colors.accent }]} numberOfLines={1}>
+          {active ? '▶ ' : ''}
           {player.name}
           {seatInfo && !seatInfo.connected ? ' (koptu)' : ''}
         </Text>
-        <Text style={styles.meta}>
-          {player.handCount} taş · {total} puan
+        <Text style={styles.meta} numberOfLines={1}>
+          {player.opened ? 'AÇTI · ' : ''}
+          {player.handCount} taş
+          {total !== 0 ? ` · ${total}` : ''}
         </Text>
-        {player.opened && <Text style={styles.opened}>AÇTI</Text>}
       </View>
-      {showDiscard && top && <TileView tile={top} okey={okey} width={26} />}
+      {showDiscard && top && <TileView tile={top} okey={okey} width={30} />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   panel: {
-    padding: 6,
-    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
     backgroundColor: 'rgba(0,0,0,0.25)',
     alignItems: 'center',
-    gap: 4,
-    borderWidth: 2,
+    gap: 2,
+    borderWidth: 4,
     borderColor: 'transparent',
+    alignSelf: 'stretch',
   },
-  horizontal: { flexDirection: 'row', gap: 10 },
-  active: { borderColor: colors.accent },
-  name: { color: colors.text, fontWeight: '800', fontSize: 13, maxWidth: 110 },
-  meta: { color: colors.muted, fontSize: 11 },
-  opened: { color: colors.ok, fontSize: 10, fontWeight: '900' },
+  horizontal: { flexDirection: 'row', gap: 12, alignSelf: 'center' },
+  active: { borderColor: colors.accent, backgroundColor: 'rgba(242,182,50,0.15)' },
+  name: { color: colors.text, fontWeight: '800', fontSize: font.body },
+  meta: { color: colors.muted, fontSize: font.small },
 });

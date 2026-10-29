@@ -1,15 +1,23 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { type HostInstance, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { useSharedValue } from 'react-native-reanimated';
+import Animated, {
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { type Action, type PlayerView, type RoomInfo, OPEN_THRESHOLD, leftOf } from '@okey/shared';
+import { type Action, type PlayerView, type RoomInfo, type Tile, OPEN_THRESHOLD, leftOf } from '@okey/shared';
 import { Button } from '../components/Button';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DragSource } from '../components/DragSource';
 import { OpponentPanel } from '../components/OpponentPanel';
 import { RACK_PAD, Rack, rackHeight } from '../components/Rack';
 import { RoundResult } from '../components/RoundResult';
 import { TableMelds } from '../components/TableMelds';
 import { TileBack, TileView, tileHeight } from '../components/TileView';
+import { buzz, feedback, isSoundOn, play, setSoundOn } from '../feedback';
 import { useDropZones } from '../game/dropZones';
 import {
   RACK_COLS,
@@ -22,46 +30,77 @@ import {
   validGroups,
 } from '../game/rackLayout';
 import type { OkeyClient } from '../net/useOkey';
-import { colors } from '../theme';
+import { colorNames, colors, font } from '../theme';
 
-const ACTION_BAR = 38;
+const ACTION_BAR = 64;
 
 export function GameScreen({ client }: { client: OkeyClient }) {
   const { view, room } = client;
   if (!view || !room) {
     return (
       <View style={styles.center}>
-        <Text style={styles.muted}>Masa hazırlanıyor…</Text>
+        <Text style={styles.waiting}>Masa hazırlanıyor…</Text>
       </View>
     );
   }
   return <Table view={view} room={room} client={client} />;
 }
 
-/** Rack tiles as large as the screen allows: full width, at most about half the height. */
+/**
+ * Sizes from the screen: rack tiles as large as width and about half the
+ * height allow; everything else scales up on tablets (factor 1–1.6).
+ */
 function useLayoutSizes() {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const scale = Math.min(1.6, Math.max(1, width / 852));
   const usableW = width - insets.left - insets.right - 12;
   const byWidth = Math.floor((usableW - RACK_PAD * 2 - 4) / RACK_COLS);
-  const byHeight = Math.floor((height * 0.5 - 22) / 2.76);
-  const tileW = Math.max(32, Math.min(72, byWidth, byHeight));
-  const topH = height - insets.top - insets.bottom - rackHeight(tileW) - ACTION_BAR - 12;
-  const pileW = Math.max(30, Math.min(Math.round(tileW * 0.85), Math.floor((topH - 85) / 1.38)));
-  const sideW = Math.max(108, pileW + 40);
-  return { tileW, pileW, sideW, topH };
+  const byHeight = Math.floor((height * 0.46 - 22) / 2.76);
+  const tileW = Math.max(32, Math.min(96, byWidth, byHeight));
+  const topH = height - insets.top - insets.bottom - rackHeight(tileW) - ACTION_BAR - 10;
+  const pileW = Math.max(30, Math.min(Math.round(tileW * 0.9), Math.floor((topH - 70) / 1.38), 80));
+  const sideW = Math.round(Math.max(136, pileW + 40) * scale);
+  // Melds on the table: big enough to read (rank ≥ 18pt), but they must fit the table area.
+  const tableH = topH - 56 * scale;
+  const meldTileW = Math.max(26, Math.min(Math.round(38 * scale), Math.floor((tableH - 30) / 1.38)));
+  return { tileW, pileW, sideW, topH, meldTileW, scale };
+}
+
+/** Gently pulses a highlight while `on`: shows where to act next. */
+function Pulse({ on, children, style }: { on: boolean; children: ReactNode; style?: object }) {
+  const v = useSharedValue(0);
+  useEffect(() => {
+    if (on) v.value = withRepeat(withTiming(1, { duration: 700 }), -1, true);
+    else {
+      cancelAnimation(v);
+      v.value = 0;
+    }
+  }, [on, v]);
+  const animated = useAnimatedStyle(() => ({
+    borderColor: on ? `rgba(242,182,50,${0.35 + 0.65 * v.value})` : 'transparent',
+    transform: [{ scale: 1 + 0.04 * v.value }],
+  }));
+  return <Animated.View style={[styles.pulse, style, animated]}>{children}</Animated.View>;
+}
+
+function tileName(t: Tile): string {
+  return t.kind === 'fake' ? 'sahte okey' : `${colorNames[t.color]} ${t.value}`;
 }
 
 function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; client: OkeyClient }) {
-  const { tileW, pileW, sideW, topH } = useLayoutSizes();
+  const { tileW, pileW, sideW, topH, meldTileW } = useLayoutSizes();
   const zones = useDropZones();
   const [slots, setSlots] = useState<RackSlots>(emptyRack);
   const [selected, setSelected] = useState<number | null>(null);
+  const [fresh, setFresh] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [sound, setSound] = useState(isSoundOn());
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rackGeom = useSharedValue<RackGeom | null>(null);
   const hoverSlot = useSharedValue(-1);
-  /** Where a tile dragged from a pile should land once the server confirms the draw. */
+  /** Where a tile dragged from a pile should land once the draw is confirmed. */
   const pendingSlot = useRef<number | null>(null);
 
   const me = view.players[view.seat];
@@ -74,29 +113,71 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   const leftTop = view.players[leftSeat].discards.at(-1);
   const myTop = me.discards.at(-1);
 
-  // Rack follows the hand; a brand-new hand (new round) gets auto-arranged.
+  // Rack follows the hand; a new round's hand gets auto-arranged. Tile ids repeat
+  // every round, so the round number (not the ids) tells a new deal apart.
+  const dealtRound = useRef<number | null>(null);
   useEffect(() => {
     const prefer = pendingSlot.current;
     pendingSlot.current = null;
+    const newDeal = dealtRound.current !== room.round;
+    dealtRound.current = room.round;
     setSlots((s) => {
+      if (newDeal) return autoArrange(view.hand, view.okey);
       const known = new Set(s.filter((id) => id !== null));
-      return view.hand.some((t) => known.has(t.id))
-        ? syncRack(s, view.hand, prefer)
-        : autoArrange(view.hand, view.okey);
+      const added = view.hand.filter((t) => !known.has(t.id));
+      if (added.length === 1) setFresh(added[0].id);
+      return syncRack(s, view.hand, prefer);
     });
-  }, [view.hand, view.okey]);
+  }, [view.hand, view.okey, room.round]);
+
+  // The drawn tile glows for two seconds so it can be found on the rack.
+  useEffect(() => {
+    if (fresh === null) return;
+    const t = setTimeout(() => setFresh(null), 2000);
+    return () => clearTimeout(t);
+  }, [fresh]);
 
   useEffect(() => {
     if (selected !== null && !view.hand.some((t) => t.id === selected)) setSelected(null);
   }, [view.hand, selected]);
 
+  // Sounds for what happens at the table; the player's own moves also vibrate.
+  const lastAction = view.lastAction;
+  useEffect(() => {
+    if (!lastAction) return;
+    const mine = lastAction.seat === view.seat;
+    const sfx = lastAction.type === 'draw' ? 'draw' : lastAction.type === 'discard' ? 'discard' : 'open';
+    if (mine) feedback(sfx);
+    else play(sfx, sfx === 'open' ? 0.6 : 0.35);
+  }, [lastAction, view.seat]);
+
+  const wasMyTurn = useRef(false);
+  useEffect(() => {
+    if (myTurn && !wasMyTurn.current) feedback('turn');
+    wasMyTurn.current = myTurn;
+  }, [myTurn]);
+
+  useEffect(() => {
+    if (view.phase !== 'finished' || !view.result) return;
+    if (view.result.winner === view.seat) feedback('win');
+    else play('turn');
+  }, [view.phase, view.result, view.seat]);
+
   const groups = useMemo(() => validGroups(slots, view.hand, view.okey), [slots, view.hand, view.okey]);
   const groupPoints = groups.reduce((s, g) => s + g.points, 0);
+  const canOpen = canPlay && !me.opened && groupPoints >= OPEN_THRESHOLD;
+
+  const reachedOpen = useRef(false);
+  useEffect(() => {
+    if (canOpen && !reachedOpen.current) buzz('success');
+    reachedOpen.current = canOpen;
+  }, [canOpen]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
+    feedback('error');
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 2800);
+    toastTimer.current = setTimeout(() => setToast(null), 3000);
   }, []);
   useEffect(() => () => void (toastTimer.current && clearTimeout(toastTimer.current)), []);
 
@@ -110,19 +191,20 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   );
 
   const discard = (tileId: number) => {
+    if (!canPlay) return showToast(canDraw ? 'Önce taş çek' : 'Sıra sende değil');
     setSelected(null);
     void send({ type: 'discard', tileId });
   };
 
   const onDropOnZone = (tileId: number, zone: string) => {
     if (zone !== 'discard' && !zone.startsWith('meld:')) return;
-    if (!canPlay) return showToast(canDraw ? 'Önce taş çek' : 'Sıra sende değil');
     if (zone === 'discard') discard(tileId);
+    else if (!canPlay) showToast(canDraw ? 'Önce taş çek' : 'Sıra sende değil');
     else void send({ type: 'addToMeld', meldId: Number(zone.slice(5)), tileIds: [tileId] });
   };
 
   const draw = (source: 'deck' | 'discard', slot: number | null = null) => {
-    if (!canDraw) return showToast(myTurn ? 'Bu tur zaten taş çektin' : 'Sıra sende değil');
+    if (!canDraw) return showToast(myTurn ? 'Bu el taşını çektin, şimdi bir taş at' : 'Sıra sende değil');
     pendingSlot.current = slot;
     void send({ type: 'draw', source });
   };
@@ -140,13 +222,24 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
     for (const g of groups) if (!(await send({ type: 'meld', tileIds: g.tileIds }))) break;
   };
 
+  const moveOnRack = (next: RackSlots) => {
+    setSlots(next);
+    feedback('place');
+  };
+
   // The whole right column is the discard target ("throw to the right").
   const discardRef = useRef<HostInstance>(null);
   useEffect(() => zones.register('discard', discardRef), [zones]);
 
-  const status = statusText(view, myTurn);
   const totals = room.totals;
-  const lastText = lastActionText(view);
+  const status = statusText(view, myTurn);
+  const okeyText = `Okey: ${colorNames[view.okey.color]} ${view.okey.value}`;
+  const openTitle = me.opened ? 'Per İndir' : `Aç ${groupPoints}/${OPEN_THRESHOLD}`;
+  const openSub = me.opened
+    ? undefined
+    : groupPoints >= OPEN_THRESHOLD
+      ? 'Açabilirsin!'
+      : `${OPEN_THRESHOLD - groupPoints} sayı daha`;
 
   return (
     <View style={styles.root}>
@@ -160,7 +253,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
             okey={view.okey}
             showDiscard={false}
           />
-          <Text style={styles.tiny}>Soldan al</Text>
+          <Text style={styles.label}>Soldan al</Text>
           <DragSource
             enabled={canDraw && !!leftTop}
             rackGeom={rackGeom}
@@ -169,21 +262,33 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
             onDragStart={zones.measureAll}
             onDrop={dropFromPile('discard')}
           >
-            <View style={[styles.pile, { width: pileW + 12, height: tileHeight(pileW) + 12 }, canDraw && leftTop && styles.glow]}>
-              {leftTop ? <TileView tile={leftTop} okey={view.okey} width={pileW} /> : <Text style={styles.tiny}>boş</Text>}
-            </View>
+            <Pulse on={canDraw && !!leftTop} style={{ width: pileW + 16, height: tileHeight(pileW) + 12 }}>
+              {leftTop ? <TileView tile={leftTop} okey={view.okey} width={pileW} /> : <Text style={styles.label}>boş</Text>}
+            </Pulse>
           </DragSource>
         </View>
 
         <View style={styles.middle}>
-          <OpponentPanel
-            player={view.players[acrossSeat]}
-            seatInfo={room.seats[acrossSeat]}
-            total={totals[acrossSeat]}
-            active={view.turn === acrossSeat}
-            okey={view.okey}
-            horizontal
-          />
+          <View style={styles.headerRow}>
+            <Button
+              title={sound ? '🔊' : '🔇'}
+              variant="secondary"
+              onPress={() => {
+                setSoundOn(!sound);
+                setSound(!sound);
+              }}
+              style={styles.iconBtn}
+            />
+            <OpponentPanel
+              player={view.players[acrossSeat]}
+              seatInfo={room.seats[acrossSeat]}
+              total={totals[acrossSeat]}
+              active={view.turn === acrossSeat}
+              okey={view.okey}
+              horizontal
+            />
+            <Button title="Çık" variant="secondary" onPress={() => setConfirmLeave(true)} style={styles.iconBtn} />
+          </View>
           <View style={styles.tableRow}>
             <View style={styles.centerPile}>
               <DragSource
@@ -194,20 +299,27 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
                 onDragStart={zones.measureAll}
                 onDrop={dropFromPile('deck')}
               >
-                <View style={[styles.deck, canDraw && styles.glow]}>
+                <Pulse on={canDraw}>
                   <TileBack width={pileW} />
                   <View style={styles.deckCountBox}>
                     <Text style={styles.deckCount}>{view.deckCount}</Text>
                   </View>
-                </View>
+                </Pulse>
               </DragSource>
-              <View style={{ alignItems: 'center' }}>
+              <View style={styles.indicatorBox}>
                 <TileView tile={view.indicator} width={Math.round(pileW * 0.62)} />
-                <Text style={styles.tiny}>Gösterge</Text>
+                <Text style={styles.okeyText}>{okeyText}</Text>
               </View>
             </View>
             <View style={styles.tableArea}>
-              <TableMelds table={view.table} players={view.players} okey={view.okey} />
+              <TableMelds
+                table={view.table}
+                players={view.players}
+                myName={me.name}
+                okey={view.okey}
+                tileWidth={meldTileW}
+                emptyText={`Açmak için ${OPEN_THRESHOLD} sayı gerekir`}
+              />
             </View>
           </View>
         </View>
@@ -221,42 +333,41 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
             okey={view.okey}
             showDiscard={false}
           />
-          <Text style={styles.tiny}>At</Text>
-          <Pressable
-            onPress={() => (canPlay && selected !== null ? discard(selected) : undefined)}
-            style={[
-              styles.pile,
-              styles.discardZone,
-              { width: pileW + 24, height: tileHeight(pileW) + 12 },
-              canPlay && styles.glow,
-            ]}
-          >
-            {myTop ? <TileView tile={myTop} okey={view.okey} width={pileW} /> : <Text style={[styles.tiny, { textAlign: 'center' }]}>buraya sürükle</Text>}
+          <Text style={styles.label}>Buraya at</Text>
+          <Pressable onPress={() => (selected !== null ? discard(selected) : undefined)}>
+            <Pulse on={canPlay} style={[styles.discardZone, { width: pileW + 24, height: tileHeight(pileW) + 12 }]}>
+              {myTop ? (
+                <TileView tile={myTop} okey={view.okey} width={pileW} />
+              ) : (
+                <Text style={[styles.label, { textAlign: 'center' }]}>taşı buraya sürükle</Text>
+              )}
+            </Pulse>
           </Pressable>
         </View>
       </View>
 
       <View style={styles.actionBar}>
-        <Button title="Diz" variant="secondary" onPress={() => setSlots(autoArrange(view.hand, view.okey))} />
+        <Button title="Diz" variant="secondary" onPress={() => moveOnRack(autoArrange(view.hand, view.okey))} />
         <View style={styles.statusBox}>
           {toast ? (
-            <Text style={styles.toast} numberOfLines={1}>
+            <Text style={styles.toast} numberOfLines={2}>
               {toast}
             </Text>
           ) : (
-            <Text style={[styles.status, myTurn && { color: colors.accent }]} numberOfLines={1}>
+            <Text style={[styles.status, myTurn && { color: colors.accent }]} numberOfLines={1} adjustsFontSizeToFit>
               {status}
-              {lastText ? <Text style={styles.info}>{`  ·  ${lastText}`}</Text> : null}
             </Text>
           )}
         </View>
-        {selected !== null && canPlay && <Button title="At" onPress={() => discard(selected)} />}
+        <Button title="At" onPress={() => selected !== null && discard(selected)} disabled={!canPlay || selected === null} />
         <Button
-          title={me.opened ? 'İndir' : `Aç ${groupPoints}`}
+          title={openTitle}
+          subtitle={openSub}
+          variant={canOpen ? 'success' : 'primary'}
           onPress={openOrLay}
           disabled={!canPlay || groups.length === 0 || (!me.opened && groupPoints < OPEN_THRESHOLD)}
+          style={{ minWidth: 150 }}
         />
-        <Button title="Çık" variant="secondary" onPress={client.leave} />
       </View>
 
       <View style={styles.rackRow}>
@@ -266,10 +377,15 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
           slots={slots}
           tileWidth={tileW}
           selectedId={selected}
+          freshId={fresh}
           rackGeom={rackGeom}
           hoverSlot={hoverSlot}
-          onSlotsChange={setSlots}
-          onSelect={setSelected}
+          onSlotsChange={moveOnRack}
+          onBlocked={() => play('error', 0.4)}
+          onSelect={(id) => {
+            setSelected(id);
+            if (id !== null) buzz('light');
+          }}
           onDropOnZone={onDropOnZone}
         />
       </View>
@@ -285,18 +401,32 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
           onLeave={client.leave}
         />
       )}
+
+      {confirmLeave && (
+        <ConfirmDialog
+          message="Masadan kalkmak istiyor musun?"
+          confirm="Evet, kalk"
+          cancel="Hayır, oyna"
+          onConfirm={() => {
+            setConfirmLeave(false);
+            client.leave();
+          }}
+          onCancel={() => setConfirmLeave(false)}
+        />
+      )}
     </View>
   );
 }
 
+/** Short, plain instructions; while others play, say what they just did. */
 function statusText(view: PlayerView, myTurn: boolean): string {
   if (view.phase === 'finished') return 'El bitti';
-  if (!myTurn) return `${view.players[view.turn].name} oynuyor…`;
-  if (view.turnPhase === 'draw') return 'Sıra sende: ortadan ya da soldan taşı ıstakaya sürükle (ya da dokun)';
-  if (view.mustUseTileId !== null) return 'Yerden aldığın taşı kullan (yoksa 101 ceza), sonra sağa at';
-  return view.players[view.seat].opened
-    ? 'Per indir ya da taşı pere sürükleyip işle, sonra sağa at'
-    : `Perleri yan yana diz, ${OPEN_THRESHOLD} olunca Aç — ya da taşı sağa sürükleyip at`;
+  if (myTurn) {
+    if (view.turnPhase === 'draw') return 'SIRA SENDE — TAŞ ÇEK';
+    if (view.mustUseTileId !== null) return 'Yerden aldığın taşı kullan';
+    return 'SIRA SENDE — BİR TAŞ AT';
+  }
+  return lastActionText(view) ?? `${view.players[view.turn].name} oynuyor…`;
 }
 
 function lastActionText(view: PlayerView): string | null {
@@ -309,51 +439,46 @@ function lastActionText(view: PlayerView): string | null {
     case 'meld':
       return `${name} per indirdi`;
     case 'addToMeld':
-      return `${name} işledi`;
+      return `${name} pere taş işledi`;
     case 'draw':
-      return a.source === 'discard' ? `${name} yerden aldı` : null;
-    default:
-      return null;
+      return a.source === 'discard' ? `${name} yerden aldı` : `${name} ortadan çekti`;
+    case 'discard':
+      return `${name} ${tileName(a.tile)} attı`;
   }
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, paddingHorizontal: 6, paddingVertical: 4 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  muted: { color: colors.muted },
+  waiting: { color: colors.text, fontSize: font.body },
   top: { flexDirection: 'row', gap: 6 },
-  side: { alignItems: 'center', gap: 3 },
-  middle: { flex: 1, gap: 4, alignItems: 'center' },
-  tableRow: { flex: 1, flexDirection: 'row', alignSelf: 'stretch', gap: 6 },
-  centerPile: { alignItems: 'center', justifyContent: 'center', gap: 4 },
-  deck: { alignItems: 'center', borderRadius: 8, padding: 4, borderWidth: 2, borderColor: 'transparent' },
+  side: { alignItems: 'center', gap: 2 },
+  middle: { flex: 1, gap: 4, alignItems: 'stretch' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  iconBtn: { minWidth: 64, minHeight: 48, paddingHorizontal: 10 },
+  tableRow: { flex: 1, flexDirection: 'row', gap: 6 },
+  centerPile: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  indicatorBox: { alignItems: 'center', width: 104 },
+  okeyText: { color: colors.text, fontSize: font.small, fontWeight: '700', textAlign: 'center' },
+  pulse: { borderWidth: 4, borderRadius: 10, padding: 2, alignItems: 'center', justifyContent: 'center' },
   deckCountBox: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
-  deckCount: { color: '#5a4a2a', fontWeight: '900', fontSize: 16 },
+  deckCount: { color: '#5a4a2a', fontWeight: '900', fontSize: 20 },
   tableArea: { flex: 1, backgroundColor: colors.feltLight, borderRadius: 10 },
-  actionBar: { height: ACTION_BAR, flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 2 },
-  statusBox: { flex: 1, alignItems: 'center' },
-  status: { color: colors.text, fontSize: 13, fontWeight: '600' },
-  info: { color: colors.ok, fontSize: 12, fontWeight: '400' },
+  label: { color: colors.text, fontSize: font.small, fontWeight: '600' },
+  discardZone: { backgroundColor: 'rgba(0,0,0,0.2)', borderStyle: 'solid' },
+  actionBar: { height: ACTION_BAR, flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 2 },
+  statusBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  status: { color: colors.text, fontSize: font.status, fontWeight: '800' },
   toast: {
     color: '#fff',
     backgroundColor: colors.danger,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
     overflow: 'hidden',
-    fontSize: 13,
+    fontSize: font.body,
     fontWeight: '700',
+    textAlign: 'center',
   },
   rackRow: { alignItems: 'center' },
-  pile: {
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.25)',
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  discardZone: { backgroundColor: 'rgba(0,0,0,0.15)' },
-  glow: { borderColor: colors.accent, borderStyle: 'solid' },
-  tiny: { color: colors.muted, fontSize: 10 },
 });

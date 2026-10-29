@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { type HostInstance, StyleSheet, View } from 'react-native';
+import { type HostInstance, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { type SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import type { OkeyInfo, Tile } from '@okey/shared';
 import { useDropZones } from '../game/dropZones';
@@ -14,9 +14,14 @@ interface Props {
   slots: RackSlots;
   tileWidth: number;
   selectedId: number | null;
+  /** The tile just drawn; it glows for a moment. */
+  freshId: number | null;
   rackGeom: SharedValue<RackGeom | null>;
   hoverSlot: SharedValue<number>;
+  /** The player moved a tile to an empty slot. */
   onSlotsChange(slots: RackSlots): void;
+  /** A drop on an occupied slot: nothing moves. */
+  onBlocked(): void;
   onSelect(tileId: number | null): void;
   /** A tile was dropped outside the rack (discard pile, a table meld). */
   onDropOnZone(tileId: number, zone: string): void;
@@ -67,7 +72,11 @@ export function Rack(p: Props) {
         drop: (x, y) => {
           const cur = latest.current;
           const slot = slotAt(rackGeom.value, x, y);
-          if (slot >= 0) return cur.onSlotsChange(placeTile(cur.slots, id, slot));
+          if (slot >= 0) {
+            if (cur.slots[slot] === id) return;
+            const next = placeTile(cur.slots, id, slot);
+            return next === cur.slots ? cur.onBlocked() : cur.onSlotsChange(next);
+          }
           const hit = zones.hitTest(x, y);
           if (hit && hit.key !== 'rack') cur.onDropOnZone(id, hit.key);
         },
@@ -99,6 +108,25 @@ export function Rack(p: Props) {
       {Array.from({ length: RACK_ROWS }, (_, r) => (
         <View key={r} style={[styles.shelf, { top: RACK_PAD + r * rowH + h - 2, width: RACK_COLS * w }]} />
       ))}
+      {/* With a tile selected, every empty slot is a tap target: tap-tap moving, no dragging needed. */}
+      {p.selectedId !== null &&
+        p.slots.map((id, i) =>
+          id === null ? (
+            <Pressable
+              key={`slot-${i}`}
+              onPress={() => {
+                const sel = latest.current.selectedId;
+                if (sel === null) return;
+                latest.current.onSlotsChange(placeTile(latest.current.slots, sel, i));
+                latest.current.onSelect(null);
+              }}
+              style={[
+                styles.emptySlot,
+                { left: RACK_PAD + (i % RACK_COLS) * w, top: RACK_PAD + Math.floor(i / RACK_COLS) * rowH, width: w - 2, height: h - 2 },
+              ]}
+            />
+          ) : null,
+        )}
       <Animated.View pointerEvents="none" style={[styles.marker, { width: w - 2, height: h - 2 }, marker]} />
       {p.slots.map((id, i) => {
         const tile = id === null ? undefined : byId.get(id);
@@ -114,7 +142,7 @@ export function Rack(p: Props) {
             onDragStart={onDragStart}
             onDrop={hnd.drop}
           >
-            <TileView tile={tile} okey={p.okey} width={w} selected={p.selectedId === tile.id} />
+            <TileView tile={tile} okey={p.okey} width={w} selected={p.selectedId === tile.id} fresh={p.freshId === tile.id} />
           </DragSource>
         );
       })}
@@ -137,11 +165,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.woodDark,
     borderRadius: 3,
   },
+  emptySlot: {
+    position: 'absolute',
+    margin: 1,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(242,182,50,0.7)',
+    backgroundColor: 'rgba(242,182,50,0.08)',
+  },
   marker: {
     position: 'absolute',
     margin: 1,
     borderRadius: 6,
-    borderWidth: 3,
+    borderWidth: 4,
     borderColor: colors.accent,
     backgroundColor: 'rgba(242,182,50,0.25)',
   },

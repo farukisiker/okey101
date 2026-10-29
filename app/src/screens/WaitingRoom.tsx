@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '../components/Button';
 import type { OkeyClient } from '../net/useOkey';
-import { colors } from '../theme';
+import { colors, font } from '../theme';
 
 export function WaitingRoom({ client }: { client: OkeyClient }) {
   const { room, session } = client;
@@ -41,17 +41,17 @@ export function WaitingRoom({ client }: { client: OkeyClient }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
-  label: { color: colors.muted },
+  label: { color: colors.muted, fontSize: font.body },
   code: { color: colors.accent, fontSize: 40, fontWeight: '900', letterSpacing: 6 },
   seats: { flexDirection: 'row', gap: 10, marginVertical: 12 },
   seat: {
-    width: 150,
+    width: 170,
     padding: 10,
     borderRadius: 8,
     backgroundColor: 'rgba(0,0,0,0.25)',
     alignItems: 'center',
   },
-  seatName: { color: colors.text, fontWeight: '700' },
-  you: { color: colors.accent, fontSize: 11 },
-  error: { color: colors.danger },
+  seatName: { color: colors.text, fontWeight: '700', fontSize: font.body, textAlign: 'center' },
+  you: { color: colors.accent, fontSize: font.small },
+  error: { color: colors.danger, fontSize: font.body },
 });

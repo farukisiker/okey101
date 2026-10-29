@@ -16,7 +16,7 @@ export const colors = {
 
 export const tileColors: Record<Color, string> = {
   red: '#d0312d',
-  yellow: '#e09a00',
+  yellow: '#b57400', // darker than classic okey yellow: readable on the ivory tile
   blue: '#1f5fbf',
   black: '#1d1d1d',
 };
@@ -26,4 +26,20 @@ export const colorNames: Record<Color, string> = {
   yellow: 'Sarı',
   blue: 'Mavi',
   black: 'Siyah',
+};
+
+/** A distinct mark per colour so colour-blind players can tell tiles apart. */
+export const colorMarks: Record<Color, string> = {
+  red: '●',
+  yellow: '▲',
+  blue: '■',
+  black: '◆',
+};
+
+/** Type scale for older players: nothing smaller than 15pt. */
+export const font = {
+  small: 15,
+  body: 18,
+  status: 22,
+  title: 28,
 };

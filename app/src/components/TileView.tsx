@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { type OkeyInfo, type Tile, isJoker } from '@okey/shared';
-import { colors, tileColors } from '../theme';
+import { colorMarks, colors, tileColors } from '../theme';
 
 interface Props {
   tile: Tile;
@@ -8,12 +8,14 @@ interface Props {
   width: number;
   selected?: boolean;
   dim?: boolean;
+  /** Briefly glows, e.g. the tile just drawn. */
+  fresh?: boolean;
   style?: ViewStyle;
 }
 
 export const tileHeight = (width: number) => Math.round(width * 1.38);
 
-export function TileView({ tile, okey, width, selected, dim, style }: Props) {
+export function TileView({ tile, okey, width, selected, dim, fresh, style }: Props) {
   const height = tileHeight(width);
   const joker = okey ? isJoker(tile, okey) : false;
   return (
@@ -21,6 +23,7 @@ export function TileView({ tile, okey, width, selected, dim, style }: Props) {
       style={[
         styles.tile,
         { width: width - 2, height: height - 2, borderRadius: width * 0.12 },
+        fresh && styles.fresh,
         selected && styles.selected,
         dim && { opacity: 0.45 },
         style,
@@ -31,7 +34,9 @@ export function TileView({ tile, okey, width, selected, dim, style }: Props) {
       ) : (
         <>
           <Text style={[styles.value, { color: tileColors[tile.color], fontSize: width * 0.5 }]}>{tile.value}</Text>
-          <View style={[styles.dot, { backgroundColor: tileColors[tile.color], width: width * 0.16, height: width * 0.16 }]} />
+          <Text style={[styles.mark, { color: tileColors[tile.color], fontSize: Math.max(8, width * 0.22) }]}>
+            {colorMarks[tile.color]}
+          </Text>
         </>
       )}
       {joker && (
@@ -63,10 +68,18 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
-  selected: { borderColor: colors.accent, borderWidth: 3, transform: [{ translateY: -6 }] },
+  selected: {
+    borderColor: colors.accent,
+    borderWidth: 4,
+    shadowColor: colors.accent,
+    shadowOpacity: 0.9,
+    shadowRadius: 8,
+    transform: [{ translateY: -12 }, { scale: 1.08 }],
+  },
+  fresh: { borderColor: colors.ok, borderWidth: 4 },
   back: { backgroundColor: '#e8dcc0' },
   value: { fontWeight: '800', marginTop: -4 },
-  dot: { borderRadius: 99, marginTop: 1 },
+  mark: { marginTop: -4 },
   fake: { color: '#2e7d32', fontWeight: '900' },
   jokerBadge: {
     position: 'absolute',
@@ -76,5 +89,5 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     paddingHorizontal: 2,
   },
-  jokerText: { fontSize: 8, fontWeight: '900', color: '#3b2a00' },
+  jokerText: { fontSize: 10, fontWeight: '900', color: '#3b2a00' },
 });
