@@ -50,18 +50,25 @@ class ApiError(Exception):
         self.body = body
 
 
-def call(method, path, body=None):
+def call(method, path, body=None, attempts=4):
+    """One API request; Apple's occasional 5xx/429 answers are retried with backoff."""
     url = path if path.startswith("http") else API + path
     data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(url, data=data, method=method)
-    req.add_header("Authorization", "Bearer " + token())
-    req.add_header("Content-Type", "application/json")
-    try:
-        with urllib.request.urlopen(req) as res:
-            raw = res.read()
-            return json.loads(raw) if raw else {}
-    except urllib.error.HTTPError as e:
-        raise ApiError(e.code, e.read().decode(errors="replace")) from None
+    for attempt in range(attempts):
+        req = urllib.request.Request(url, data=data, method=method)
+        req.add_header("Authorization", "Bearer " + token())
+        req.add_header("Content-Type", "application/json")
+        try:
+            with urllib.request.urlopen(req) as res:
+                raw = res.read()
+                return json.loads(raw) if raw else {}
+        except urllib.error.HTTPError as e:
+            body_text = e.read().decode(errors="replace")
+            if (e.code >= 500 or e.code == 429) and attempt < attempts - 1:
+                log(f"{method} {path}: HTTP {e.code}, tekrar deneniyor")
+                time.sleep(5 * 2**attempt)
+                continue
+            raise ApiError(e.code, body_text) from None
 
 
 def log(msg):
