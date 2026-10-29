@@ -4,3 +4,4 @@ export * from './solver';
 export * from './game';
 export * from './protocol';
 export * from './bot';
+export * from './names';

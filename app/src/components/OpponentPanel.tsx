@@ -20,7 +20,6 @@ export function OpponentPanel({ player, seatInfo, total, active, okey, horizonta
     <View style={[styles.panel, horizontal && styles.horizontal, active && styles.active]}>
       <View style={{ alignItems: horizontal ? 'flex-start' : 'center' }}>
         <Text style={styles.name} numberOfLines={1}>
-          {seatInfo?.isBot ? '🤖 ' : ''}
           {player.name}
           {seatInfo && !seatInfo.connected ? ' (koptu)' : ''}
         </Text>

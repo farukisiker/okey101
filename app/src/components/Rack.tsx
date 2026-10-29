@@ -3,7 +3,7 @@ import { type HostInstance, StyleSheet, View } from 'react-native';
 import Animated, { type SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import type { OkeyInfo, Tile } from '@okey/shared';
 import { useDropZones } from '../game/dropZones';
-import { RACK_COLS, RACK_ROWS, type RackGeom, type RackSlots, insertTile, slotAt } from '../game/rackLayout';
+import { RACK_COLS, RACK_ROWS, type RackGeom, type RackSlots, placeTile, slotAt } from '../game/rackLayout';
 import { colors } from '../theme';
 import { DragSource } from './DragSource';
 import { TileView, tileHeight } from './TileView';
@@ -67,7 +67,7 @@ export function Rack(p: Props) {
         drop: (x, y) => {
           const cur = latest.current;
           const slot = slotAt(rackGeom.value, x, y);
-          if (slot >= 0) return cur.onSlotsChange(insertTile(cur.slots, id, slot));
+          if (slot >= 0) return cur.onSlotsChange(placeTile(cur.slots, id, slot));
           const hit = zones.hitTest(x, y);
           if (hit && hit.key !== 'rack') cur.onDropOnZone(id, hit.key);
         },

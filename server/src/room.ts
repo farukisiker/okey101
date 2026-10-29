@@ -6,6 +6,7 @@ import {
   SEATS,
   applyAction,
   createGame,
+  pickBotNames,
   viewFor,
 } from '@okey/shared';
 import { botStep, quickMove } from './bot';
@@ -43,7 +44,7 @@ export class Room {
     private readonly onChange: RoomListener,
     opts: RoomOptions = {},
   ) {
-    this.botDelayMs = opts.botDelayMs ?? 700;
+    this.botDelayMs = opts.botDelayMs ?? 1000;
     this.turnTimeoutMs = opts.turnTimeoutMs ?? 60_000;
     this.rng = opts.rng;
   }
@@ -93,10 +94,10 @@ export class Room {
 
   start(): string | null {
     if (this.game) return 'Oyun zaten başladı';
-    let n = 1;
-    for (let i = 0; i < SEATS; i++) {
-      if (!this.seats[i]) this.seats[i] = { name: `Bot ${n++}`, isBot: true, socketId: null };
-    }
+    const empty = this.seats.flatMap((s, i) => (s ? [] : [i]));
+    const taken = this.seats.flatMap((s) => (s ? [s.name] : []));
+    const names = pickBotNames(empty.length, taken, this.rng);
+    empty.forEach((seat, i) => (this.seats[seat] = { name: names[i], isBot: true, socketId: null }));
     this.newRound();
     return null;
   }
@@ -179,7 +180,7 @@ export class Room {
     const view = viewFor(g, seat);
     // A timed-out human only gets the minimum: draw, then throw.
     const timedOut = !seatInfo.isBot && seatInfo.socketId !== null;
-    const action = timedOut ? quickMove(view) : botStep(view);
+    const action = timedOut ? quickMove(view) : botStep(view, { rng: this.rng });
     if (this.act(seat, action) !== null) {
       // Should not happen; fall back to the simplest legal move.
       const fallback: Action =

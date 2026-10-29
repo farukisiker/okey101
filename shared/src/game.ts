@@ -178,7 +178,8 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
       const total = analyses.reduce((s, a) => s + a.points, 0);
       if (total < OPEN_THRESHOLD) return fail(`Açmak için en az ${OPEN_THRESHOLD} gerekli (${total})`);
       const used = new Set(action.melds.flat());
-      if (used.size >= player.hand.length) return fail('Atmak için elinizde bir taş kalmalı');
+      const keep = keepsDiscard(state, player, used);
+      if (keep) return fail(keep);
       player.hand = player.hand.filter((t) => !used.has(t.id));
       const meldIds = groups.map((g, i) => addTableMeld(state, seat, g, analyses[i]));
       player.opened = true;
@@ -194,8 +195,9 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
       if (typeof groups === 'string') return fail(groups);
       const a = analyzeMeld(groups[0], state.okey);
       if (!a) return fail('Geçersiz per');
-      if (action.tileIds.length >= player.hand.length) return fail('Atmak için elinizde bir taş kalmalı');
       const ids = new Set(action.tileIds);
+      const keep = keepsDiscard(state, player, ids);
+      if (keep) return fail(keep);
       player.hand = player.hand.filter((t) => !ids.has(t.id));
       const meldId = addTableMeld(state, seat, groups[0], a);
       state.lastAction = { seat, type: 'meld', meldId };
@@ -209,7 +211,8 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
       if (!meld) return fail('Per bulunamadı');
       const groups = takeGroups(player.hand, [action.tileIds]);
       if (typeof groups === 'string') return fail(groups);
-      if (action.tileIds.length >= player.hand.length) return fail('Atmak için elinizde bir taş kalmalı');
+      const keep = keepsDiscard(state, player, new Set(action.tileIds));
+      if (keep) return fail(keep);
       const a = analyzeMeld([...meld.tiles, ...groups[0]], state.okey);
       if (!a || a.type !== meld.type) return fail('Bu taş bu pere işlenemez');
       const ids = new Set(action.tileIds);
@@ -251,6 +254,19 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
       return { ok: true, state };
     }
   }
+}
+
+/**
+ * Playing tiles must leave something legal to discard: at least one tile, and
+ * not just the tile taken from the left player (it may not be thrown back).
+ */
+function keepsDiscard(state: GameState, player: PlayerState, used: Set<number>): string | null {
+  const rest = player.hand.filter((t) => !used.has(t.id));
+  if (rest.length === 0) return 'Atmak için elinizde bir taş kalmalı';
+  if (rest.length === 1 && rest[0].id === state.mustUseTileId) {
+    return 'Yerden aldığınız taş elde tek başına kalamaz; onu kullanın';
+  }
+  return null;
 }
 
 function takeGroups(hand: Tile[], groups: number[][]): Tile[][] | string {

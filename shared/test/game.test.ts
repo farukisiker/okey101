@@ -153,6 +153,21 @@ describe('açma (101)', () => {
   });
 });
 
+describe('yerden alınan taş', () => {
+  it('cannot be left alone in hand after laying everything else', () => {
+    const groups = opening();
+    let g = rigged([...groups.flat(), t('red', 1)]);
+    g.players[3].discards = [t('blue', 2)];
+    g.turnPhase = 'draw';
+    g = ok(g, 0, { type: 'draw', source: 'discard' });
+    // Opening with all nine tiles would leave only the picked-up blue 2.
+    expect(err(g, 0, { type: 'open', melds: [...ids(groups), [g.players[0].hand[9].id]] })).toBeTruthy();
+    const withRed = [...ids(groups)];
+    g.players[0].hand = g.players[0].hand.filter((x) => !(x.kind === 'normal' && x.color === 'red' && x.value === 1));
+    expect(err(g, 0, { type: 'open', melds: withRed })).toMatch(/tek başına/);
+  });
+});
+
 describe('bitirme ve puan', () => {
   function finishSetup(lastTile: Tile) {
     const groups = opening();

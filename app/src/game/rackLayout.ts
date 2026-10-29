@@ -1,6 +1,6 @@
 import { type OkeyInfo, type Tile, analyzeMeld, findBestMelds } from '@okey/shared';
 
-export const RACK_COLS = 13;
+export const RACK_COLS = 15;
 export const RACK_ROWS = 2;
 export const RACK_SLOTS = RACK_COLS * RACK_ROWS;
 
@@ -8,26 +8,20 @@ export const RACK_SLOTS = RACK_COLS * RACK_ROWS;
 export type RackSlots = (number | null)[];
 
 /**
- * Keeps known tiles where they are, drops tiles that left the hand, puts new
- * ones in free slots. A single new tile goes to `preferSlot` when given
- * (a tile dragged from a pile onto the rack).
+ * Keeps known tiles where they are and drops tiles that left the hand. New
+ * tiles go to `preferSlot` when it is free (a tile dragged onto the rack),
+ * otherwise to the last free slot so they don't join an arranged group.
  */
 export function syncRack(slots: RackSlots, hand: Tile[], preferSlot: number | null = null): RackSlots {
   const ids = new Set(hand.map((t) => t.id));
-  let next = slots.length === RACK_SLOTS ? slots.map((id) => (id !== null && ids.has(id) ? id : null)) : emptyRack();
+  const next = slots.length === RACK_SLOTS ? slots.map((id) => (id !== null && ids.has(id) ? id : null)) : emptyRack();
   const placed = new Set(next.filter((id): id is number => id !== null));
-  const fresh = hand.filter((t) => !placed.has(t.id));
-  if (fresh.length === 1 && preferSlot !== null) {
-    const free = next.indexOf(null);
-    if (free >= 0) {
-      next[free] = fresh[0].id;
-      return insertTile(next, fresh[0].id, preferSlot);
-    }
-  }
-  for (const t of fresh) {
-    const free = next.indexOf(null);
-    if (free < 0) break;
-    next[free] = t.id;
+  for (const t of hand) {
+    if (placed.has(t.id)) continue;
+    let slot = preferSlot !== null && next[preferSlot] === null ? preferSlot : next.lastIndexOf(null);
+    preferSlot = null;
+    if (slot < 0) break;
+    next[slot] = t.id;
   }
   return next;
 }
@@ -55,45 +49,12 @@ export function emptyRack(): RackSlots {
   return Array(RACK_SLOTS).fill(null);
 }
 
-/**
- * Puts a tile at a slot like on a real istaka: an occupied target pushes its
- * neighbours aside within the row (towards the nearest gap); swaps only when
- * the row has no gap.
- */
-export function insertTile(slots: RackSlots, tileId: number, to: number): RackSlots {
+/** Moves a tile to an empty slot. Occupied slots are left alone: the player arranges by hand. */
+export function placeTile(slots: RackSlots, tileId: number, to: number): RackSlots {
   const from = slots.indexOf(tileId);
-  if (from < 0 || to < 0 || to >= RACK_SLOTS || from === to) return slots;
+  if (from < 0 || to < 0 || to >= RACK_SLOTS || from === to || slots[to] !== null) return slots;
   const next = slots.slice();
   next[from] = null;
-  if (next[to] === null) {
-    next[to] = tileId;
-    return next;
-  }
-  const rowStart = to - (to % RACK_COLS);
-  const rowEnd = rowStart + RACK_COLS - 1;
-  let right = -1;
-  for (let i = to + 1; i <= rowEnd; i++) if (next[i] === null) { right = i; break; }
-  let left = -1;
-  for (let i = to - 1; i >= rowStart; i--) if (next[i] === null) { left = i; break; }
-  if (right >= 0 && (left < 0 || right - to <= to - left)) {
-    for (let i = right; i > to; i--) next[i] = next[i - 1];
-    next[to] = tileId;
-    return next;
-  }
-  if (left >= 0) {
-    for (let i = left; i < to; i++) next[i] = next[i + 1];
-    next[to] = tileId;
-    return next;
-  }
-  return moveTile(slots, tileId, to);
-}
-
-/** Moves a tile to a slot; an occupied target swaps with the source. */
-export function moveTile(slots: RackSlots, tileId: number, to: number): RackSlots {
-  const from = slots.indexOf(tileId);
-  if (from < 0 || to < 0 || to >= RACK_SLOTS || from === to) return slots;
-  const next = slots.slice();
-  next[from] = next[to];
   next[to] = tileId;
   return next;
 }

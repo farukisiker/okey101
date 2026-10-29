@@ -17,7 +17,7 @@ export function WaitingRoom({ client }: { client: OkeyClient }) {
       <View style={styles.seats}>
         {room.seats.map((s, i) => (
           <View key={i} style={styles.seat}>
-            <Text style={styles.seatName}>{s ? s.name : 'Boş — bot oturacak'}</Text>
+            <Text style={styles.seatName}>{s ? s.name : 'Boş — bilgisayar oturacak'}</Text>
             {i === session.seat && <Text style={styles.you}>sen</Text>}
           </View>
         ))}

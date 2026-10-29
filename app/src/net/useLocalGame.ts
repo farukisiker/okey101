@@ -7,11 +7,12 @@ import {
   applyAction,
   botStep,
   createGame,
+  pickBotNames,
   viewFor,
 } from '@okey/shared';
 import type { Session } from './useOkey';
 
-const BOT_DELAY_MS = 700;
+const BOT_DELAY_MS = 1000;
 const ME = 0;
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -22,6 +23,7 @@ type Result = { ok: true } | { ok: false; error: string };
  */
 export function useLocalGame() {
   const [name, setName] = useState<string | null>(null);
+  const [names, setNames] = useState<string[]>([]);
   const [game, setGame] = useState<GameState | null>(null);
   const [round, setRound] = useState(0);
   const [totals, setTotals] = useState([0, 0, 0, 0]);
@@ -41,9 +43,9 @@ export function useLocalGame() {
     return { ok: true };
   }, []);
 
-  const deal = useCallback((playerName: string, roundNo: number) => {
+  const deal = useCallback((seatNames: string[], roundNo: number) => {
     const g = createGame({
-      names: [playerName, 'Bot 1', 'Bot 2', 'Bot 3'],
+      names: seatNames,
       startingSeat: roundNo % SEATS,
     });
     gameRef.current = g;
@@ -78,7 +80,7 @@ export function useLocalGame() {
         ? null
         : {
             id: 'YEREL',
-            seats: [name, 'Bot 1', 'Bot 2', 'Bot 3'].map((n, seat) => ({
+            seats: names.map((n, seat) => ({
               seat,
               name: n,
               isBot: seat !== ME,
@@ -89,7 +91,7 @@ export function useLocalGame() {
             round,
             totals,
           },
-    [name, round, totals],
+    [name, names, round, totals],
   );
 
   const session = useMemo<Session | null>(
@@ -103,16 +105,18 @@ export function useLocalGame() {
     room,
     view,
     begin: async (playerName: string): Promise<Result> => {
+      const seatNames = [playerName, ...pickBotNames(3, [playerName])];
       setName(playerName);
+      setNames(seatNames);
       setTotals([0, 0, 0, 0]);
-      deal(playerName, 0);
+      deal(seatNames, 0);
       return { ok: true };
     },
     act: async (action: Action): Promise<Result> => apply(ME, action),
     nextRound: async (): Promise<Result> => {
       const g = gameRef.current;
       if (!g || g.phase !== 'finished' || name === null) return { ok: false, error: 'Tur bitmedi' };
-      deal(name, round);
+      deal(names, round);
       return { ok: true };
     },
     leave: () => {

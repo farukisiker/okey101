@@ -46,7 +46,8 @@ export const DragSource = memo(function DragSource(p: Props) {
 
   const pan = usePanGesture({
     enabled,
-    minDistance: 2,
+    // A real drag, not a brush of the finger, before anything moves.
+    minDistance: 10,
     onActivate: () => {
       dragging.value = true;
       scheduleOnRN(onDragStart);

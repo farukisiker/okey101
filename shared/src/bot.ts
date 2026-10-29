@@ -1,34 +1,70 @@
 import { type Action, type PlayerView, OPEN_THRESHOLD, leftOf } from './game';
 import { analyzeMeld } from './melds';
 import { findBestMelds } from './solver';
-import { type OkeyInfo, type Tile, faceOf, isJoker } from './tiles';
+import { type OkeyInfo, type Rng, type Tile, faceOf, isJoker } from './tiles';
+
+export type BotLevel = 'medium' | 'hard';
+
+export interface BotOptions {
+  /** medium (default): patient about opening, shallower search, occasional slips. hard: plays its best. */
+  level?: BotLevel;
+  rng?: Rng;
+}
+
+const LEVELS = {
+  // nodeLimit: meld search budget. eagerOpen: chance to open early once 101 is reached
+  // (always opens once the deck is down to `openByDeck`). takeDiscard: chance to take a
+  // useful discard. slip: chance to throw the second-worst tile instead of the worst.
+  medium: { nodeLimit: 600, eagerOpen: 0.08, openByDeck: 9, takeDiscard: 0.35, slip: 0.2 },
+  hard: { nodeLimit: 40000, eagerOpen: 1, openByDeck: 20, takeDiscard: 1, slip: 0 },
+};
 
 /**
- * Simple bot: keeps the tiles that form the most melds, opens as soon as it
- * reaches 101, lays/adds whatever it can afterwards and discards the least
- * useful leftover. Only sees its own PlayerView, like a human.
+ * Bot: keeps the tiles that form the most melds, opens once it has 101 (a
+ * medium bot waits a while), lays/adds whatever it can afterwards and
+ * discards the least useful leftover. Only sees its own PlayerView, like a human.
  */
-export function botStep(view: PlayerView): Action {
+export function botStep(view: PlayerView, opts: BotOptions = {}): Action {
+  const cfg = LEVELS[opts.level ?? 'medium'];
+  const rng = opts.rng ?? Math.random;
   const me = view.players[view.seat];
   const hand = view.hand;
   const { okey } = view;
 
   if (view.turnPhase === 'draw') {
     const top = view.players[leftOf(view.seat)].discards.at(-1);
-    if (top && view.deckCount > 0 && wantsDiscard(view, top)) return { type: 'draw', source: 'discard' };
+    // Taking a discard forces playing it now, i.e. opening early; a patient bot avoids that.
+    const patient = !me.opened && view.deckCount > cfg.openByDeck;
+    if (top && view.deckCount > 0 && !patient && rng() < cfg.takeDiscard && wantsDiscard(view, top, cfg.nodeLimit)) {
+      return { type: 'draw', source: 'discard' };
+    }
     return { type: 'draw', source: view.deckCount > 0 ? 'deck' : 'discard' };
   }
 
-  const maxTiles = hand.length - 1;
-  const best = findBestMelds(hand, okey, { maxTiles, preferTileId: view.mustUseTileId ?? undefined });
+  // Whatever is played must leave a legal discard: not nothing, not only the picked-up tile.
+  const mustUse = view.mustUseTileId;
+  const leavesDiscard = (used: Tile[]) => {
+    const usedIds = new Set(used.map((t) => t.id));
+    const rest = hand.filter((t) => !usedIds.has(t.id));
+    return rest.length > 1 || (rest.length === 1 && rest[0].id !== mustUse);
+  };
+  const solve = (maxTiles: number) =>
+    findBestMelds(hand, okey, { maxTiles, preferTileId: mustUse ?? undefined, nodeLimit: cfg.nodeLimit });
+  let best = solve(hand.length - 1);
+  if (!leavesDiscard(best.melds.flat())) best = solve(hand.length - 2);
 
   if (!me.opened) {
-    if (best.points >= OPEN_THRESHOLD) return { type: 'open', melds: best.melds.map(ids) };
+    // A picked-up discard must be played this turn, so open whenever that is possible.
+    const ready = mustUse !== null || view.deckCount <= cfg.openByDeck || rng() < cfg.eagerOpen;
+    if (best.points >= OPEN_THRESHOLD && ready && leavesDiscard(best.melds.flat())) {
+      return { type: 'open', melds: best.melds.map(ids) };
+    }
   } else {
-    if (best.melds.length > 0) return { type: 'meld', tileIds: ids(best.melds[0]) };
+    const meld = best.melds.find(leavesDiscard);
+    if (meld) return { type: 'meld', tileIds: ids(meld) };
     if (hand.length > 1) {
       for (const tile of hand) {
-        if (isJoker(tile, okey)) continue;
+        if (isJoker(tile, okey) || !leavesDiscard([tile])) continue;
         for (const m of view.table) {
           const a = analyzeMeld([...m.tiles, tile], okey);
           if (a && a.type === m.type) return { type: 'addToMeld', meldId: m.id, tileIds: [tile.id] };
@@ -37,7 +73,8 @@ export function botStep(view: PlayerView): Action {
     }
   }
 
-  return { type: 'discard', tileId: chooseDiscard(hand, okey, best.melds, view.mustUseTileId) };
+  const slip = rng() < cfg.slip;
+  return { type: 'discard', tileId: chooseDiscard(hand, okey, best.melds, view.mustUseTileId, slip) };
 }
 
 /** Minimal move for a player who ran out of time: draw from the deck or throw the worst tile. */
@@ -49,10 +86,10 @@ export function quickMove(view: PlayerView): Action {
 
 const ids = (tiles: Tile[]) => tiles.map((t) => t.id);
 
-function wantsDiscard(view: PlayerView, top: Tile): boolean {
+function wantsDiscard(view: PlayerView, top: Tile, nodeLimit: number): boolean {
   const me = view.players[view.seat];
   const hand = [...view.hand, top];
-  const best = findBestMelds(hand, view.okey, { maxTiles: hand.length - 1, preferTileId: top.id });
+  const best = findBestMelds(hand, view.okey, { maxTiles: hand.length - 1, preferTileId: top.id, nodeLimit });
   const usesTop = best.melds.some((m) => m.some((t) => t.id === top.id));
   if (!me.opened) return usesTop && best.points >= OPEN_THRESHOLD;
   if (usesTop) return true;
@@ -79,12 +116,20 @@ function usefulness(tile: Tile, hand: Tile[], okey: OkeyInfo): number {
   return score;
 }
 
-function chooseDiscard(hand: Tile[], okey: OkeyInfo, melds: Tile[][], mustUse: number | null): number {
+function chooseDiscard(
+  hand: Tile[],
+  okey: OkeyInfo,
+  melds: Tile[][],
+  mustUse: number | null,
+  slip = false,
+): number {
   const inMeld = new Set(melds.flat().map((t) => t.id));
   const legal = hand.filter((t) => t.id !== mustUse);
   let pool = legal.filter((t) => !inMeld.has(t.id));
   if (pool.length === 0) pool = legal;
   const value = (t: Tile) => faceOf(t, okey)?.value ?? 0;
   pool.sort((a, b) => usefulness(a, hand, okey) - usefulness(b, hand, okey) || value(b) - value(a));
+  // A slip throws the runner-up instead, but never the okey.
+  if (slip && pool.length > 1 && !isJoker(pool[1], okey)) return pool[1].id;
   return pool[0].id;
 }
