@@ -47,7 +47,8 @@ alanına bilgisayarın yerel IP'sini yaz (ör. `http://192.168.1.20:3001`) ya da
   masadaki perlere taş işlenebilir. Atmak için elde en az bir taş kalmalıdır.
 - Sıra: ortadan ya da soldaki oyuncunun son attığı taştan çek, bir taş at.
   Yerden alınan taş o el kullanılmazsa +101 ceza; aynı taş geri atılamaz.
-- Ortadaki taşlar bitince el berabere biter.
+- Ortadaki taşlar bitince yerdeki atılmış taşlar (son atılan hariç) karıştırılıp yeni
+  orta deste yapılır; en fazla 3 kez. Sonra taş biterse el berabere biter.
 - Puan (düşük iyi): bitiren −101; açmış oyuncular elde kalan taşların toplamı
   (elde kalan okey 101); açamayan 202. Okeyle bitirmek ve elden bitirmek
   (aynı elde açıp bitirmek) puanları ayrı ayrı ikiye katlar.

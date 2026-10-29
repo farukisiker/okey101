@@ -71,7 +71,7 @@ describe('bot', () => {
     expect(botStep(viewFor(rigged(hand), 0), { level: 'hard' }).type).toBe('open');
   });
 
-  it('a medium bot waits before opening, then opens once the deck runs low', () => {
+  it('a medium bot waits a couple of laps before opening', () => {
     const hand = [
       t('blue', 13), t('black', 13), t('yellow', 13),
       t('black', 10), t('black', 11), t('black', 12),
@@ -81,7 +81,7 @@ describe('bot', () => {
     const g = rigged(hand);
     const patient = () => 0.99;
     expect(botStep(viewFor(g, 0), { rng: patient }).type).toBe('discard');
-    g.deck = g.deck.slice(0, 8);
+    g.turnNumber = 8; // two full laps
     expect(botStep(viewFor(g, 0), { rng: patient }).type).toBe('open');
   });
 

@@ -12,11 +12,12 @@ export interface BotOptions {
 }
 
 const LEVELS = {
-  // nodeLimit: meld search budget. eagerOpen: chance to open early once 101 is reached
-  // (always opens once the deck is down to `openByDeck`). takeDiscard: chance to take a
-  // useful discard. slip: chance to throw the second-worst tile instead of the worst.
-  medium: { nodeLimit: 600, eagerOpen: 0.08, openByDeck: 9, takeDiscard: 0.35, slip: 0.2 },
-  hard: { nodeLimit: 40000, eagerOpen: 1, openByDeck: 20, takeDiscard: 1, slip: 0 },
+  // nodeLimit: meld search budget. openAfterLaps: full laps of the table before it opens
+  // with 101 in hand (it also opens once the middle is down to `openByDeck`); eagerOpen:
+  // chance to open earlier anyway. takeDiscard: chance to take a useful discard. slip:
+  // chance to throw the second-worst tile instead of the worst.
+  medium: { nodeLimit: 600, openAfterLaps: 2, openByDeck: 6, eagerOpen: 0.08, takeDiscard: 0.35, slip: 0.2 },
+  hard: { nodeLimit: 40000, openAfterLaps: 0, openByDeck: 200, eagerOpen: 1, takeDiscard: 1, slip: 0 },
 };
 
 /**
@@ -34,7 +35,7 @@ export function botStep(view: PlayerView, opts: BotOptions = {}): Action {
   if (view.turnPhase === 'draw') {
     const top = view.players[leftOf(view.seat)].discards.at(-1);
     // Taking a discard forces playing it now, i.e. opening early; a patient bot avoids that.
-    const patient = !me.opened && view.deckCount > cfg.openByDeck;
+    const patient = !me.opened && !waitedEnough(view, cfg);
     if (top && view.deckCount > 0 && !patient && rng() < cfg.takeDiscard && wantsDiscard(view, top, cfg.nodeLimit)) {
       return { type: 'draw', source: 'discard' };
     }
@@ -55,7 +56,7 @@ export function botStep(view: PlayerView, opts: BotOptions = {}): Action {
 
   if (!me.opened) {
     // A picked-up discard must be played this turn, so open whenever that is possible.
-    const ready = mustUse !== null || view.deckCount <= cfg.openByDeck || rng() < cfg.eagerOpen;
+    const ready = mustUse !== null || waitedEnough(view, cfg) || rng() < cfg.eagerOpen;
     if (best.points >= OPEN_THRESHOLD && ready && leavesDiscard(best.melds.flat())) {
       return { type: 'open', melds: best.melds.map(ids) };
     }
@@ -75,6 +76,12 @@ export function botStep(view: PlayerView, opts: BotOptions = {}): Action {
 
   const slip = rng() < cfg.slip;
   return { type: 'discard', tileId: chooseDiscard(hand, okey, best.melds, view.mustUseTileId, slip) };
+}
+
+function waitedEnough(view: PlayerView, cfg: { openAfterLaps: number; openByDeck: number }) {
+  const laps = Math.floor(view.turnNumber / 4);
+  // After a reshuffle the middle is long again; laps keep the pace honest.
+  return laps >= cfg.openAfterLaps || view.deckCount <= cfg.openByDeck;
 }
 
 /** Minimal move for a player who ran out of time: draw from the deck or throw the worst tile. */

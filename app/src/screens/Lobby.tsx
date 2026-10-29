@@ -55,22 +55,24 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
   if (!loaded) return <View style={styles.root} />;
 
   if (name === null || editingName) {
+    // Kept at the top of the screen: in landscape the keyboard covers the lower half.
     return (
-      <View style={styles.root}>
-        <Text style={styles.title}>Okey 101</Text>
+      <View style={styles.nameRoot}>
         <Text style={styles.question}>Adınız nedir?</Text>
-        <TextInput
-          style={styles.nameInput}
-          value={draft}
-          onChangeText={setDraft}
-          onSubmitEditing={confirmName}
-          placeholder="Adınızı yazın"
-          placeholderTextColor={colors.muted}
-          maxLength={20}
-          autoFocus
-          returnKeyType="done"
-        />
-        <Button title="Devam" onPress={confirmName} disabled={!draft.trim()} style={{ minWidth: 220 }} />
+        <View style={styles.nameRow}>
+          <TextInput
+            style={styles.nameInput}
+            value={draft}
+            onChangeText={setDraft}
+            onSubmitEditing={confirmName}
+            placeholder="Adınızı yazın"
+            placeholderTextColor={colors.muted}
+            maxLength={20}
+            autoFocus
+            returnKeyType="done"
+          />
+          <Button title="Devam" onPress={confirmName} disabled={!draft.trim()} style={{ minWidth: 140 }} />
+        </View>
       </View>
     );
   }
@@ -145,6 +147,8 @@ const styles = StyleSheet.create({
   welcome: { color: colors.text, fontSize: 24, fontWeight: '700' },
   change: { color: colors.muted, fontSize: font.small, fontWeight: '400' },
   question: { color: colors.text, fontSize: 26, fontWeight: '700' },
+  nameRoot: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 16, gap: 12 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   label: { color: colors.muted, fontSize: font.small },
   nameInput: {
     backgroundColor: 'rgba(0,0,0,0.3)',
@@ -153,7 +157,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 26,
-    minWidth: 320,
+    minWidth: 340,
+    minHeight: 56,
     textAlign: 'center',
   },
   friendsRow: { flexDirection: 'row', gap: 32, alignItems: 'flex-end' },

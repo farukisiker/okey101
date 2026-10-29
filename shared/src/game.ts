@@ -8,6 +8,7 @@ import {
   isJoker,
   okeyFromIndicator,
   penaltyValue,
+  seededRng,
   shuffle,
 } from './tiles';
 
@@ -16,6 +17,8 @@ export const OPEN_THRESHOLD = 101;
 export const NOT_OPENED_PENALTY = 202;
 export const FINISH_BONUS = -101;
 export const UNUSED_DISCARD_PENALTY = 101;
+/** How many times the discards may be reshuffled into a new middle stack. */
+export const DEFAULT_RESHUFFLES = 3;
 
 export interface PlayerState {
   seat: number;
@@ -72,6 +75,12 @@ export interface GameState {
   nextMeldId: number;
   lastAction: LastAction | null;
   result: RoundResult | null;
+  /** Reshuffles of the discards still allowed when the middle stack runs out. */
+  reshufflesLeft: number;
+  /** Reshuffles done so far this round. */
+  reshuffles: number;
+  /** Seed for reshuffling, so the reducer stays pure and replayable. */
+  seed: number;
 }
 
 export type Action =
@@ -87,6 +96,11 @@ export interface NewGameOptions {
   names?: string[];
   startingSeat?: number;
   rng?: Rng;
+  /**
+   * When the middle runs out, shuffle the discards (all but the last one thrown)
+   * into a new middle stack up to this many times; 0 ends the round instead.
+   */
+  reshuffles?: number;
 }
 
 export const leftOf = (seat: number) => (seat + SEATS - 1) % SEATS;
@@ -129,6 +143,9 @@ export function createGame(opts: NewGameOptions = {}): GameState {
     nextMeldId: 1,
     lastAction: null,
     result: null,
+    reshufflesLeft: opts.reshuffles ?? DEFAULT_RESHUFFLES,
+    reshuffles: 0,
+    seed: Math.floor(rng() * 2 ** 31),
   };
 }
 
@@ -244,7 +261,7 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
 
       if (player.hand.length === 0) {
         finishRound(state, seat, isJoker(tile, state.okey));
-      } else if (state.deck.length === 0) {
+      } else if (state.deck.length === 0 && !reshuffleDiscards(state, seat)) {
         finishRound(state, null, false);
       } else {
         state.turn = nextSeat(seat);
@@ -254,6 +271,25 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
       return { ok: true, state };
     }
   }
+}
+
+/**
+ * Middle stack is empty: shuffle every discard except the one just thrown
+ * (the next player may still take it) into a new middle stack.
+ */
+function reshuffleDiscards(state: GameState, discarder: number): boolean {
+  if (state.reshufflesLeft <= 0) return false;
+  const pool: Tile[] = [];
+  for (const p of state.players) {
+    const keep = p.seat === discarder ? p.discards.pop() : undefined;
+    pool.push(...p.discards);
+    p.discards = keep ? [keep] : [];
+  }
+  if (pool.length === 0) return false;
+  state.reshufflesLeft--;
+  state.reshuffles++;
+  state.deck = shuffle(pool, seededRng(state.seed + state.reshuffles));
+  return true;
 }
 
 /**
@@ -346,6 +382,9 @@ export interface PlayerView {
   table: TableMeld[];
   turn: number;
   turnPhase: TurnPhase;
+  turnNumber: number;
+  /** Times the discards were reshuffled into the middle this round. */
+  reshuffles: number;
   mustUseTileId: number | null;
   lastAction: LastAction | null;
   result: RoundResult | null;
@@ -372,6 +411,8 @@ export function viewFor(state: GameState, seat: number): PlayerView {
     table: state.table,
     turn: state.turn,
     turnPhase: state.turnPhase,
+    turnNumber: state.turnNumber,
+    reshuffles: state.reshuffles,
     mustUseTileId: state.turn === seat ? state.mustUseTileId : null,
     lastAction: state.lastAction,
     result: state.result,

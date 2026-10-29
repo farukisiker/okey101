@@ -95,8 +95,8 @@ describe('sıra', () => {
     g = ok(g, 1, { type: 'discard', tileId: g.players[1].hand[0].id });
     expect(g.players[1].penalties).toBe(101);
   });
-  it('round ends when the deck runs out', () => {
-    let g = createGame({ rng: seededRng(5) });
+  it('round ends when the deck runs out (no reshuffle)', () => {
+    let g = createGame({ rng: seededRng(5), reshuffles: 0 });
     g = ok(g, 0, { type: 'discard', tileId: g.players[0].hand[0].id });
     while (g.phase === 'playing') {
       g = ok(g, g.turn, { type: 'draw', source: 'deck' });
@@ -105,6 +105,33 @@ describe('sıra', () => {
     expect(g.deck).toHaveLength(0);
     expect(g.result?.winner).toBeNull();
     expect(g.result?.scores).toEqual([202, 202, 202, 202]);
+  });
+});
+
+describe('yerdeki taşları karıştırma', () => {
+  it('shuffles the discards into a new middle, keeping the last discard, at most N times', () => {
+    let g = createGame({ rng: seededRng(5), reshuffles: 2 });
+    g = ok(g, 0, { type: 'discard', tileId: g.players[0].hand[0].id });
+    let reshuffled = 0;
+    let steps = 0;
+    while (g.phase === 'playing') {
+      g = ok(g, g.turn, { type: 'draw', source: 'deck' });
+      const seat = g.turn;
+      const thrown = g.players[seat].hand[0];
+      g = ok(g, seat, { type: 'discard', tileId: thrown.id });
+      if (g.reshuffles > reshuffled) {
+        reshuffled = g.reshuffles;
+        // Only the tile just thrown stays on the table; the rest went back to the middle.
+        expect(g.players.flatMap((p) => p.discards).map((t) => t.id)).toEqual([thrown.id]);
+        expect(g.deck.length).toBeGreaterThan(0);
+      }
+      const total = 1 + g.deck.length + g.players.reduce((n, p) => n + p.hand.length + p.discards.length, 0);
+      expect(total).toBe(106);
+      if (++steps > 500) throw new Error('did not end');
+    }
+    expect(g.reshuffles).toBe(2);
+    expect(g.result?.winner).toBeNull();
+    expect(steps).toBeGreaterThan(50);
   });
 });
 

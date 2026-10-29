@@ -9,11 +9,15 @@ interface Props {
   children: ReactNode;
   style?: ViewStyle;
   enabled?: boolean;
+  /** Jump back instead of sliding home (a pile's top tile: the drawn tile "went" to the rack). */
+  instantReturn?: boolean;
   /** Rack geometry and the hovered-slot marker, updated on the UI thread while dragging. */
   rackGeom: SharedValue<RackGeom | null>;
   hoverSlot: SharedValue<number>;
   onTap?(): void;
   onDragStart?(): void;
+  /** Gesture over, dropped anywhere or cancelled. */
+  onDragEnd?(): void;
   onDrop(x: number, y: number): void;
 }
 
@@ -28,12 +32,14 @@ export const DragSource = memo(function DragSource(p: Props) {
   const { rackGeom, hoverSlot } = p;
   const enabled = p.enabled ?? true;
   const hasTap = !!p.onTap;
+  const instant = !!p.instantReturn;
 
   // Stable callbacks so re-renders mid-drag don't rebuild the gesture handlers.
   const latest = useRef(p);
   latest.current = p;
   const onTap = useCallback(() => latest.current.onTap?.(), []);
   const onDragStart = useCallback(() => latest.current.onDragStart?.(), []);
+  const onDragEnd = useCallback(() => latest.current.onDragEnd?.(), []);
   const onDrop = useCallback((x: number, y: number) => latest.current.onDrop(x, y), []);
   const left = p.style?.left;
   const top = p.style?.top;
@@ -62,10 +68,11 @@ export const DragSource = memo(function DragSource(p: Props) {
       scheduleOnRN(onDrop, e.absoluteX, e.absoluteY);
     },
     onFinalize: () => {
+      if (dragging.value) scheduleOnRN(onDragEnd);
       dragging.value = false;
       hoverSlot.value = -1;
-      tx.value = withSpring(0, { duration: 160 });
-      ty.value = withSpring(0, { duration: 160 });
+      tx.value = instant ? 0 : withSpring(0, { duration: 160 });
+      ty.value = instant ? 0 : withSpring(0, { duration: 160 });
     },
   });
   const tap = useTapGesture({

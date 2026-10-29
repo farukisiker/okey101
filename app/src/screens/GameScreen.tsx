@@ -96,6 +96,9 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   const [fresh, setFresh] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  /** Which pile's top tile the player is holding. */
+  const [dragging, setDragging] = useState<'deck' | 'discard' | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [sound, setSound] = useState(isSoundOn());
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rackGeom = useSharedValue<RackGeom | null>(null);
@@ -111,6 +114,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   const acrossSeat = (view.seat + 2) % 4;
   const leftSeat = leftOf(view.seat);
   const leftTop = view.players[leftSeat].discards.at(-1);
+  const leftUnder = view.players[leftSeat].discards.at(-2);
   const myTop = me.discards.at(-1);
 
   // Rack follows the hand; a new round's hand gets auto-arranged. Tile ids repeat
@@ -162,6 +166,19 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
     if (view.result.winner === view.seat) feedback('win');
     else play('turn');
   }, [view.phase, view.result, view.seat]);
+
+  // Middle ran out and the discards were shuffled back in: say so, the game goes on.
+  const seenReshuffles = useRef(view.reshuffles);
+  useEffect(() => {
+    if (view.reshuffles > seenReshuffles.current) {
+      setInfo('Ortadaki taşlar bitti — yerdekiler karıştırıldı, oyun devam ediyor');
+      play('draw');
+      const t = setTimeout(() => setInfo(null), 4000);
+      seenReshuffles.current = view.reshuffles;
+      return () => clearTimeout(t);
+    }
+    seenReshuffles.current = view.reshuffles;
+  }, [view.reshuffles]);
 
   const groups = useMemo(() => validGroups(slots, view.hand, view.okey), [slots, view.hand, view.okey]);
   const groupPoints = groups.reduce((s, g) => s + g.points, 0);
@@ -243,8 +260,8 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
 
   return (
     <View style={styles.root}>
-      <View style={[styles.top, { height: topH }]}>
-        <View style={[styles.side, { width: sideW }]}>
+      <View style={[styles.top, { height: topH }, dragging && styles.raised]}>
+        <View style={[styles.side, { width: sideW }, dragging === 'discard' && styles.raised]}>
           <OpponentPanel
             player={view.players[leftSeat]}
             seatInfo={room.seats[leftSeat]}
@@ -254,21 +271,35 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
             showDiscard={false}
           />
           <Text style={styles.label}>Soldan al</Text>
-          <DragSource
-            enabled={canDraw && !!leftTop}
-            rackGeom={rackGeom}
-            hoverSlot={hoverSlot}
-            onTap={() => leftTop && draw('discard')}
-            onDragStart={zones.measureAll}
-            onDrop={dropFromPile('discard')}
-          >
-            <Pulse on={canDraw && !!leftTop} style={{ width: pileW + 16, height: tileHeight(pileW) + 12 }}>
-              {leftTop ? <TileView tile={leftTop} okey={view.okey} width={pileW} /> : <Text style={styles.label}>boş</Text>}
-            </Pulse>
-          </DragSource>
+          <Pulse on={canDraw && !!leftTop} style={{ width: pileW + 16, height: tileHeight(pileW) + 12 }}>
+            {/* What stays on the table while the top tile is in the player's hand. */}
+            {dragging === 'discard' ? (
+              leftUnder ? <TileView tile={leftUnder} okey={view.okey} width={pileW} /> : <Text style={styles.label}>boş</Text>
+            ) : !leftTop ? (
+              <Text style={styles.label}>boş</Text>
+            ) : null}
+            {leftTop && (
+              <DragSource
+                enabled={canDraw}
+                instantReturn
+                style={styles.leftPileTop}
+                rackGeom={rackGeom}
+                hoverSlot={hoverSlot}
+                onTap={() => draw('discard')}
+                onDragStart={() => {
+                  setDragging('discard');
+                  zones.measureAll();
+                }}
+                onDragEnd={() => setDragging(null)}
+                onDrop={dropFromPile('discard')}
+              >
+                <TileView tile={leftTop} okey={view.okey} width={pileW} />
+              </DragSource>
+            )}
+          </Pulse>
         </View>
 
-        <View style={styles.middle}>
+        <View style={[styles.middle, dragging === 'deck' && styles.raised]}>
           <View style={styles.headerRow}>
             <Button
               title={sound ? '🔊' : '🔇'}
@@ -290,22 +321,32 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
             <Button title="Çık" variant="secondary" onPress={() => setConfirmLeave(true)} style={styles.iconBtn} />
           </View>
           <View style={styles.tableRow}>
-            <View style={styles.centerPile}>
-              <DragSource
-                enabled={canDraw}
-                rackGeom={rackGeom}
-                hoverSlot={hoverSlot}
-                onTap={() => draw('deck')}
-                onDragStart={zones.measureAll}
-                onDrop={dropFromPile('deck')}
-              >
-                <Pulse on={canDraw}>
-                  <TileBack width={pileW} />
-                  <View style={styles.deckCountBox}>
-                    <Text style={styles.deckCount}>{view.deckCount}</Text>
-                  </View>
-                </Pulse>
-              </DragSource>
+            <View style={[styles.centerPile, dragging === 'deck' && styles.raised]}>
+              <Pulse on={canDraw}>
+                {/* The stack stays put; only its top tile follows the finger, and the count drops by one. */}
+                {view.deckCount > 1 || dragging !== 'deck' ? <TileBack width={pileW} /> : <View style={{ width: pileW, height: tileHeight(pileW) }} />}
+                {view.deckCount > 0 && (
+                  <DragSource
+                    enabled={canDraw}
+                    instantReturn
+                    style={styles.pileTop}
+                    rackGeom={rackGeom}
+                    hoverSlot={hoverSlot}
+                    onTap={() => draw('deck')}
+                    onDragStart={() => {
+                      setDragging('deck');
+                      zones.measureAll();
+                    }}
+                    onDragEnd={() => setDragging(null)}
+                    onDrop={dropFromPile('deck')}
+                  >
+                    <TileBack width={pileW} />
+                  </DragSource>
+                )}
+                <View style={styles.deckCountBox} pointerEvents="none">
+                  <Text style={styles.deckCount}>{dragging === 'deck' ? view.deckCount - 1 : view.deckCount}</Text>
+                </View>
+              </Pulse>
               <View style={styles.indicatorBox}>
                 <TileView tile={view.indicator} width={Math.round(pileW * 0.62)} />
                 <Text style={styles.okeyText}>{okeyText}</Text>
@@ -352,6 +393,10 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
           {toast ? (
             <Text style={styles.toast} numberOfLines={2}>
               {toast}
+            </Text>
+          ) : info ? (
+            <Text style={styles.info} numberOfLines={2}>
+              {info}
             </Text>
           ) : (
             <Text style={[styles.status, myTurn && { color: colors.accent }]} numberOfLines={1} adjustsFontSizeToFit>
@@ -460,8 +505,25 @@ const styles = StyleSheet.create({
   centerPile: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   indicatorBox: { alignItems: 'center', width: 104 },
   okeyText: { color: colors.text, fontSize: font.small, fontWeight: '700', textAlign: 'center' },
+  pileTop: { position: 'absolute', top: 2, left: 2 },
+  // While a pile tile is held, lift its containers over the table, status bar and rack.
+  raised: { zIndex: 50, elevation: 50 },
+  // The left pile box is wider than a tile and centres it: border 4 + padding 2 + 2 of slack.
+  leftPileTop: { position: 'absolute', top: 2, left: 4 },
+  info: {
+    color: '#0b3d2e',
+    backgroundColor: colors.ok,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+    overflow: 'hidden',
+    fontSize: font.body,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
   pulse: { borderWidth: 4, borderRadius: 10, padding: 2, alignItems: 'center', justifyContent: 'center' },
-  deckCountBox: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
+  // Above the idle top tile (zIndex 1), below a tile being dragged (100).
+  deckCountBox: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', zIndex: 5 },
   deckCount: { color: '#5a4a2a', fontWeight: '900', fontSize: 20 },
   tableArea: { flex: 1, backgroundColor: colors.feltLight, borderRadius: 10 },
   label: { color: colors.text, fontSize: font.small, fontWeight: '600' },
