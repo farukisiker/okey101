@@ -17,7 +17,7 @@ env:
   BUNDLE_ID: com.farukisiker.okey101
   ASC_KEY_ID: 8A9NPVKUG3
   ASC_ISSUER_ID: 824671a4-c87f-4324-b2dd-952f240aac00
-  TESTERS: mfaruk.isiker@gmail.com,evsconnecting@gmail.com
+  TESTERS: mfaruk.isiker@gmail.com,evsconnecting@gmail.com,ismailisiker@gmail.com
 
 jobs:
   build:
