@@ -263,8 +263,17 @@ def cmd_testflight(args):
     # Not team members: external group, which needs Beta App Review for the first build.
     log(f"Dahili eklenemeyenler harici gruba ekleniyor: {', '.join(pending)}")
     external = get_group(app["id"], "Harici Test", False)
-    call("POST", f"/betaGroups/{external['id']}/relationships/builds",
-         {"data": [{"type": "builds", "id": build["id"]}]})
+    # Right after processing the build can still be unknown to beta groups (404) for a few minutes.
+    for attempt in range(20):
+        try:
+            call("POST", f"/betaGroups/{external['id']}/relationships/builds",
+                 {"data": [{"type": "builds", "id": build["id"]}]})
+            break
+        except ApiError as e:
+            if e.status != 404 or attempt == 19:
+                raise
+            log("Build harici gruba henüz eklenemiyor, bekleniyor…")
+            time.sleep(30)
     for email in pending:
         if add_tester(external["id"], email):
             log(f"Harici testte: {email}")
