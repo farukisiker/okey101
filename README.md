@@ -1,6 +1,7 @@
 # Okey 101
 
-iOS ve Android için 4 kişilik çok oyunculu Okey 101. Boş koltuklara bot oturur.
+iOS ve Android için 4 kişilik çok oyunculu okey: **101 Okey** ve **Düz Okey**.
+İsim girildikten sonra oyun seçilir; boş koltuklara bot oturur.
 
 ```
 shared/  Oyun kuralları (saf TypeScript, arayüzden bağımsız) + Vitest testleri
@@ -37,6 +38,8 @@ alanına bilgisayarın yerel IP'sini yaz (ör. `http://192.168.1.20:3001`) ya da
 
 ## Kurallar (uygulanan hali)
 
+### 101 Okey
+
 - 106 taş: 4 renk × 1–13 × 2 set + 2 sahte okey.
 - Gösterge açılır, okey = göstergenin bir üstü (13 ise 1).
 - Başlayan 22, diğerleri 21 taş alır; başlayan taş çekmeden atar.
@@ -54,6 +57,19 @@ alanına bilgisayarın yerel IP'sini yaz (ör. `http://192.168.1.20:3001`) ya da
   (aynı elde açıp bitirmek) puanları ayrı ayrı ikiye katlar.
 - Sırasını süresinde (varsayılan 60 sn) oynamayan oyuncu için otomatik çek-at
   yapılır; bağlantısı kopan oyuncunun yerine bot oynar, geri gelince koltuğunu alır.
+
+### Düz Okey
+
+- Aynı 106 taş, gösterge ve okey. Başlayan 15, diğerleri 14 taş alır; yere per açılmaz.
+- Sıra: ortadan ya da soldan çek, bir taş at. Yerden alınan taş elde tutulabilir.
+- Bitirme: elde 15 taş varken kalan 14 taşın hepsi per/seri ya da 7 çift
+  (aynı renk ve sayı; okey her taşla çift olur) ise 15. taş atılarak bitirilir.
+  Uygulama eli kendisi kontrol eder, "Bitir" düğmesi yanar.
+- Puan: herkes 20 puanla başlar. Biri bitirince diğerleri 2 puan kaybeder;
+  okeyi atarak bitirmek ve çiftle bitirmek bunu ayrı ayrı ikiye katlar.
+  Göstergenin eşini tutan oyuncu dağıtımda otomatik gösterir, diğerleri 1 puan kaybeder.
+- Ortadaki taşlar bitince el berabere biter. Birinin puanı sıfıra inince oyun
+  biter; en çok puanı kalan kazanır, "Yeni Oyun" ile puanlar sıfırlanır.
 
 Kapsam dışı (şimdilik): çift açma, okeyi masadan geri alma, işlenebilir taşı
 atma cezası.

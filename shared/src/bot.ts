@@ -1,4 +1,5 @@
 import { type Action, type PlayerView, OPEN_THRESHOLD, leftOf } from './game';
+import { findFinish, meldCover } from './duz';
 import { analyzeMeld } from './melds';
 import { findBestMelds } from './solver';
 import { type OkeyInfo, type Rng, type Tile, faceOf, isJoker } from './tiles';
@@ -31,6 +32,7 @@ export function botStep(view: PlayerView, opts: BotOptions = {}): Action {
   const me = view.players[view.seat];
   const hand = view.hand;
   const { okey } = view;
+  if (view.mode === 'duz') return duzStep(view, cfg, rng);
 
   if (view.turnPhase === 'draw') {
     const top = view.players[leftOf(view.seat)].discards.at(-1);
@@ -86,7 +88,9 @@ function waitedEnough(view: PlayerView, cfg: { openAfterLaps: number; openByDeck
 
 /** Minimal move for a player who ran out of time: draw from the deck or throw the worst tile. */
 export function quickMove(view: PlayerView): Action {
-  if (view.turnPhase === 'draw') return { type: 'draw', source: 'deck' };
+  if (view.turnPhase === 'draw') return { type: 'draw', source: view.deckCount > 0 ? 'deck' : 'discard' };
+  const finish = view.mode === 'duz' ? findFinish(view.hand, view.okey) : null;
+  if (finish) return { type: 'finish', tileId: finish.tileId };
   const best = findBestMelds(view.hand, view.okey, { maxTiles: view.hand.length - 1 });
   return { type: 'discard', tileId: chooseDiscard(view.hand, view.okey, best.melds, view.mustUseTileId) };
 }
@@ -139,4 +143,61 @@ function chooseDiscard(
   // A slip throws the runner-up instead, but never the okey.
   if (slip && pool.length > 1 && !isJoker(pool[1], okey)) return pool[1].id;
   return pool[0].id;
+}
+
+// ---- Düz okey ----
+
+/**
+ * Düz okey bot: finishes whenever the hand allows, takes a discard that makes
+ * the hand better (a medium bot not always), and throws the tile whose loss
+ * hurts the hand least.
+ */
+function duzStep(view: PlayerView, cfg: (typeof LEVELS)['medium'], rng: Rng): Action {
+  const { hand, okey } = view;
+  if (view.turnPhase === 'draw') {
+    const top = view.players[leftOf(view.seat)].discards.at(-1);
+    if (top && view.deckCount === 0) return { type: 'draw', source: 'discard' };
+    if (top) {
+      const withTop = [...hand, top];
+      const finishes = findFinish(withTop, okey) !== null;
+      const better = () => {
+        const keep = withTop.filter((t) => t.id !== duzDiscard(withTop, okey, cfg.nodeLimit));
+        return duzValue(keep, okey, cfg.nodeLimit) > duzValue(hand, okey, cfg.nodeLimit);
+      };
+      if (finishes || (rng() < cfg.takeDiscard && better())) return { type: 'draw', source: 'discard' };
+    }
+    return { type: 'draw', source: 'deck' };
+  }
+  const finish = findFinish(hand, okey);
+  if (finish) return { type: 'finish', tileId: finish.tileId };
+  return { type: 'discard', tileId: duzDiscard(hand, okey, cfg.nodeLimit, rng() < cfg.slip) };
+}
+
+/** How close 14 tiles are to finishing: tiles in melds (or pairs, with five or more), then near-misses. */
+function duzValue(tiles: Tile[], okey: OkeyInfo, nodeLimit: number): number {
+  const cover = meldCover(tiles, okey, nodeLimit * 20);
+  const faces = new Map<string, number>();
+  for (const t of tiles) {
+    const f = faceOf(t, okey);
+    if (f) faces.set(f.color + f.value, (faces.get(f.color + f.value) ?? 0) + 1);
+  }
+  const pairs = [...faces.values()].reduce((s, n) => s + Math.floor(n / 2), 0);
+  const shape = Math.max(cover, pairs >= 5 ? pairs * 2 : 0);
+  const near = tiles.reduce((s, t) => s + usefulness(t, tiles, okey), 0);
+  return shape * 10 + near / 4;
+}
+
+function duzDiscard(hand: Tile[], okey: OkeyInfo, nodeLimit: number, slip = false): number {
+  const seen = new Set<string>();
+  const options: { id: number; value: number }[] = [];
+  for (const t of hand) {
+    if (isJoker(t, okey)) continue;
+    const f = faceOf(t, okey)!;
+    if (seen.has(f.color + f.value)) continue;
+    seen.add(f.color + f.value);
+    options.push({ id: t.id, value: duzValue(hand.filter((x) => x.id !== t.id), okey, nodeLimit) });
+  }
+  if (options.length === 0) return hand[0].id;
+  options.sort((a, b) => b.value - a.value);
+  return (slip && options.length > 1 ? options[1] : options[0]).id;
 }

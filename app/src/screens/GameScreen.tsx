@@ -7,7 +7,18 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { type Action, type PlayerView, type RoomInfo, type Tile, OPEN_THRESHOLD, addableTiles, leftOf } from '@okey/shared';
+import {
+  type Action,
+  type PlayerView,
+  type RoomInfo,
+  type Tile,
+  DUZ_START_POINTS,
+  OPEN_THRESHOLD,
+  addableTiles,
+  findFinish,
+  finishShape,
+  leftOf,
+} from '@okey/shared';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DragSource } from '../components/DragSource';
@@ -89,6 +100,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   const pendingSlot = useRef<number | null>(null);
 
   const me = view.players[view.seat];
+  const duz = view.mode === 'duz';
   const myTurn = view.phase === 'playing' && view.turn === view.seat;
   const canDraw = myTurn && view.turnPhase === 'draw';
   const canPlay = myTurn && view.turnPhase === 'play';
@@ -149,6 +161,20 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
     else play('turn');
   }, [view.phase, view.result, view.seat]);
 
+  // Düz okey: whoever holds the indicator's twin shows it at the deal.
+  const gosterge = view.gosterge;
+  const announcedRound = useRef<number | null>(null);
+  useEffect(() => {
+    if (gosterge === null || announcedRound.current === room.round) return;
+    announcedRound.current = room.round;
+    const who = gosterge === view.seat ? 'Sen' : view.players[gosterge].name;
+    setInfo(`${who} göstergeyi gösterdi: ${gosterge === view.seat ? 'diğerleri' : 'herkes'} 1 puan kaybeder`);
+    const t = setTimeout(() => setInfo(null), 4000);
+    return () => clearTimeout(t);
+    // Once per deal; names and seat don't change within a round.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gosterge, room.round]);
+
   // Middle ran out and the discards were shuffled back in: say so, the game goes on.
   const seenReshuffles = useRef(view.reshuffles);
   useEffect(() => {
@@ -164,7 +190,21 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
 
   const groups = useMemo(() => validGroups(slots, view.hand, view.okey), [slots, view.hand, view.okey]);
   const groupPoints = groups.reduce((s, g) => s + g.points, 0);
-  const canOpen = canPlay && !me.opened && groupPoints >= OPEN_THRESHOLD;
+  const canOpen = canPlay && !duz && !me.opened && groupPoints >= OPEN_THRESHOLD;
+
+  // Düz okey: the hand is checked for the player, whatever the rack order. The
+  // selected tile is thrown if the rest finishes; otherwise the best tile is.
+  const finish = useMemo(() => {
+    if (!duz || !canPlay) return null;
+    if (selected !== null && finishShape(view.hand.filter((t) => t.id !== selected), view.okey)) return selected;
+    return findFinish(view.hand, view.okey)?.tileId ?? null;
+  }, [duz, canPlay, selected, view.hand, view.okey]);
+  const canFinish = finish !== null;
+  const reachedFinish = useRef(false);
+  useEffect(() => {
+    if (canFinish && !reachedFinish.current) buzz('success');
+    reachedFinish.current = canFinish;
+  }, [canFinish]);
 
   // "İşlek" tiles: hand tiles that fit a meld on the table. Marked on the rack;
   // selecting one lights up the melds it fits.
@@ -254,8 +294,9 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   const discardRef = useRef<HostInstance>(null);
   useEffect(() => zones.register('discard', discardRef), [zones]);
 
-  const totals = room.totals;
-  const status = statusText(view, myTurn, addable.size > 0);
+  // Düz okey shows what each player has left of their starting points.
+  const totals = duz ? room.totals.map((t) => DUZ_START_POINTS - t) : room.totals;
+  const status = statusText(view, myTurn, addable.size > 0, canFinish);
   const okeyName = `${colorNames[view.okey.color]} ${view.okey.value}`;
   const openTitle = me.opened ? 'Per İndir' : `Aç ${groupPoints}/${OPEN_THRESHOLD}`;
   const openSub = me.opened
@@ -380,6 +421,16 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
         </View>
 
         <View style={{ flex: 1, height: L.zoneH, marginHorizontal: 6 }}>
+          {duz ? (
+            <View style={styles.duzCenter}>
+              <Text style={styles.duzTitle}>Düz Okey</Text>
+              <Text style={styles.duzHint}>
+                14 taşın hepsi per (ya da 7 çift) olunca{'\n'}
+                <Text style={{ color: colors.accent }}>Bitir</Text>'e bas, 15. taş atılır
+              </Text>
+              <Text style={styles.duzScore}>Puanın: {totals[view.seat]}</Text>
+            </View>
+          ) : (
           <TableMelds
             table={view.table}
             players={view.players}
@@ -392,6 +443,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
             onMeldPress={onMeldPress}
             onZoom={() => view.table.length > 0 && setZoomed(true)}
           />
+          )}
         </View>
 
         <Pressable
@@ -439,14 +491,25 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
           disabled={!canPlay || selected === null}
           style={fixed(L.atW, L.actH)}
         />
-        <Button
-          title={openTitle}
-          subtitle={openSub}
-          variant={canOpen ? 'success' : 'primary'}
-          onPress={openOrLay}
-          disabled={!canPlay || groups.length === 0 || (!me.opened && groupPoints < OPEN_THRESHOLD)}
-          style={fixed(L.acW, L.actH)}
-        />
+        {duz ? (
+          <Button
+            title="Bitir"
+            subtitle={canFinish ? 'Bitirebilirsin!' : 'Henüz bitmedi'}
+            variant={canFinish ? 'success' : 'primary'}
+            onPress={() => finish !== null && void send({ type: 'finish', tileId: finish })}
+            disabled={!canFinish}
+            style={fixed(L.acW, L.actH)}
+          />
+        ) : (
+          <Button
+            title={openTitle}
+            subtitle={openSub}
+            variant={canOpen ? 'success' : 'primary'}
+            onPress={openOrLay}
+            disabled={!canPlay || groups.length === 0 || (!me.opened && groupPoints < OPEN_THRESHOLD)}
+            style={fixed(L.acW, L.actH)}
+          />
+        )}
       </View>
 
       {/* 4 · The rack: wood from edge to edge, down under the home indicator. */}
@@ -535,11 +598,12 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
 }
 
 /** Short, plain instructions; while others play, say what they just did. */
-function statusText(view: PlayerView, myTurn: boolean, hasAddable: boolean): string {
+function statusText(view: PlayerView, myTurn: boolean, hasAddable: boolean, canFinish: boolean): string {
   if (view.phase === 'finished') return 'El bitti';
   if (myTurn) {
     if (view.turnPhase === 'draw') return 'SIRA SENDE — TAŞ ÇEK';
     if (view.mustUseTileId !== null) return 'Yerden aldığın taşı kullan';
+    if (canFinish) return 'ELİN BİTTİ — BİTİR\'E BAS';
     if (hasAddable && view.players[view.seat].opened) return '"+" işaretli taşı pere ekleyebilirsin';
     return 'SIRA SENDE — BİR TAŞ AT';
   }
@@ -561,6 +625,8 @@ function lastActionText(view: PlayerView): string | null {
       return a.source === 'discard' ? `${name} yerden aldı` : `${name} ortadan çekti`;
     case 'discard':
       return `${name} ${tileName(a.tile)} attı`;
+    case 'finish':
+      return `${name} bitirdi`;
   }
 }
 
@@ -610,6 +676,18 @@ const styles = StyleSheet.create({
   // Above the idle top tile (zIndex 1), below a tile being dragged (100).
   deckCountBox: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', zIndex: 5 },
   deckCount: { color: '#5a4a2a', fontWeight: '900' },
+  duzCenter: {
+    flex: 1,
+    borderRadius: 12,
+    backgroundColor: colors.feltLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+    gap: 4,
+  },
+  duzTitle: { color: colors.accent, fontSize: font.status, fontWeight: '900' },
+  duzHint: { color: colors.text, fontSize: font.body, textAlign: 'center', lineHeight: 24 },
+  duzScore: { color: colors.text, fontSize: font.body, fontWeight: '800' },
   statusBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   status: { color: colors.text, fontSize: font.status, fontWeight: '800', textAlign: 'center' },
   toast: {

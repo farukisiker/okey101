@@ -69,6 +69,18 @@ describe('socket server', () => {
     b.close();
   });
 
+  it('quick play düz okey: the room and the deal follow the chosen game', async () => {
+    const c = client();
+    const first = waitFor<PlayerView>(c, 'game:view', () => true);
+    const room = waitFor<RoomInfo>(c, 'room:state', (r) => r.started);
+    expect(await c.emitWithAck('room:quickPlay', { name: 'Ali', mode: 'duz' })).toMatchObject({ ok: true });
+    expect((await room).mode).toBe('duz');
+    const view = await first;
+    expect(view.mode).toBe('duz');
+    expect(view.players.map((p) => p.handCount)).toEqual([15, 14, 14, 14]);
+    c.close();
+  });
+
   it('rejects unknown rooms', async () => {
     const c = client();
     expect(await c.emitWithAck('room:join', { roomId: 'NOPE1', name: 'X' })).toMatchObject({ ok: false });

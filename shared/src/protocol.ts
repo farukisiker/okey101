@@ -1,4 +1,4 @@
-import type { Action, PlayerView } from './game';
+import type { Action, GameMode, PlayerView } from './game';
 
 export interface SeatInfo {
   seat: number;
@@ -9,21 +9,22 @@ export interface SeatInfo {
 
 export interface RoomInfo {
   id: string;
+  mode: GameMode;
   seats: (SeatInfo | null)[];
   hostSeat: number;
   started: boolean;
   round: number;
-  /** Cumulative scores across rounds. */
+  /** Cumulative scores across rounds (düz okey: points lost this game). */
   totals: number[];
 }
 
 export type Ack<T = object> = (res: ({ ok: true } & T) | { ok: false; error: string }) => void;
 
 export interface ClientToServerEvents {
-  'room:create': (p: { name: string }, ack: Ack<{ roomId: string; seat: number }>) => void;
+  'room:create': (p: { name: string; mode?: GameMode }, ack: Ack<{ roomId: string; seat: number }>) => void;
   'room:join': (p: { roomId: string; name: string }, ack: Ack<{ roomId: string; seat: number }>) => void;
   /** Creates a room, fills empty seats with bots and starts immediately. */
-  'room:quickPlay': (p: { name: string }, ack: Ack<{ roomId: string; seat: number }>) => void;
+  'room:quickPlay': (p: { name: string; mode?: GameMode }, ack: Ack<{ roomId: string; seat: number }>) => void;
   /** Host only: fill empty seats with bots and start. */
   'room:start': (ack: Ack) => void;
   'room:nextRound': (ack: Ack) => void;

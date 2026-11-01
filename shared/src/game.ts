@@ -1,3 +1,4 @@
+import { type FinishShape, finishShape } from './duz';
 import { type MeldAnalysis, type MeldType, analyzeMeld } from './melds';
 import {
   type NormalTile,
@@ -19,6 +20,19 @@ export const FINISH_BONUS = -101;
 export const UNUSED_DISCARD_PENALTY = 101;
 /** How many times the discards may be reshuffled into a new middle stack. */
 export const DEFAULT_RESHUFFLES = 3;
+
+/**
+ * '101': open with 101 in melds on the table, lowest total wins.
+ * 'duz' (düz okey): 15/14 tiles, no table; finish by throwing the 15th tile
+ * with the other 14 all in melds (or seven pairs). Everyone starts with
+ * DUZ_START_POINTS and loses points each round; the game ends at zero.
+ */
+export type GameMode = '101' | 'duz';
+export const DUZ_START_POINTS = 20;
+/** Points every other player loses when someone finishes (doubled by okey, by pairs). */
+export const DUZ_FINISH_LOSS = 2;
+/** Points every other player loses when someone holds the indicator's twin. */
+export const DUZ_GOSTERGE_LOSS = 1;
 
 export interface PlayerState {
   seat: number;
@@ -47,8 +61,10 @@ export interface RoundResult {
   winner: number | null;
   okeyFinish: boolean;
   elden: boolean;
+  /** Düz okey: finished with seven pairs. */
+  pairs: boolean;
   multiplier: number;
-  /** Points per seat for this round (lower is better). */
+  /** Points per seat for this round (lower is better; in düz okey, points lost). */
   scores: number[];
 }
 
@@ -57,9 +73,11 @@ export type LastAction =
   | { seat: number; type: 'discard'; tile: Tile }
   | { seat: number; type: 'open'; meldIds: number[]; points: number }
   | { seat: number; type: 'meld'; meldId: number }
-  | { seat: number; type: 'addToMeld'; meldId: number; tileIds: number[] };
+  | { seat: number; type: 'addToMeld'; meldId: number; tileIds: number[] }
+  | { seat: number; type: 'finish'; tile: Tile; shape: FinishShape };
 
 export interface GameState {
+  mode: GameMode;
   phase: 'playing' | 'finished';
   indicator: NormalTile;
   okey: OkeyInfo;
@@ -81,6 +99,8 @@ export interface GameState {
   reshuffles: number;
   /** Seed for reshuffling, so the reducer stays pure and replayable. */
   seed: number;
+  /** Düz okey: seat holding the indicator's twin, shown automatically at the deal. */
+  gosterge: number | null;
 }
 
 export type Action =
@@ -88,11 +108,14 @@ export type Action =
   | { type: 'open'; melds: number[][] }
   | { type: 'meld'; tileIds: number[] }
   | { type: 'addToMeld'; meldId: number; tileIds: number[] }
-  | { type: 'discard'; tileId: number };
+  | { type: 'discard'; tileId: number }
+  /** Düz okey: throw this tile and finish with the 14 left in hand. */
+  | { type: 'finish'; tileId: number };
 
 export type ActionResult = { ok: true; state: GameState } | { ok: false; error: string };
 
 export interface NewGameOptions {
+  mode?: GameMode;
   names?: string[];
   startingSeat?: number;
   rng?: Rng;
@@ -108,6 +131,8 @@ export const nextSeat = (seat: number) => (seat + 1) % SEATS;
 
 export function createGame(opts: NewGameOptions = {}): GameState {
   const rng = opts.rng ?? Math.random;
+  const mode = opts.mode ?? '101';
+  const [first, rest] = mode === 'duz' ? [15, 14] : [22, 21];
   const startingSeat = opts.startingSeat ?? 0;
   const deck = shuffle(createTileSet(), rng);
 
@@ -120,7 +145,7 @@ export function createGame(opts: NewGameOptions = {}): GameState {
     players[seat] = {
       seat,
       name: opts.names?.[seat] ?? `Oyuncu ${seat + 1}`,
-      hand: deck.splice(0, i === 0 ? 22 : 21),
+      hand: deck.splice(0, i === 0 ? first : rest),
       discards: [],
       opened: false,
       openedOnTurn: null,
@@ -128,7 +153,12 @@ export function createGame(opts: NewGameOptions = {}): GameState {
     };
   }
 
+  const twin = players.find((p) =>
+    p.hand.some((t) => t.kind === 'normal' && t.color === indicator.color && t.value === indicator.value),
+  );
+
   return {
+    mode,
     phase: 'playing',
     indicator,
     okey: okeyFromIndicator(indicator),
@@ -137,15 +167,17 @@ export function createGame(opts: NewGameOptions = {}): GameState {
     table: [],
     startingSeat,
     turn: startingSeat,
-    turnPhase: 'play', // starting player holds 22 tiles and only discards
+    turnPhase: 'play', // the starting player holds one extra tile and only discards
     turnNumber: 0,
     mustUseTileId: null,
     nextMeldId: 1,
     lastAction: null,
     result: null,
-    reshufflesLeft: opts.reshuffles ?? DEFAULT_RESHUFFLES,
+    // Düz okey ends the round when the middle runs out.
+    reshufflesLeft: mode === 'duz' ? 0 : (opts.reshuffles ?? DEFAULT_RESHUFFLES),
     reshuffles: 0,
     seed: Math.floor(rng() * 2 ** 31),
+    gosterge: mode === 'duz' ? (twin?.seat ?? null) : null,
   };
 }
 
@@ -169,7 +201,8 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
       } else {
         tile = state.players[leftOf(seat)].discards.pop();
         if (!tile) return fail('Solunuzda atılmış taş yok');
-        state.mustUseTileId = tile.id;
+        // In 101 a picked-up discard must be played; düz okey has no table to play it on.
+        if (state.mode === '101') state.mustUseTileId = tile.id;
       }
       player.hand.push(tile);
       state.turnPhase = 'play';
@@ -181,6 +214,7 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
     }
 
     case 'open': {
+      if (state.mode === 'duz') return fail('Düz okeyde yere per açılmaz');
       if (state.turnPhase !== 'play') return fail('Önce taş çekmelisiniz');
       if (player.opened) return fail('Zaten açtınız');
       if (action.melds.length === 0) return fail('Per seçilmedi');
@@ -206,6 +240,7 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
     }
 
     case 'meld': {
+      if (state.mode === 'duz') return fail('Düz okeyde yere per açılmaz');
       if (state.turnPhase !== 'play') return fail('Önce taş çekmelisiniz');
       if (!player.opened) return fail('Önce elinizi açmalısınız');
       const groups = takeGroups(player.hand, [action.tileIds]);
@@ -222,6 +257,7 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
     }
 
     case 'addToMeld': {
+      if (state.mode === 'duz') return fail('Düz okeyde yere per açılmaz');
       if (state.turnPhase !== 'play') return fail('Önce taş çekmelisiniz');
       if (!player.opened) return fail('İşlemek için önce açmalısınız');
       const meld = state.table.find((m) => m.id === action.meldId);
@@ -241,6 +277,20 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
         represents: a.represents,
       });
       state.lastAction = { seat, type: 'addToMeld', meldId: meld.id, tileIds: action.tileIds };
+      return { ok: true, state };
+    }
+
+    case 'finish': {
+      if (state.mode !== 'duz') return fail('101 okeyde son taşı atarak bitirilir');
+      if (state.turnPhase !== 'play') return fail('Önce taş çekmelisiniz');
+      const tile = player.hand.find((t) => t.id === action.tileId);
+      if (!tile) return fail('Taş elinizde değil');
+      const rest = player.hand.filter((t) => t.id !== tile.id);
+      const shape = finishShape(rest, state.okey);
+      if (!shape) return fail('Eliniz bitmiyor: kalan 14 taşın hepsi per ya da çift olmalı');
+      player.hand = rest;
+      state.lastAction = { seat, type: 'finish', tile, shape };
+      finishRound(state, seat, isJoker(tile, state.okey), shape === 'pairs');
       return { ok: true, state };
     }
 
@@ -337,7 +387,8 @@ function addTableMeld(state: GameState, owner: number, tiles: Tile[], a: MeldAna
  * Finishing with the okey and finishing "elden" (opening and finishing in the
  * same turn) each double the round. Unused discard pickups add 101.
  */
-export function scoreRound(state: GameState, winner: number | null, okeyFinish: boolean): RoundResult {
+export function scoreRound(state: GameState, winner: number | null, okeyFinish: boolean, pairs = false): RoundResult {
+  if (state.mode === 'duz') return scoreDuz(state, winner, okeyFinish, pairs);
   const w = winner === null ? null : state.players[winner];
   const elden = !!w && w.openedOnTurn === state.turnNumber;
   const multiplier = winner === null ? 1 : (okeyFinish ? 2 : 1) * (elden ? 2 : 1);
@@ -348,12 +399,32 @@ export function scoreRound(state: GameState, winner: number | null, okeyFinish: 
     else s = p.hand.reduce((sum, t) => sum + penaltyValue(t, state.okey), 0) * multiplier;
     return s + p.penalties;
   });
-  return { winner, okeyFinish, elden, multiplier, scores };
+  return { winner, okeyFinish, elden, pairs: false, multiplier, scores };
 }
 
-function finishRound(state: GameState, winner: number | null, okeyFinish: boolean) {
+/**
+ * Düz okey (points lost, lower is better): when someone finishes, everyone
+ * else loses 2; finishing by throwing the okey and finishing with seven pairs
+ * each double it. The indicator's twin costs everyone else 1, even in a drawn round.
+ */
+function scoreDuz(state: GameState, winner: number | null, okeyFinish: boolean, pairs: boolean): RoundResult {
+  const multiplier = winner === null ? 1 : (okeyFinish ? 2 : 1) * (pairs ? 2 : 1);
+  const scores = state.players.map((p) => {
+    let s = winner !== null && p.seat !== winner ? DUZ_FINISH_LOSS * multiplier : 0;
+    if (state.gosterge !== null && p.seat !== state.gosterge) s += DUZ_GOSTERGE_LOSS;
+    return s;
+  });
+  return { winner, okeyFinish, elden: false, pairs, multiplier, scores };
+}
+
+/** Düz okey game over: someone has lost all their starting points. */
+export function matchOver(mode: GameMode, totals: number[]): boolean {
+  return mode === 'duz' && totals.some((t) => t >= DUZ_START_POINTS);
+}
+
+function finishRound(state: GameState, winner: number | null, okeyFinish: boolean, pairs = false) {
   state.phase = 'finished';
-  state.result = scoreRound(state, winner, okeyFinish);
+  state.result = scoreRound(state, winner, okeyFinish, pairs);
 }
 
 export function tileText(t: Tile): string {
@@ -372,6 +443,7 @@ export interface PublicPlayer {
 }
 
 export interface PlayerView {
+  mode: GameMode;
   seat: number;
   phase: GameState['phase'];
   indicator: NormalTile;
@@ -390,10 +462,13 @@ export interface PlayerView {
   result: RoundResult | null;
   /** All hands are revealed once the round is over. */
   revealedHands: Tile[][] | null;
+  /** Düz okey: who showed the indicator's twin this round. */
+  gosterge: number | null;
 }
 
 export function viewFor(state: GameState, seat: number): PlayerView {
   return {
+    mode: state.mode,
     seat,
     phase: state.phase,
     indicator: state.indicator,
@@ -417,5 +492,6 @@ export function viewFor(state: GameState, seat: number): PlayerView {
     lastAction: state.lastAction,
     result: state.result,
     revealedHands: state.phase === 'finished' ? state.players.map((p) => p.hand) : null,
+    gosterge: state.gosterge,
   };
 }

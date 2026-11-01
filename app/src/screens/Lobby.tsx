@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { GameMode } from '@okey/shared';
 import { Button } from '../components/Button';
 import { loadName, saveName } from '../feedback';
 import type { OkeyClient } from '../net/useOkey';
@@ -14,8 +15,9 @@ interface Props {
 type Result = { ok: true } | { ok: false; error: string };
 
 /**
- * One big "OYNA" button. The name is asked once and remembered; playing with
- * friends (which needs a server) is tucked behind a second button.
+ * After the name (asked once and remembered) the player picks the game: two
+ * big buttons, 101 or düz okey, each starts a table with bots right away.
+ * Playing with friends (which needs a server) is tucked behind a third button.
  */
 export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
   const [name, setName] = useState<string | null>(null);
@@ -23,6 +25,8 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
   const [draft, setDraft] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [friends, setFriends] = useState(false);
+  /** Game for a new friends' room; set by the last game button pressed. */
+  const [mode, setMode] = useState<GameMode>('101');
   const [code, setCode] = useState('');
   const [url, setUrl] = useState(serverUrl);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +99,22 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
           ) : null}
           <View style={styles.friendsRow}>
             <View style={styles.col}>
-              <Button title="Yeni Oda Kur" onPress={() => run(() => client.createRoom(name))} disabled={busy || offline} />
+              <View style={styles.modeRow}>
+                {(['101', 'duz'] as const).map((m) => (
+                  <Button
+                    key={m}
+                    title={m === '101' ? '101 Okey' : 'Düz Okey'}
+                    variant={mode === m ? 'primary' : 'secondary'}
+                    onPress={() => setMode(m)}
+                    style={{ minWidth: 150, paddingHorizontal: 8 }}
+                  />
+                ))}
+              </View>
+              <Button
+                title="Yeni Oda Kur"
+                onPress={() => run(() => client.createRoom(name, mode))}
+                disabled={busy || offline}
+              />
             </View>
             <View style={[styles.col, styles.joinRow]}>
               <TextInput
@@ -133,14 +152,36 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
 
   return (
     <View style={styles.root}>
-      <Text style={styles.title}>Okey 101</Text>
+      <Text style={styles.title}>Okey</Text>
       <Pressable onPress={() => setEditingName(true)} hitSlop={12}>
         <Text style={styles.welcome}>
           Hoş geldin, <Text style={{ color: colors.accent }}>{name}</Text>
           <Text style={styles.change}>   (değiştir)</Text>
         </Text>
       </Pressable>
-      <Button title="OYNA" size="large" onPress={() => run(() => client.quickPlay(name))} disabled={busy} />
+      <Text style={styles.question}>Hangi oyunu oynayalım?</Text>
+      <View style={styles.games}>
+        <Button
+          title="101 OKEY"
+          subtitle="101 sayıyla aç, yere per indir"
+          size="large"
+          onPress={() => {
+            setMode('101');
+            void run(() => client.quickPlay(name, '101'));
+          }}
+          disabled={busy}
+        />
+        <Button
+          title="DÜZ OKEY"
+          subtitle="14 taşı diz, 15.'yi atıp bitir"
+          size="large"
+          onPress={() => {
+            setMode('duz');
+            void run(() => client.quickPlay(name, 'duz'));
+          }}
+          disabled={busy}
+        />
+      </View>
       <Button title="Arkadaşlarla Oyna" variant="secondary" onPress={() => setFriends(true)} />
       {error && <Text style={styles.warn}>{error}</Text>}
     </View>
@@ -148,7 +189,9 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
 }
 
 const styles = StyleSheet.create({
-  root: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 16, gap: 16 },
+  root: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 16, gap: 14 },
+  games: { flexDirection: 'row', gap: 24 },
+  modeRow: { flexDirection: 'row', gap: 8 },
   title: { color: colors.accent, fontSize: 40, fontWeight: '900' },
   heading: { color: colors.accent, fontSize: font.title, fontWeight: '900' },
   welcome: { color: colors.text, fontSize: 24, fontWeight: '700' },

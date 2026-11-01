@@ -1,5 +1,5 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { NOT_OPENED_PENALTY, type PlayerView, type RoomInfo } from '@okey/shared';
+import { DUZ_START_POINTS, NOT_OPENED_PENALTY, type PlayerView, type RoomInfo, matchOver } from '@okey/shared';
 import { colors, font } from '../theme';
 import { Button } from './Button';
 
@@ -12,14 +12,23 @@ interface Props {
 
 export function RoundResult({ view, room, onNext, onLeave }: Props) {
   const r = view.result!;
+  const duz = view.mode === 'duz';
+  const nameOf = (seat: number) => (seat === view.seat ? 'Sen' : view.players[seat].name);
   const iWon = r.winner === view.seat;
-  const winner = r.winner === null ? null : r.winner === view.seat ? 'Sen' : view.players[r.winner].name;
+  const winner = r.winner === null ? null : nameOf(r.winner);
   const title = iWon ? 'Tebrikler, sen bitirdin!' : winner ? `${winner} bitirdi` : 'Taşlar bitti, el berabere';
-  const notes = [r.okeyFinish && 'okeyle bitti', r.elden && 'elden bitti'].filter(Boolean).join(', ');
+  const notes = [r.okeyFinish && 'okeyle bitti', r.pairs && 'çiftle bitti', r.elden && 'elden bitti']
+    .filter(Boolean)
+    .join(', ');
+  // Düz okey counts down from 20; whoever has the most left when someone hits zero wins the game.
+  const over = matchOver(view.mode, room.totals);
+  const left = room.totals.map((t) => DUZ_START_POINTS - t);
+  const champion = left.indexOf(Math.max(...left));
 
   const explain = (seat: number) => {
     const p = view.players[seat];
     if (seat === r.winner) return 'bitirdi';
+    if (duz) return seat === view.gosterge ? 'gösterge' : '';
     if (!p.opened) return `açamadı: ${NOT_OPENED_PENALTY * r.multiplier} ceza`;
     return 'elinde kalanlar';
   };
@@ -29,12 +38,17 @@ export function RoundResult({ view, room, onNext, onLeave }: Props) {
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.card}>
           <Text style={styles.title}>{title}</Text>
+          {over && (
+            <Text style={styles.over}>
+              Oyun bitti! {champion === view.seat ? 'Kazanan sensin' : `Kazanan: ${nameOf(champion)}`}
+            </Text>
+          )}
           {notes ? <Text style={styles.note}>{notes} — puanlar {r.multiplier} katı</Text> : null}
           <View style={styles.table}>
             <View style={styles.row}>
               <Text style={[styles.cell, styles.head, { flex: 2.4 }]}>Oyuncu</Text>
               <Text style={[styles.cell, styles.head]}>Bu el</Text>
-              <Text style={[styles.cell, styles.head]}>Toplam</Text>
+              <Text style={[styles.cell, styles.head]}>{duz ? 'Kalan puan' : 'Toplam'}</Text>
             </View>
             {view.players.map((p) => {
               const me = p.seat === view.seat;
@@ -44,15 +58,17 @@ export function RoundResult({ view, room, onNext, onLeave }: Props) {
                     <Text style={me ? { color: colors.accent } : undefined}>{me ? 'Sen' : p.name}</Text>
                     <Text style={styles.why}>{`  ${explain(p.seat)}`}</Text>
                   </Text>
-                  <Text style={styles.cell}>{r.scores[p.seat]}</Text>
-                  <Text style={styles.cell}>{room.totals[p.seat]}</Text>
+                  <Text style={styles.cell}>{duz ? (r.scores[p.seat] ? `−${r.scores[p.seat]}` : '0') : r.scores[p.seat]}</Text>
+                  <Text style={styles.cell}>{duz ? left[p.seat] : room.totals[p.seat]}</Text>
                 </View>
               );
             })}
           </View>
-          <Text style={styles.note}>Düşük puan iyidir.</Text>
+          <Text style={styles.note}>
+            {duz ? `Herkes ${DUZ_START_POINTS} puanla başlar; puanı ilk biten oyunu bitirir.` : 'Düşük puan iyidir.'}
+          </Text>
           <View style={styles.buttons}>
-            <Button title="Sonraki El" onPress={onNext} style={{ minWidth: 240, minHeight: 64 }} />
+            <Button title={over ? 'Yeni Oyun' : 'Sonraki El'} onPress={onNext} style={{ minWidth: 240, minHeight: 64 }} />
             <Button title="Masadan kalk" variant="secondary" onPress={onLeave} />
           </View>
         </View>
@@ -72,6 +88,7 @@ const styles = StyleSheet.create({
   buttons: { flexDirection: 'row', gap: 20, alignItems: 'center', marginTop: 4 },
   title: { color: colors.accent, fontSize: 26, fontWeight: '900', textAlign: 'center' },
   note: { color: colors.muted, fontSize: font.small },
+  over: { color: colors.text, fontSize: 22, fontWeight: '900', textAlign: 'center' },
   table: { alignSelf: 'stretch' },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 3, paddingHorizontal: 8, borderRadius: 8 },
   winnerRow: { backgroundColor: 'rgba(95,208,125,0.25)' },

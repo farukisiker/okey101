@@ -62,4 +62,18 @@ describe('room', () => {
     expect(room.nextRound()).toBeNull();
     expect(room.game!.startingSeat).toBe(1);
   });
+
+  it('plays düz okey: 15/14 tiles, points lost; a new game once someone is out of points', () => {
+    const room = new Room('R6', () => {}, { mode: 'duz', botDelayMs: 1, turnTimeoutMs: 1, rng: seededRng(8) });
+    room.join('Ali', 's1');
+    room.start();
+    expect(room.info().mode).toBe('duz');
+    expect(room.game!.players.map((p) => p.hand.length)).toEqual([15, 14, 14, 14]);
+    vi.advanceTimersByTime(100_000);
+    expect(room.game!.phase).toBe('finished');
+    expect(room.totals).toEqual(room.game!.result!.scores);
+    room.totals = [3, 20, 0, 6];
+    expect(room.nextRound()).toBeNull();
+    expect(room.totals).toEqual([0, 0, 0, 0]);
+  });
 });

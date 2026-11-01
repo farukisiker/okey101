@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
-import type { Action, ClientToServerEvents, PlayerView, RoomInfo, ServerToClientEvents } from '@okey/shared';
+import type { Action, ClientToServerEvents, GameMode, PlayerView, RoomInfo, ServerToClientEvents } from '@okey/shared';
 
 type OkeySocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -50,13 +50,18 @@ export function useOkey(serverUrl: string) {
   }, [serverUrl]);
 
   const enter = useCallback(
-    async (kind: 'room:create' | 'room:quickPlay' | 'room:join', name: string, roomId = ''): Promise<Result> => {
+    async (
+      kind: 'room:create' | 'room:quickPlay' | 'room:join',
+      name: string,
+      roomId = '',
+      mode: GameMode = '101',
+    ): Promise<Result> => {
       const socket = socketRef.current;
       if (!socket?.connected) return { ok: false, error: 'Sunucuya bağlanılamadı' };
       const res =
         kind === 'room:join'
           ? await socket.timeout(5000).emitWithAck('room:join', { roomId, name })
-          : await socket.timeout(5000).emitWithAck(kind, { name });
+          : await socket.timeout(5000).emitWithAck(kind, { name, mode });
       if (!res.ok) return res;
       const s = { roomId: res.roomId, seat: res.seat, name };
       sessionRef.current = s;
@@ -81,8 +86,8 @@ export function useOkey(serverUrl: string) {
     session,
     room,
     view,
-    quickPlay: (name: string) => enter('room:quickPlay', name),
-    createRoom: (name: string) => enter('room:create', name),
+    quickPlay: (name: string, mode: GameMode = '101') => enter('room:quickPlay', name, '', mode),
+    createRoom: (name: string, mode: GameMode = '101') => enter('room:create', name, '', mode),
     joinRoom: (name: string, roomId: string) => enter('room:join', name, roomId),
     start: () => call((s) => s.timeout(5000).emitWithAck('room:start')),
     nextRound: () => call((s) => s.timeout(5000).emitWithAck('room:nextRound')),

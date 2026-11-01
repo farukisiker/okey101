@@ -1,11 +1,13 @@
 import {
   type Action,
+  type GameMode,
   type GameState,
   type RoomInfo,
   type Rng,
   SEATS,
   applyAction,
   createGame,
+  matchOver,
   pickBotNames,
   viewFor,
 } from '@okey/shared';
@@ -19,6 +21,7 @@ export interface Seat {
 }
 
 export interface RoomOptions {
+  mode?: GameMode;
   botDelayMs?: number;
   /** A human who doesn't move in time gets a bot move instead. 0 disables. */
   turnTimeoutMs?: number;
@@ -38,6 +41,7 @@ export class Room {
   private readonly botDelayMs: number;
   private readonly turnTimeoutMs: number;
   private readonly rng?: Rng;
+  readonly mode: GameMode;
 
   constructor(
     readonly id: string,
@@ -47,6 +51,7 @@ export class Room {
     this.botDelayMs = opts.botDelayMs ?? 1000;
     this.turnTimeoutMs = opts.turnTimeoutMs ?? 60_000;
     this.rng = opts.rng;
+    this.mode = opts.mode ?? '101';
   }
 
   get started() {
@@ -104,12 +109,15 @@ export class Room {
 
   nextRound(): string | null {
     if (!this.game || this.game.phase !== 'finished') return 'Tur bitmedi';
+    // Düz okey: once someone is out of points a new game starts from scratch.
+    if (matchOver(this.mode, this.totals)) this.totals = [0, 0, 0, 0];
     this.newRound();
     return null;
   }
 
   private newRound() {
     this.game = createGame({
+      mode: this.mode,
       names: this.seats.map((s) => s!.name),
       startingSeat: this.round % SEATS,
       rng: this.rng,
@@ -135,6 +143,7 @@ export class Room {
   info(): RoomInfo {
     return {
       id: this.id,
+      mode: this.mode,
       seats: this.seats.map((s, seat) =>
         s ? { seat, name: s.name, isBot: s.isBot, connected: s.isBot || s.socketId !== null } : null,
       ),

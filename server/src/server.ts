@@ -1,7 +1,7 @@
 import { createServer as createHttpServer } from 'node:http';
 import express from 'express';
 import { Server, type Socket } from 'socket.io';
-import type { ClientToServerEvents, ServerToClientEvents } from '@okey/shared';
+import type { ClientToServerEvents, GameMode, ServerToClientEvents } from '@okey/shared';
 import { Room, type RoomOptions } from './room';
 
 type IO = Server<ClientToServerEvents, ServerToClientEvents>;
@@ -77,9 +77,12 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
     return room ? { room, seat: room.seatOf(socket.id) } : null;
   };
 
+  // Older apps send no mode: they play 101.
+  const modeOf = (mode: unknown): GameMode => (mode === 'duz' ? 'duz' : '101');
+
   io.on('connection', (socket) => {
-    socket.on('room:create', ({ name }, ack) => {
-      const room = new Room(newRoomId(), broadcast, roomOpts);
+    socket.on('room:create', ({ name, mode }, ack) => {
+      const room = new Room(newRoomId(), broadcast, { ...roomOpts, mode: modeOf(mode) });
       rooms.set(room.id, room);
       const seat = enter(socket, room, name);
       if (typeof seat === 'string') return ack({ ok: false, error: seat });
@@ -94,8 +97,8 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
       ack({ ok: true, roomId: room.id, seat });
     });
 
-    socket.on('room:quickPlay', ({ name }, ack) => {
-      const room = new Room(newRoomId(), broadcast, roomOpts);
+    socket.on('room:quickPlay', ({ name, mode }, ack) => {
+      const room = new Room(newRoomId(), broadcast, { ...roomOpts, mode: modeOf(mode) });
       rooms.set(room.id, room);
       const seat = enter(socket, room, name);
       if (typeof seat === 'string') return ack({ ok: false, error: seat });
