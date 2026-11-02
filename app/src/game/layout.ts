@@ -52,7 +52,7 @@ export function computeLayout(W: number, H: number, ins: { l: number; r: number;
   const sesW = r(48);
   const okW = r(124); // fits the longest okey name, "Kırmızı 13" / "Siyah 13"
   const oppW = Math.floor((usable - cikW - sesW - okW - r(42)) / 3);
-  const drawW = r(160);
+  const drawW = r(172); // two 80pt cells: room for "Soldan al" in the iOS font
   const discW = r(110);
   // Zone box: border 3 + pulse frame 3 around the tile, plus the 18pt label line.
   const pileW = Math.max(30, Math.min(r(56), Math.floor((zoneH - 32) / 1.38)));

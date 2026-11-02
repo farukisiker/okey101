@@ -6,13 +6,15 @@ interface Props {
   player: PublicPlayer;
   seatInfo: SeatInfo | null;
   total: number;
+  /** Düz okey: the total is points left ("20 puan"); hand counts are always 14 there. */
+  unit?: string;
   active: boolean;
   width: number;
   height: number;
 }
 
 /** One opponent in the header strip: name (+ AÇTI) over "N taş · puan"; lit when it's their turn. */
-export function OpponentPanel({ player, seatInfo, total, active, width, height }: Props) {
+export function OpponentPanel({ player, seatInfo, total, unit, active, width, height }: Props) {
   const away = seatInfo && !seatInfo.connected;
   return (
     <View style={[styles.panel, { width, height }, active && styles.active]}>
@@ -27,8 +29,8 @@ export function OpponentPanel({ player, seatInfo, total, active, width, height }
           </View>
         )}
       </View>
-      <Text style={styles.meta} numberOfLines={1}>
-        {away ? 'bağlantı koptu' : `${player.handCount} taş · ${total}`}
+      <Text style={styles.meta} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+        {away ? 'bağlantı koptu' : unit ? `${total} ${unit}` : `${player.handCount} taş · ${total}`}
       </Text>
     </View>
   );

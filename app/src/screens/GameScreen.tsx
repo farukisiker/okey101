@@ -333,6 +333,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
               player={view.players[seat]}
               seatInfo={room.seats[seat]}
               total={totals[seat]}
+              unit={duz ? 'puan' : undefined}
               active={view.turn === seat}
               width={L.oppW}
               height={L.headH}
@@ -414,7 +415,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
                 </DragSource>
               )}
             </Pulse>
-            <Text style={styles.zoneLabel} numberOfLines={1}>
+            <Text style={styles.zoneLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
               Soldan al
             </Text>
           </View>
@@ -422,13 +423,16 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
 
         <View style={{ flex: 1, height: L.zoneH, marginHorizontal: 6 }}>
           {duz ? (
+            // Two short lines beside the score: fits the shortest zone (~90pt) on any phone.
             <View style={styles.duzCenter}>
-              <Text style={styles.duzTitle}>Düz Okey</Text>
-              <Text style={styles.duzHint}>
-                14 taşın hepsi per (ya da 7 çift) olunca{'\n'}
-                <Text style={{ color: colors.accent }}>Bitir</Text>'e bas, 15. taş atılır
+              <View style={styles.duzScoreBox}>
+                <Text style={styles.duzScoreLabel}>Puanın</Text>
+                <Text style={styles.duzScore}>{totals[view.seat]}</Text>
+              </View>
+              <Text style={styles.duzHint} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75}>
+                14 taş per ya da 7 çift olunca{'\n'}
+                <Text style={{ color: colors.accent, fontWeight: '900' }}>Bitir</Text>'e bas
               </Text>
-              <Text style={styles.duzScore}>Puanın: {totals[view.seat]}</Text>
             </View>
           ) : (
           <TableMelds
@@ -678,16 +682,19 @@ const styles = StyleSheet.create({
   deckCount: { color: '#5a4a2a', fontWeight: '900' },
   duzCenter: {
     flex: 1,
+    flexDirection: 'row',
     borderRadius: 12,
     backgroundColor: colors.feltLight,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 8,
-    gap: 4,
+    paddingHorizontal: 10,
+    gap: 14,
+    overflow: 'hidden',
   },
-  duzTitle: { color: colors.accent, fontSize: font.status, fontWeight: '900' },
-  duzHint: { color: colors.text, fontSize: font.body, textAlign: 'center', lineHeight: 24 },
-  duzScore: { color: colors.text, fontSize: font.body, fontWeight: '800' },
+  duzScoreBox: { alignItems: 'center', backgroundColor: colors.panel, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 2 },
+  duzScoreLabel: { color: colors.muted, fontSize: font.small, fontWeight: '700', lineHeight: 18 },
+  duzScore: { color: colors.accent, fontSize: 30, fontWeight: '900', lineHeight: 34 },
+  duzHint: { flexShrink: 1, color: colors.text, fontSize: 17, fontWeight: '600', textAlign: 'center', lineHeight: 22 },
   statusBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   status: { color: colors.text, fontSize: font.status, fontWeight: '800', textAlign: 'center' },
   toast: {
