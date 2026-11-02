@@ -5,6 +5,9 @@ import Animated, { type SharedValue, useAnimatedStyle, useSharedValue, withSprin
 import { scheduleOnRN } from 'react-native-worklets';
 import { type RackGeom, slotAt } from '../game/rackLayout';
 
+/** The held tile rides this far above the finger so the finger doesn't hide it. */
+const LIFT = 24;
+
 interface Props {
   children: ReactNode;
   style?: ViewStyle;
@@ -60,12 +63,12 @@ export const DragSource = memo(function DragSource(p: Props) {
     },
     onUpdate: (e) => {
       tx.value = e.translationX;
-      // Lift the tile above the finger so it stays visible while dragging.
-      ty.value = e.translationY - 24;
-      hoverSlot.value = slotAt(rackGeom.value, e.absoluteX, e.absoluteY);
+      ty.value = e.translationY - LIFT;
+      // Where the tile is, not where the finger is: the player aims the tile.
+      hoverSlot.value = slotAt(rackGeom.value, e.absoluteX, e.absoluteY - LIFT);
     },
     onDeactivate: (e) => {
-      scheduleOnRN(onDrop, e.absoluteX, e.absoluteY);
+      scheduleOnRN(onDrop, e.absoluteX, e.absoluteY - LIFT);
     },
     onFinalize: () => {
       if (dragging.value) scheduleOnRN(onDragEnd);

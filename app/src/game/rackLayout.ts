@@ -38,13 +38,18 @@ export interface RackGeom {
   rowH: number;
 }
 
-/** Slot under a window point, or -1. Runs on the UI thread during drags. */
+/**
+ * Slot under a window point, or -1. Runs on the UI thread during drags.
+ * Forgiving at the edges: anything below the rack (only the screen edge is
+ * there) counts as the bottom row, and a little above it as the top row.
+ */
 export function slotAt(g: RackGeom | null, px: number, py: number): number {
   'worklet';
   if (!g) return -1;
   const col = Math.floor((px - g.x - g.padX) / g.tileW);
-  const row = Math.floor((py - g.y - g.padY) / g.rowH);
-  if (row < 0 || row >= RACK_ROWS || col < -1 || col > RACK_COLS) return -1;
+  const top = g.y + g.padY;
+  if (py < top - g.rowH * 0.35 || col < -1 || col > RACK_COLS) return -1;
+  const row = Math.min(RACK_ROWS - 1, Math.max(0, Math.floor((py - top) / g.rowH)));
   return row * RACK_COLS + Math.min(RACK_COLS - 1, Math.max(0, col));
 }
 
