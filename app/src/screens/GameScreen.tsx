@@ -69,7 +69,11 @@ function Pulse({ on, children, style }: { on: boolean; children: ReactNode; styl
     borderColor: on ? `rgba(242,182,50,${0.35 + 0.65 * v.value})` : 'transparent',
     transform: [{ scale: 1 + 0.04 * v.value }],
   }));
-  return <Animated.View style={[styles.pulse, style, animated]}>{children}</Animated.View>;
+  return (
+    <Animated.View collapsable={false} style={[styles.pulse, style, animated]}>
+      {children}
+    </Animated.View>
+  );
 }
 
 /** Exact width and height for a button, overriding its minimums. */
@@ -353,9 +357,14 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
       </View>
 
       {/* 2 · Zones: draw (deck, left discard) · table · discard. */}
-      <View style={[styles.zones, { marginTop: L.gap }, dragging && styles.raised]}>
-        <View style={[styles.zone, styles.drawZone, { width: L.drawW, height: L.sideH }, dragging && styles.raised]}>
-          <View style={[styles.cell, { width: cellW }, dragging === 'deck' && styles.raised]}>
+      {/* collapsable={false}: these views get a zIndex while a pile tile is held. If they could be
+          flattened away, that zIndex would create them mid-drag, re-parent the tile and cancel the drag. */}
+      <View collapsable={false} style={[styles.zones, { marginTop: L.gap }, dragging && styles.raised]}>
+        <View
+          collapsable={false}
+          style={[styles.zone, styles.drawZone, { width: L.drawW, height: L.sideH }, dragging && styles.raised]}
+        >
+          <View collapsable={false} style={[styles.cell, { width: cellW }, dragging === 'deck' && styles.raised]}>
             <Pulse on={canDraw}>
               {/* The stack stays put; only its top tile follows the finger, and the count drops by one. */}
               {view.deckCount > 1 && <View style={styles.stackShadow}><TileBack width={L.pileW} /></View>}
@@ -386,7 +395,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
             </Pulse>
             <Text style={styles.zoneLabel}>Deste</Text>
           </View>
-          <View style={[styles.cell, { width: cellW }, dragging === 'discard' && styles.raised]}>
+          <View collapsable={false} style={[styles.cell, { width: cellW }, dragging === 'discard' && styles.raised]}>
             <Pulse on={canDraw && !!leftTop}>
               {/* What stays on the table while the top tile is in the player's hand. */}
               {dragging === 'discard'
