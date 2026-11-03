@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { io as connect, type Socket } from 'socket.io-client';
-import type { ClientToServerEvents, PlayerView, RoomInfo, ServerToClientEvents } from '@okey/shared';
+import type { ClientToServerEvents, PlayerView, RoomInfo, ServerToClientEvents, TableSummary } from '@okey/shared';
 import { createOkeyServer, type OkeyServer } from '../src/server';
 
 type Client = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -16,7 +16,7 @@ afterAll(() => server.close());
 function client(): Client {
   return connect(url, { transports: ['websocket'], forceNew: true });
 }
-function waitFor<T>(sock: Client, event: 'game:view' | 'room:state', pred: (v: T) => boolean): Promise<T> {
+function waitFor<T>(sock: Client, event: 'game:view' | 'room:state' | 'salon:list', pred: (v: T) => boolean): Promise<T> {
   return new Promise((resolve) => {
     const h = (v: T) => {
       if (pred(v)) {
@@ -79,6 +79,36 @@ describe('socket server', () => {
     expect(view.mode).toBe('duz');
     expect(view.players.map((p) => p.handCount)).toEqual([15, 14, 14, 14]);
     c.close();
+  });
+
+  it('salon: a public table is listed, fills up, starts by itself; a leaver frees a seat', async () => {
+    const [a, b, c, d, w] = [client(), client(), client(), client(), client()];
+    const created = await a.emitWithAck('room:create', { name: 'A', mode: 'duz', isPublic: true });
+    if (!created.ok) throw new Error(created.error);
+    // A private table never shows up.
+    await c.emitWithAck('room:create', { name: 'Gizli' });
+    c.emit('room:leave');
+
+    const listed = waitFor<TableSummary[]>(w, 'salon:list', (l) => l.some((t) => t.id === created.roomId));
+    w.emit('salon:watch', true);
+    const list = await listed;
+    expect(list).toEqual([{ id: created.roomId, mode: 'duz', seats: ['A', null, null, null], free: 3, started: false }]);
+
+    const started = waitFor<RoomInfo>(a, 'room:state', (r) => r.started);
+    const gone = waitFor<TableSummary[]>(w, 'salon:list', (l) => l.length === 0);
+    for (const [sock, name] of [[b, 'B'], [c, 'C'], [d, 'D']] as const) {
+      expect(await sock.emitWithAck('room:join', { roomId: created.roomId, name })).toMatchObject({ ok: true });
+    }
+    const room = await started;
+    expect(room.seats.map((s) => s?.isBot)).toEqual([false, false, false, false]);
+    await gone; // full tables leave the list
+
+    const back = waitFor<TableSummary[]>(w, 'salon:list', (l) => l.length === 1);
+    d.emit('room:leave');
+    expect((await back)[0]).toMatchObject({ id: created.roomId, free: 1, started: true, seats: ['A', 'B', 'C', null] });
+    // Someone else takes the bot's seat mid-game.
+    expect(await w.emitWithAck('room:join', { roomId: created.roomId, name: 'W' })).toMatchObject({ ok: true, seat: 3 });
+    for (const s of [a, b, c, d, w]) s.close();
   });
 
   it('rejects unknown rooms', async () => {

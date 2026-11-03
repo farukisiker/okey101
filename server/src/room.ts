@@ -4,6 +4,7 @@ import {
   type GameState,
   type RoomInfo,
   type Rng,
+  type TableSummary,
   SEATS,
   applyAction,
   createGame,
@@ -22,6 +23,8 @@ export interface Seat {
 
 export interface RoomOptions {
   mode?: GameMode;
+  /** Listed in the salon. */
+  isPublic?: boolean;
   botDelayMs?: number;
   /** A human who doesn't move in time gets a bot move instead. 0 disables. */
   turnTimeoutMs?: number;
@@ -42,6 +45,7 @@ export class Room {
   private readonly turnTimeoutMs: number;
   private readonly rng?: Rng;
   readonly mode: GameMode;
+  readonly isPublic: boolean;
 
   constructor(
     readonly id: string,
@@ -52,6 +56,7 @@ export class Room {
     this.turnTimeoutMs = opts.turnTimeoutMs ?? 60_000;
     this.rng = opts.rng;
     this.mode = opts.mode ?? '101';
+    this.isPublic = opts.isPublic ?? false;
   }
 
   get started() {
@@ -79,14 +84,51 @@ export class Room {
     return seat;
   }
 
-  /** Socket left: keep the seat (bot autoplays it) so the player can come back. */
+  /** Socket dropped: keep the seat (bot autoplays it) so the player can come back. */
   disconnect(socketId: string) {
     const seat = this.seatOf(socketId);
     if (seat < 0) return;
-    if (!this.game) this.seats[seat] = null;
+    if (!this.game) this.free(seat);
     else this.seats[seat]!.socketId = null;
     this.changed();
     this.schedule();
+  }
+
+  /** Left on purpose: before the start the seat frees up; mid-game a bot takes it for good. */
+  leave(socketId: string) {
+    const seat = this.seatOf(socketId);
+    if (seat < 0) return;
+    if (!this.game) this.free(seat);
+    else {
+      const taken = this.seats.flatMap((s, i) => (s && i !== seat ? [s.name] : []));
+      const [name] = pickBotNames(1, taken, this.rng);
+      this.seats[seat] = { name, isBot: true, socketId: null };
+      this.game.players[seat].name = name;
+    }
+    this.changed();
+    this.schedule();
+  }
+
+  private free(seat: number) {
+    this.seats[seat] = null;
+    // The host left before the start: the next person at the table can start it.
+    if (seat === this.hostSeat) {
+      const next = this.seats.findIndex((s) => s && !s.isBot);
+      if (next >= 0) this.hostSeat = next;
+    }
+  }
+
+  /** Four people at a table that hasn't started: deal. */
+  startIfFull(): boolean {
+    if (this.game || !this.seats.every((s) => s && !s.isBot)) return false;
+    this.start();
+    return true;
+  }
+
+  /** The table as the salon list shows it. */
+  summary(): TableSummary {
+    const seats = this.seats.map((s) => (s && !s.isBot ? s.name : null));
+    return { id: this.id, mode: this.mode, seats, free: seats.filter((s) => s === null).length, started: this.started };
   }
 
   hasHumans() {
@@ -144,6 +186,7 @@ export class Room {
     return {
       id: this.id,
       mode: this.mode,
+      isPublic: this.isPublic,
       seats: this.seats.map((s, seat) =>
         s ? { seat, name: s.name, isBot: s.isBot, connected: s.isBot || s.socketId !== null } : null,
       ),

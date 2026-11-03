@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
-import type { Action, ClientToServerEvents, GameMode, PlayerView, RoomInfo, ServerToClientEvents } from '@okey/shared';
+import type {
+  Action,
+  ClientToServerEvents,
+  GameMode,
+  PlayerView,
+  RoomInfo,
+  ServerToClientEvents,
+  TableSummary,
+} from '@okey/shared';
 
 type OkeySocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -23,12 +31,15 @@ export function useOkey(serverUrl: string) {
   const [session, setSession] = useState<Session | null>(null);
   const [room, setRoom] = useState<RoomInfo | null>(null);
   const [view, setView] = useState<PlayerView | null>(null);
+  const [salon, setSalon] = useState<TableSummary[]>([]);
+  const watchingSalon = useRef(false);
 
   useEffect(() => {
     const socket: OkeySocket = io(serverUrl, { transports: ['websocket'], reconnection: true });
     socketRef.current = socket;
     socket.on('connect', () => {
       setConnected(true);
+      if (watchingSalon.current) socket.emit('salon:watch', true);
       // Reclaim our seat after a dropped connection.
       const s = sessionRef.current;
       if (s)
@@ -42,6 +53,7 @@ export function useOkey(serverUrl: string) {
     socket.on('disconnect', () => setConnected(false));
     socket.on('room:state', setRoom);
     socket.on('game:view', setView);
+    socket.on('salon:list', setSalon);
     return () => {
       socket.removeAllListeners();
       socket.close();
@@ -55,14 +67,18 @@ export function useOkey(serverUrl: string) {
       name: string,
       roomId = '',
       mode: GameMode = '101',
+      isPublic = false,
     ): Promise<Result> => {
       const socket = socketRef.current;
       if (!socket?.connected) return { ok: false, error: 'Sunucuya bağlanılamadı' };
       const res =
         kind === 'room:join'
           ? await socket.timeout(5000).emitWithAck('room:join', { roomId, name })
-          : await socket.timeout(5000).emitWithAck(kind, { name, mode });
+          : kind === 'room:create'
+            ? await socket.timeout(5000).emitWithAck(kind, { name, mode, isPublic })
+            : await socket.timeout(5000).emitWithAck(kind, { name, mode });
       if (!res.ok) return res;
+      watchingSalon.current = false;
       const s = { roomId: res.roomId, seat: res.seat, name };
       sessionRef.current = s;
       setSession(s);
@@ -81,13 +97,23 @@ export function useOkey(serverUrl: string) {
     }
   }, []);
 
+  /** Follow the salon's table list while the salon screen is open. */
+  const watchSalon = useCallback((on: boolean) => {
+    watchingSalon.current = on;
+    socketRef.current?.emit('salon:watch', on);
+  }, []);
+
   return {
     connected,
     session,
     room,
     view,
     quickPlay: (name: string, mode: GameMode = '101') => enter('room:quickPlay', name, '', mode),
-    createRoom: (name: string, mode: GameMode = '101') => enter('room:create', name, '', mode),
+    /** `isPublic`: the table shows up in the salon for anyone to sit at. */
+    createRoom: (name: string, mode: GameMode = '101', isPublic = false) =>
+      enter('room:create', name, '', mode, isPublic),
+    salon,
+    watchSalon,
     joinRoom: (name: string, roomId: string) => enter('room:join', name, roomId),
     start: () => call((s) => s.timeout(5000).emitWithAck('room:start')),
     nextRound: () => call((s) => s.timeout(5000).emitWithAck('room:nextRound')),

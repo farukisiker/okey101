@@ -1,7 +1,7 @@
 import { createServer as createHttpServer } from 'node:http';
 import express from 'express';
 import { Server, type Socket } from 'socket.io';
-import type { ClientToServerEvents, GameMode, ServerToClientEvents } from '@okey/shared';
+import type { ClientToServerEvents, GameMode, ServerToClientEvents, TableSummary } from '@okey/shared';
 import { Room, type RoomOptions } from './room';
 
 type IO = Server<ClientToServerEvents, ServerToClientEvents>;
@@ -26,7 +26,26 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
     res.json({ ok: true, rooms: rooms.size });
   });
 
+  // Salon: public tables with someone at them and a seat to take. Fuller
+  // waiting tables first (they start soonest), then games with a bot seat.
+  const SALON = 'salon';
+  const salonList = (): TableSummary[] =>
+    [...rooms.values()]
+      .filter((r) => r.isPublic && r.hasHumans())
+      .map((r) => r.summary())
+      .filter((t) => t.free > 0)
+      .sort((a, b) => Number(a.started) - Number(b.started) || a.free - b.free)
+      .slice(0, 50);
+  let salonTimer: ReturnType<typeof setTimeout> | null = null;
+  const salonChanged = () => {
+    salonTimer ??= setTimeout(() => {
+      salonTimer = null;
+      io.to(SALON).emit('salon:list', salonList());
+    }, 200);
+  };
+
   const broadcast = (room: Room) => {
+    if (room.isPublic) salonChanged();
     io.to(room.id).emit('room:state', room.info());
     room.seats.forEach((s, seat) => {
       if (s?.socketId) {
@@ -43,20 +62,23 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
     return id;
   };
 
-  const leave = (socket: ClientSocket) => {
+  /** `onPurpose`: the player left the table (a bot takes over); otherwise the connection dropped. */
+  const leave = (socket: ClientSocket, onPurpose = false) => {
     const roomId = membership.get(socket.id);
     if (!roomId) return;
     membership.delete(socket.id);
     socket.leave(roomId);
     const room = rooms.get(roomId);
     if (!room) return;
-    room.disconnect(socket.id);
+    if (onPurpose) room.leave(socket.id);
+    else room.disconnect(socket.id);
     // Keep an empty room a little while so a dropped player can reconnect.
     if (!room.hasHumans()) {
       setTimeout(() => {
         if (!room.hasHumans() && rooms.get(roomId) === room) {
           room.dispose();
           rooms.delete(roomId);
+          if (room.isPublic) salonChanged();
         }
       }, emptyRoomTtlMs).unref();
     }
@@ -68,6 +90,7 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
     if (typeof seat === 'string') return seat;
     membership.set(socket.id, room.id);
     socket.join(room.id);
+    socket.leave(SALON);
     broadcast(room);
     return seat;
   };
@@ -81,8 +104,8 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
   const modeOf = (mode: unknown): GameMode => (mode === 'duz' ? 'duz' : '101');
 
   io.on('connection', (socket) => {
-    socket.on('room:create', ({ name, mode }, ack) => {
-      const room = new Room(newRoomId(), broadcast, { ...roomOpts, mode: modeOf(mode) });
+    socket.on('room:create', ({ name, mode, isPublic }, ack) => {
+      const room = new Room(newRoomId(), broadcast, { ...roomOpts, mode: modeOf(mode), isPublic: isPublic === true });
       rooms.set(room.id, room);
       const seat = enter(socket, room, name);
       if (typeof seat === 'string') return ack({ ok: false, error: seat });
@@ -91,10 +114,11 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
 
     socket.on('room:join', ({ roomId, name }, ack) => {
       const room = rooms.get(roomId.trim().toUpperCase());
-      if (!room) return ack({ ok: false, error: 'Oda bulunamadı' });
+      if (!room) return ack({ ok: false, error: 'Masa bulunamadı' });
       const seat = enter(socket, room, name);
       if (typeof seat === 'string') return ack({ ok: false, error: seat });
       ack({ ok: true, roomId: room.id, seat });
+      room.startIfFull();
     });
 
     socket.on('room:quickPlay', ({ name, mode }, ack) => {
@@ -128,7 +152,12 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
       ack(err ? { ok: false, error: err } : { ok: true });
     });
 
-    socket.on('room:leave', () => leave(socket));
+    socket.on('room:leave', () => leave(socket, true));
+    socket.on('salon:watch', (on) => {
+      if (!on) return void socket.leave(SALON);
+      socket.join(SALON);
+      socket.emit('salon:list', salonList());
+    });
     socket.on('disconnect', () => leave(socket));
   });
 
@@ -144,6 +173,7 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
       }),
     close: async () => {
       rooms.forEach((r) => r.dispose());
+      if (salonTimer) clearTimeout(salonTimer);
       await io.close();
     },
   };

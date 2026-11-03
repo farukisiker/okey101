@@ -36,6 +36,15 @@ alanına bilgisayarın yerel IP'sini yaz (ör. `http://192.168.1.20:3001`) ya da
 - Istakadaki dizilim istemcide kalır; yan yana duran taşlar bir grup sayılır,
   "Aç" bu grupları sunucuya gönderir.
 
+## Salon (arkadaşlarla oyun)
+
+- **Masa Aç**: masa salonda listelenir; gelen tek dokunuşla **Otur**ur. 4 kişi
+  olunca oyun kendiliğinden başlar; masayı açan beklemeden **Botlarla Başlat** diyebilir.
+- **Özel Masa**: listelenmez, 5 harfli kodla girilir.
+- Oyun ortasında masadan kalkan oyuncunun yerine bot geçer ve o yer salonda
+  boş görünür; yeni gelen botun yerine oturur. Bağlantısı kopan oyuncu ise aynı
+  isimle dönünce yerini geri alır.
+
 ## Kurallar (uygulanan hali)
 
 ### 101 Okey

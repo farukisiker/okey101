@@ -24,26 +24,33 @@ export function WaitingRoom({ client }: { client: OkeyClient }) {
         <Button title="‹ Çık" variant="secondary" onPress={client.leave} style={{ minWidth: 120 }} />
       </View>
       <Text style={styles.game}>{room.mode === 'duz' ? 'Düz Okey' : '101 Okey'}</Text>
-      <Text style={styles.label}>Oda kodu</Text>
-      <Text style={styles.code}>{room.id}</Text>
+      {room.isPublic ? (
+        <Text style={styles.label}>Masan salonda görünüyor · 4 kişi olunca oyun kendiliğinden başlar</Text>
+      ) : (
+        <>
+          <Text style={styles.label}>Masa kodu — arkadaşlarına gönder</Text>
+          <Text style={styles.code}>{room.id}</Text>
+        </>
+      )}
       <View style={styles.seats}>
         {room.seats.map((s, i) => (
           <View key={i} style={styles.seat}>
-            <Text style={styles.seatName}>{s ? s.name : 'Boş — bilgisayar oturacak'}</Text>
+            <Text style={styles.seatName}>{s ? s.name : 'Boş'}</Text>
             {i === session.seat && <Text style={styles.you}>sen</Text>}
           </View>
         ))}
       </View>
       {isHost ? (
         <Button
-          title="Başlat"
+          title="Botlarla Başlat"
+          subtitle="Boş yerlere bilgisayar oturur"
           onPress={async () => {
             const r = await client.start();
             if (!r.ok) setError(r.error);
           }}
         />
       ) : (
-        <Text style={styles.label}>Oda sahibinin başlatması bekleniyor…</Text>
+        <Text style={styles.label}>Masa dolunca ya da masayı açan başlatınca oyun başlar…</Text>
       )}
       {error && <Text style={styles.error}>{error}</Text>}
     </View>
@@ -53,7 +60,7 @@ export function WaitingRoom({ client }: { client: OkeyClient }) {
 const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
   back: { position: 'absolute', top: 8, left: 12 },
-  label: { color: colors.muted, fontSize: font.body },
+  label: { color: colors.muted, fontSize: font.body, textAlign: 'center', paddingHorizontal: 16 },
   game: { color: colors.text, fontSize: font.title, fontWeight: '900' },
   code: { color: colors.accent, fontSize: 40, fontWeight: '900', letterSpacing: 6 },
   seats: { flexDirection: 'row', gap: 10, marginVertical: 12 },

@@ -76,4 +76,31 @@ describe('room', () => {
     expect(room.nextRound()).toBeNull();
     expect(room.totals).toEqual([0, 0, 0, 0]);
   });
+
+  it('a host who leaves before the start passes the table on; a full table starts', () => {
+    const room = new Room('R7', () => {}, { botDelayMs: 1, rng: seededRng(9) });
+    room.join('A', 'a');
+    room.join('B', 'b');
+    room.leave('a');
+    expect(room.hostSeat).toBe(1);
+    expect(room.startIfFull()).toBe(false);
+    room.join('C', 'c');
+    room.join('D', 'd');
+    room.join('E', 'e');
+    expect(room.startIfFull()).toBe(true);
+    expect(room.info().seats.every((s) => s && !s.isBot)).toBe(true);
+  });
+
+  it('leaving mid-game hands the seat to a bot for good', () => {
+    const room = new Room('R8', () => {}, { botDelayMs: 1000, turnTimeoutMs: 0, rng: seededRng(9) });
+    room.join('A', 'a');
+    room.join('B', 'b');
+    room.start();
+    room.leave('b');
+    const seat = room.info().seats[1]!;
+    expect(seat.isBot).toBe(true);
+    expect(seat.name).not.toBe('B');
+    expect(room.game!.players[1].name).toBe(seat.name);
+    expect(room.summary()).toMatchObject({ free: 3, started: true });
+  });
 });
