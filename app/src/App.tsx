@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { useKeepAwake } from 'expo-keep-awake';
 import { StatusBar } from 'expo-status-bar';
@@ -9,6 +9,7 @@ import { DropZoneProvider } from './game/dropZones';
 import { useLocalGame } from './net/useLocalGame';
 import { type OkeyClient, useOkey } from './net/useOkey';
 import { GameScreen } from './screens/GameScreen';
+import { Intro } from './screens/Intro';
 import { Lobby } from './screens/Lobby';
 import { WaitingRoom } from './screens/WaitingRoom';
 import { colors } from './theme';
@@ -22,6 +23,8 @@ export default function App() {
   useEffect(() => {
     void initFeedback();
   }, []);
+  const [intro, setIntro] = useState(true);
+  const endIntro = useCallback(() => setIntro(false), []);
   const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER);
   const online = useOkey(serverUrl);
   const local = useLocalGame();
@@ -31,7 +34,9 @@ export default function App() {
     : { ...online, quickPlay: local.begin };
 
   let screen;
-  if (!client.session) {
+  if (intro) {
+    screen = <Intro onDone={endIntro} />;
+  } else if (!client.session) {
     screen = <Lobby client={client} serverUrl={serverUrl} onServerUrlChange={setServerUrl} />;
   } else if (client.room && !client.room.started) {
     screen = <WaitingRoom client={client} />;

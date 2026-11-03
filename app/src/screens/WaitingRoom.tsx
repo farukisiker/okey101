@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { BackHandler, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../components/Button';
 import type { OkeyClient } from '../net/useOkey';
 import { colors, font } from '../theme';
@@ -7,6 +7,14 @@ import { colors, font } from '../theme';
 export function WaitingRoom({ client }: { client: OkeyClient }) {
   const { room, session } = client;
   const [error, setError] = useState<string | null>(null);
+  // Android back leaves the room, like "‹ Çık".
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      client.leave();
+      return true;
+    });
+    return () => sub.remove();
+  }, [client]);
   if (!room || !session) return null;
   const isHost = room.hostSeat === session.seat;
 

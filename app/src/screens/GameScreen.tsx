@@ -1,5 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { type HostInstance, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, type HostInstance, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   useAnimatedStyle,
@@ -293,6 +293,17 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
     setSlots(next);
     feedback('place');
   };
+
+  // Android back: close what's open, otherwise ask before leaving the table (never leave by accident).
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (zoomed) setZoomed(false);
+      else if (confirmIslek !== null) setConfirmIslek(null);
+      else setConfirmLeave((open) => !open);
+      return true;
+    });
+    return () => sub.remove();
+  }, [zoomed, confirmIslek]);
 
   // The discard zone is a drop target for tiles dragged off the rack.
   const discardRef = useRef<HostInstance>(null);

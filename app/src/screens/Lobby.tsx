@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { BackHandler, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { GameMode } from '@okey/shared';
 import { Button } from '../components/Button';
 import { loadName, saveName } from '../feedback';
@@ -55,6 +55,17 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
     setName(n);
     setEditingName(false);
   };
+
+  // Android back steps back inside the lobby; on the main screen it leaves the app as usual.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (friends) setFriends(false);
+      else if (editingName && name !== null) setEditingName(false);
+      else return false;
+      return true;
+    });
+    return () => sub.remove();
+  }, [friends, editingName, name]);
 
   if (!loaded) return <View style={styles.root} />;
 
@@ -152,7 +163,9 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
 
   return (
     <View style={styles.root}>
-      <Text style={styles.title}>Okey</Text>
+      <Text style={styles.title}>
+        <Text style={styles.titleName}>Nurettin Işıker </Text>VIP Okey
+      </Text>
       <Pressable onPress={() => setEditingName(true)} hitSlop={12}>
         <Text style={styles.welcome}>
           Hoş geldin, <Text style={{ color: colors.accent }}>{name}</Text>
@@ -193,6 +206,7 @@ const styles = StyleSheet.create({
   games: { flexDirection: 'row', gap: 24 },
   modeRow: { flexDirection: 'row', gap: 8 },
   title: { color: colors.accent, fontSize: 40, fontWeight: '900' },
+  titleName: { color: colors.text, fontSize: 28, fontWeight: '800' },
   heading: { color: colors.accent, fontSize: font.title, fontWeight: '900' },
   welcome: { color: colors.text, fontSize: 24, fontWeight: '700' },
   change: { color: colors.muted, fontSize: font.small, fontWeight: '400' },

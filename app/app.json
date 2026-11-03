@@ -20,7 +20,8 @@
       }
     },
     "android": {
-      "package": "com.farukisiker.okey101"
+      "package": "com.farukisiker.okey101",
+      "versionCode": 1
     },
     "icon": "./assets/icon.png",
     "plugins": [
@@ -30,6 +31,14 @@
           "microphonePermission": false,
           "recordAudioAndroid": false,
           "enableBackgroundPlayback": false
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
         }
       ]
     ]
