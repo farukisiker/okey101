@@ -45,6 +45,8 @@ alanına bilgisayarın yerel IP'sini yaz (ör. `http://192.168.1.20:3001`) ya da
   boş görünür; yeni gelen botun yerine oturur. Bağlantısı kopan oyuncu ise aynı
   isimle dönünce yerini geri alır.
 
+Sunucuyu Raspberry Pi'ye kurmak: [docs/raspberry-pi-kurulum.md](docs/raspberry-pi-kurulum.md).
+
 ## Kurallar (uygulanan hali)
 
 ### 101 Okey
