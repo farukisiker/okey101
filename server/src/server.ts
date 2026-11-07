@@ -1,7 +1,7 @@
 import { createServer as createHttpServer } from 'node:http';
 import express from 'express';
 import { Server, type Socket } from 'socket.io';
-import type { ClientToServerEvents, GameMode, ServerToClientEvents, TableSummary } from '@okey/shared';
+import { type ClientToServerEvents, type GameMode, isTablePassword, type ServerToClientEvents, type TableSummary } from '@okey/shared';
 import { Room, type RoomOptions } from './room';
 
 type IO = Server<ClientToServerEvents, ServerToClientEvents>;
@@ -21,6 +21,10 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
   const rooms = new Map<string, Room>();
   /** socket id -> room id */
   const membership = new Map<string, string>();
+  /** socket id -> wrong table passwords in a row, and until when it is locked out */
+  const wrongPasswords = new Map<string, { count: number; until: number }>();
+  const MAX_WRONG_PASSWORDS = 5;
+  const WRONG_PASSWORD_LOCK_MS = 60_000;
 
   app.get('/health', (_req, res) => {
     res.json({ ok: true, rooms: rooms.size });
@@ -104,17 +108,35 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
   const modeOf = (mode: unknown): GameMode => (mode === 'duz' ? 'duz' : '101');
 
   io.on('connection', (socket) => {
-    socket.on('room:create', ({ name, mode, isPublic }, ack) => {
-      const room = new Room(newRoomId(), broadcast, { ...roomOpts, mode: modeOf(mode), isPublic: isPublic === true });
+    socket.on('room:create', ({ name, mode, isPublic, password }, ack) => {
+      if (password !== undefined && !isTablePassword(password)) return ack({ ok: false, error: 'Şifre 6 rakam olmalı' });
+      // A locked table is listed in the salon too: people see it and ask for the password.
+      const room = new Room(newRoomId(), broadcast, {
+        ...roomOpts,
+        mode: modeOf(mode),
+        isPublic: isPublic === true || password !== undefined,
+        password: password ?? null,
+      });
       rooms.set(room.id, room);
       const seat = enter(socket, room, name);
       if (typeof seat === 'string') return ack({ ok: false, error: seat });
       ack({ ok: true, roomId: room.id, seat });
     });
 
-    socket.on('room:join', ({ roomId, name }, ack) => {
-      const room = rooms.get(roomId.trim().toUpperCase());
+    socket.on('room:join', ({ roomId, name, password }, ack) => {
+      const room = rooms.get(String(roomId).trim().toUpperCase());
       if (!room) return ack({ ok: false, error: 'Masa bulunamadı' });
+      if (room.password !== null && room.seatOf(socket.id) < 0) {
+        const wrong = wrongPasswords.get(socket.id);
+        if (wrong && wrong.until > Date.now()) return ack({ ok: false, error: 'Çok fazla yanlış şifre, biraz bekleyin' });
+        if (password !== room.password) {
+          const count = (wrong?.count ?? 0) + 1;
+          const locked = count >= MAX_WRONG_PASSWORDS;
+          wrongPasswords.set(socket.id, { count: locked ? 0 : count, until: locked ? Date.now() + WRONG_PASSWORD_LOCK_MS : 0 });
+          return ack({ ok: false, error: password ? 'Şifre yanlış' : 'Bu masa şifreli' });
+        }
+        wrongPasswords.delete(socket.id);
+      }
       const seat = enter(socket, room, name);
       if (typeof seat === 'string') return ack({ ok: false, error: seat });
       ack({ ok: true, roomId: room.id, seat });
@@ -158,7 +180,10 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
       socket.join(SALON);
       socket.emit('salon:list', salonList());
     });
-    socket.on('disconnect', () => leave(socket));
+    socket.on('disconnect', () => {
+      wrongPasswords.delete(socket.id);
+      leave(socket);
+    });
   });
 
   return {

@@ -18,6 +18,8 @@ export interface RoomInfo {
   totals: number[];
   /** Listed in the salon for anyone to sit at; otherwise joined by code only. */
   isPublic?: boolean;
+  /** Listed, but sitting down needs this 6-digit password. Sent only to the people at the table. */
+  password?: string;
 }
 
 /** One table in the salon list. */
@@ -29,14 +31,23 @@ export interface TableSummary {
   /** Free seats: empty before the start, bot-played once the game is on. */
   free: number;
   started: boolean;
+  /** Sitting down needs the table's 6-digit password. */
+  locked?: boolean;
 }
+
+/** A table password: exactly 6 digits. */
+export const isTablePassword = (p: unknown): p is string => typeof p === 'string' && /^\d{6}$/.test(p);
 
 export type Ack<T = object> = (res: ({ ok: true } & T) | { ok: false; error: string }) => void;
 
 export interface ClientToServerEvents {
-  /** `isPublic`: list the table in the salon. */
-  'room:create': (p: { name: string; mode?: GameMode; isPublic?: boolean }, ack: Ack<{ roomId: string; seat: number }>) => void;
-  'room:join': (p: { roomId: string; name: string }, ack: Ack<{ roomId: string; seat: number }>) => void;
+  /** `isPublic`: list the table in the salon. `password` (6 digits): listed, locked with it. */
+  'room:create': (
+    p: { name: string; mode?: GameMode; isPublic?: boolean; password?: string },
+    ack: Ack<{ roomId: string; seat: number }>,
+  ) => void;
+  /** `password`: needed for a locked table. */
+  'room:join': (p: { roomId: string; name: string; password?: string }, ack: Ack<{ roomId: string; seat: number }>) => void;
   /** Creates a room, fills empty seats with bots and starts immediately. */
   'room:quickPlay': (p: { name: string; mode?: GameMode }, ack: Ack<{ roomId: string; seat: number }>) => void;
   /** Host only: fill empty seats with bots and start. */

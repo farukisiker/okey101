@@ -92,7 +92,7 @@ describe('socket server', () => {
     const listed = waitFor<TableSummary[]>(w, 'salon:list', (l) => l.some((t) => t.id === created.roomId));
     w.emit('salon:watch', true);
     const list = await listed;
-    expect(list).toEqual([{ id: created.roomId, mode: 'duz', seats: ['A', null, null, null], free: 3, started: false }]);
+    expect(list).toEqual([{ id: created.roomId, mode: 'duz', seats: ['A', null, null, null], free: 3, started: false, locked: false }]);
 
     const started = waitFor<RoomInfo>(a, 'room:state', (r) => r.started);
     const gone = waitFor<TableSummary[]>(w, 'salon:list', (l) => l.length === 0);
@@ -109,6 +109,40 @@ describe('socket server', () => {
     // Someone else takes the bot's seat mid-game.
     expect(await w.emitWithAck('room:join', { roomId: created.roomId, name: 'W' })).toMatchObject({ ok: true, seat: 3 });
     for (const s of [a, b, c, d, w]) s.close();
+  });
+
+  it('locked table: listed with a lock, needs its 6-digit password, the host sees it', async () => {
+    const [a, b, w] = [client(), client(), client()];
+    expect(await a.emitWithAck('room:create', { name: 'A', password: '12ab56' })).toMatchObject({ ok: false });
+    const hostState = waitFor<RoomInfo>(a, 'room:state', () => true);
+    const created = await a.emitWithAck('room:create', { name: 'A', password: '482913' });
+    if (!created.ok) throw new Error(created.error);
+    expect((await hostState).password).toBe('482913');
+
+    const listed = waitFor<TableSummary[]>(w, 'salon:list', (l) => l.some((t) => t.id === created.roomId));
+    w.emit('salon:watch', true);
+    expect((await listed).find((t) => t.id === created.roomId)).toMatchObject({ locked: true, free: 3 });
+
+    expect(await b.emitWithAck('room:join', { roomId: created.roomId, name: 'B' })).toEqual({ ok: false, error: 'Bu masa şifreli' });
+    expect(await b.emitWithAck('room:join', { roomId: created.roomId, name: 'B', password: '000000' })).toEqual({
+      ok: false,
+      error: 'Şifre yanlış',
+    });
+    expect(await b.emitWithAck('room:join', { roomId: created.roomId, name: 'B', password: '482913' })).toMatchObject({
+      ok: true,
+      seat: 1,
+    });
+
+    // Guessing is cut off after a few wrong tries, even with the right password.
+    for (let i = 0; i < 5; i++) await w.emitWithAck('room:join', { roomId: created.roomId, name: 'W', password: `00000${i}` });
+    expect(await w.emitWithAck('room:join', { roomId: created.roomId, name: 'W', password: '482913' })).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/bekleyin/),
+    });
+
+    // The host can still start with bots.
+    expect(await a.emitWithAck('room:start')).toEqual({ ok: true });
+    for (const s of [a, b, w]) s.close();
   });
 
   it('rejects unknown rooms', async () => {

@@ -25,6 +25,8 @@ export interface RoomOptions {
   mode?: GameMode;
   /** Listed in the salon. */
   isPublic?: boolean;
+  /** Sitting down needs this 6-digit password (the table is still listed). */
+  password?: string | null;
   botDelayMs?: number;
   /** A human who doesn't move in time gets a bot move instead. 0 disables. */
   turnTimeoutMs?: number;
@@ -46,6 +48,7 @@ export class Room {
   private readonly rng?: Rng;
   readonly mode: GameMode;
   readonly isPublic: boolean;
+  readonly password: string | null;
 
   constructor(
     readonly id: string,
@@ -57,6 +60,7 @@ export class Room {
     this.rng = opts.rng;
     this.mode = opts.mode ?? '101';
     this.isPublic = opts.isPublic ?? false;
+    this.password = opts.password ?? null;
   }
 
   get started() {
@@ -128,7 +132,14 @@ export class Room {
   /** The table as the salon list shows it. */
   summary(): TableSummary {
     const seats = this.seats.map((s) => (s && !s.isBot ? s.name : null));
-    return { id: this.id, mode: this.mode, seats, free: seats.filter((s) => s === null).length, started: this.started };
+    return {
+      id: this.id,
+      mode: this.mode,
+      seats,
+      free: seats.filter((s) => s === null).length,
+      started: this.started,
+      locked: this.password !== null,
+    };
   }
 
   hasHumans() {
@@ -187,6 +198,7 @@ export class Room {
       id: this.id,
       mode: this.mode,
       isPublic: this.isPublic,
+      ...(this.password !== null && { password: this.password }),
       seats: this.seats.map((s, seat) =>
         s ? { seat, name: s.name, isBot: s.isBot, connected: s.isBot || s.socketId !== null } : null,
       ),

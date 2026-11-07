@@ -16,6 +16,8 @@ export interface Session {
   roomId: string;
   seat: number;
   name: string;
+  /** A locked table's password, to sit back down after a dropped connection. */
+  password?: string;
 }
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -43,7 +45,7 @@ export function useOkey(serverUrl: string) {
       // Reclaim our seat after a dropped connection.
       const s = sessionRef.current;
       if (s)
-        socket.emit('room:join', { roomId: s.roomId, name: s.name }, (res) => {
+        socket.emit('room:join', { roomId: s.roomId, name: s.name, password: s.password }, (res) => {
           if (res.ok && res.seat !== s.seat) {
             sessionRef.current = { ...s, seat: res.seat };
             setSession(sessionRef.current);
@@ -68,18 +70,19 @@ export function useOkey(serverUrl: string) {
       roomId = '',
       mode: GameMode = '101',
       isPublic = false,
+      password?: string,
     ): Promise<Result> => {
       const socket = socketRef.current;
       if (!socket?.connected) return { ok: false, error: 'Sunucuya bağlanılamadı' };
       const res =
         kind === 'room:join'
-          ? await socket.timeout(5000).emitWithAck('room:join', { roomId, name })
+          ? await socket.timeout(5000).emitWithAck('room:join', { roomId, name, password })
           : kind === 'room:create'
-            ? await socket.timeout(5000).emitWithAck(kind, { name, mode, isPublic })
+            ? await socket.timeout(5000).emitWithAck(kind, { name, mode, isPublic, password })
             : await socket.timeout(5000).emitWithAck(kind, { name, mode });
       if (!res.ok) return res;
       watchingSalon.current = false;
-      const s = { roomId: res.roomId, seat: res.seat, name };
+      const s = { roomId: res.roomId, seat: res.seat, name, password };
       sessionRef.current = s;
       setSession(s);
       return { ok: true };
@@ -109,12 +112,12 @@ export function useOkey(serverUrl: string) {
     room,
     view,
     quickPlay: (name: string, mode: GameMode = '101') => enter('room:quickPlay', name, '', mode),
-    /** `isPublic`: the table shows up in the salon for anyone to sit at. */
-    createRoom: (name: string, mode: GameMode = '101', isPublic = false) =>
-      enter('room:create', name, '', mode, isPublic),
+    /** `isPublic`: the table shows up in the salon. `password` (6 digits): it shows up locked. */
+    createRoom: (name: string, mode: GameMode = '101', isPublic = false, password?: string) =>
+      enter('room:create', name, '', mode, isPublic, password),
     salon,
     watchSalon,
-    joinRoom: (name: string, roomId: string) => enter('room:join', name, roomId),
+    joinRoom: (name: string, roomId: string, password?: string) => enter('room:join', name, roomId, '101', false, password),
     start: () => call((s) => s.timeout(5000).emitWithAck('room:start')),
     nextRound: () => call((s) => s.timeout(5000).emitWithAck('room:nextRound')),
     act: (action: Action) => call((s) => s.timeout(5000).emitWithAck('game:action', action)),

@@ -24,7 +24,12 @@ export function WaitingRoom({ client }: { client: OkeyClient }) {
         <Button title="‹ Çık" variant="secondary" onPress={client.leave} style={{ minWidth: 120 }} />
       </View>
       <Text style={styles.game}>{room.mode === 'duz' ? 'Düz Okey' : '101 Okey'}</Text>
-      {room.isPublic ? (
+      {room.password ? (
+        <>
+          <Text style={styles.label}>🔒 Masa şifresi — oturacak arkadaşlarına söyle</Text>
+          <Text style={styles.code}>{room.password}</Text>
+        </>
+      ) : room.isPublic ? (
         <Text style={styles.label}>Masan salonda görünüyor · 4 kişi olunca oyun kendiliğinden başlar</Text>
       ) : (
         <>
