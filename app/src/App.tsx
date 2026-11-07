@@ -14,8 +14,9 @@ import { Lobby } from './screens/Lobby';
 import { WaitingRoom } from './screens/WaitingRoom';
 import { colors } from './theme';
 
-// On a device, point this at the machine running the server (e.g. http://192.168.1.20:3001).
-const DEFAULT_SERVER = process.env.EXPO_PUBLIC_SERVER_URL || 'http://localhost:3001';
+// The live server runs on the Raspberry Pi behind Tailscale Funnel (docs/raspberry-pi-kurulum.md).
+// For local development, set EXPO_PUBLIC_SERVER_URL (e.g. http://localhost:3001).
+const DEFAULT_SERVER = process.env.EXPO_PUBLIC_SERVER_URL || 'https://okey.tail39ee5a.ts.net';
 
 export default function App() {
   // A slow game shouldn't let the screen go dark mid-turn.

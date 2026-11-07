@@ -19,9 +19,11 @@ pnpm test              # shared + server testleri
 pnpm typecheck         # tüm paketler
 ```
 
-Telefondan bağlanırken sunucu adresi `localhost` olamaz: lobideki "Sunucu"
-alanına bilgisayarın yerel IP'sini yaz (ör. `http://192.168.1.20:3001`) ya da
-`EXPO_PUBLIC_SERVER_URL` ile başlat. Android emülatöründe `http://10.0.2.2:3001`.
+Uygulama varsayılan olarak Pi'deki canlı sunucuya bağlanır:
+`https://okey.tail39ee5a.ts.net` (`app/src/App.tsx`, `DEFAULT_SERVER`).
+Kendi bilgisayarındaki sunucuyla denemek için `EXPO_PUBLIC_SERVER_URL` ile başlat
+(ör. `http://localhost:3001`; telefondan bilgisayarın yerel IP'si, ör.
+`http://192.168.1.20:3001`; Android emülatöründe `http://10.0.2.2:3001`).
 
 > Not: `.npmrc` içinde `node-linker=hoisted` var; pnpm 11+ bu ayarı
 > `pnpm-workspace.yaml` içinden okuduğu için orada da `nodeLinker: hoisted` var.

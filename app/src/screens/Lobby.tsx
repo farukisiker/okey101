@@ -79,6 +79,7 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
             placeholder="Adınızı yazın"
             placeholderTextColor={colors.muted}
             maxLength={20}
+            disableFullscreenUI
             autoFocus
             returnKeyType="done"
           />

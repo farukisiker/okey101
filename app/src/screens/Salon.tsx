@@ -68,7 +68,13 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack }: Pr
           )}
         </ScrollView>
 
-        <ScrollView style={styles.side} contentContainerStyle={{ gap: 10, paddingBottom: 12 }} keyboardShouldPersistTaps="handled">
+        {/* iOS: scroll the focused code box above the keyboard instead of hiding it underneath. */}
+        <ScrollView
+          style={styles.side}
+          contentContainerStyle={{ gap: 10, paddingBottom: 12 }}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
           <View style={styles.modeRow}>
             {(['101', 'duz'] as const).map((m) => (
               <Button
@@ -103,6 +109,8 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack }: Pr
               placeholderTextColor={colors.muted}
               autoCapitalize="characters"
               maxLength={5}
+              // In landscape Android opens a full-screen keyboard that hides the table; keep the screen visible.
+              disableFullscreenUI
             />
             <Button
               title="Katıl"
@@ -112,15 +120,21 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack }: Pr
             />
           </View>
           {error && <Text style={styles.warn}>{error}</Text>}
-          <Text style={styles.label}>Sunucu adresi</Text>
-          <TextInput
-            style={styles.urlInput}
-            value={url}
-            onChangeText={setUrl}
-            onEndEditing={() => onServerUrlChange(url.trim())}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
+          {/* The live server address is built in (App.tsx); the field is only for development builds. */}
+          {__DEV__ && (
+            <>
+              <Text style={styles.label}>Sunucu adresi</Text>
+              <TextInput
+                style={styles.urlInput}
+                value={url}
+                onChangeText={setUrl}
+                onEndEditing={() => onServerUrlChange(url.trim())}
+                autoCapitalize="none"
+                autoCorrect={false}
+                disableFullscreenUI
+              />
+            </>
+          )}
         </ScrollView>
       </View>
     </View>
