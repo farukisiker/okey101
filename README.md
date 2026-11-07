@@ -20,7 +20,7 @@ pnpm typecheck         # tüm paketler
 ```
 
 Uygulama varsayılan olarak Pi'deki canlı sunucuya bağlanır:
-`https://okey.tail39ee5a.ts.net` (`app/src/App.tsx`, `DEFAULT_SERVER`).
+`https://okey.lightsoldiergames.com` (`app/src/App.tsx`, `DEFAULT_SERVER`).
 Kendi bilgisayarındaki sunucuyla denemek için `EXPO_PUBLIC_SERVER_URL` ile başlat
 (ör. `http://localhost:3001`; telefondan bilgisayarın yerel IP'si, ör.
 `http://192.168.1.20:3001`; Android emülatöründe `http://10.0.2.2:3001`).

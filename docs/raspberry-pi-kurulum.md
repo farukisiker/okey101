@@ -116,9 +116,9 @@ Sunucu çalışıyor: http://localhost:3001/health -> {"ok":true,"rooms":0}
 - **Kalıcı olarak:** adresi Claude'a gönder; iPhone ve Android sürümleri bu
   adrese bağlı derlenir, kimse adres yazmak zorunda kalmaz.
 
-> Şu anki canlı adres: `https://okey.tail39ee5a.ts.net` — uygulamaya gömülü
-> (`app/src/App.tsx`). Pi'yi başka bir Tailscale hesabına ya da başka bir adla
-> bağlarsan adres değişir; o zaman uygulamadaki adres de güncellenmeli.
+> Şu anki canlı adres: `https://okey.lightsoldiergames.com` — uygulamaya gömülü
+> (`app/src/App.tsx`), Cloudflare Tunnel ile (`scripts/pi-cloudflare-tunnel.sh`). Adres
+> değişirse uygulamadaki adres de güncellenmeli.
 
 ---
 
