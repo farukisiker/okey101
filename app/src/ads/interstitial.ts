@@ -67,7 +67,7 @@ async function preload(): Promise<void> {
     const { InterstitialAd, TestIds, AdEventType } = await import('react-native-google-mobile-ads');
     if (!canRequestAds() || isAdFree()) { loading = false; return; }
     const unit = Platform.OS === 'ios' ? ADMOB_INTERSTITIAL_IOS : ADMOB_INTERSTITIAL_ANDROID;
-    const candidate = InterstitialAd.createForAdRequest(unit || TestIds.INTERSTITIAL);
+    const candidate = InterstitialAd.createForAdRequest(__DEV__ || !unit ? TestIds.INTERSTITIAL : unit);
     ad = candidate;
     revision = consentRevision();
     let opened = false;

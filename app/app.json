@@ -30,8 +30,8 @@
       [
         "react-native-google-mobile-ads",
         {
-          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
-          "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "androidAppId": "ca-app-pub-2975518552649928~9717230927",
+          "iosAppId": "ca-app-pub-2975518552649928~8954813591",
           "delayAppMeasurementInit": true,
           "userTrackingUsageDescription": "Size daha ilgili reklamlar göstermek için izin istiyoruz.",
           "skAdNetworkItems": [
