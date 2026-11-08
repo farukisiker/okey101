@@ -35,6 +35,8 @@ interface Props {
 
 /** Vertical gap above, between and below the two rows. */
 const GAP = 4;
+/** Wait for the drag's spring-back (160 ms) to finish before playing a dropped tile. */
+const DROP_SETTLE_MS = 200;
 
 export function rackHeight(tileW: number) {
   return RACK_ROWS * tileHeight(tileW) + (RACK_ROWS + 1) * GAP;
@@ -87,7 +89,13 @@ export function Rack(p: Props) {
             return next === cur.slots ? cur.onBlocked() : cur.onSlotsChange(next);
           }
           const hit = zones.hitTest(x, y);
-          if (hit && hit.key !== 'rack') cur.onDropOnZone(id, hit.key);
+          // Play the tile only after the drag has fully settled. Removing it from the
+          // hand mid-gesture (offline games answer synchronously) unmounted the view
+          // while its gesture/spring was still running and left a ghost tile on the rack.
+          if (hit && hit.key !== 'rack') {
+            const zone = hit.key;
+            setTimeout(() => latest.current.onDropOnZone(id, zone), DROP_SETTLE_MS);
+          }
         },
       };
       handlers.current.set(id, hnd);
@@ -143,6 +151,8 @@ export function Rack(p: Props) {
             ) : null,
           )}
         <Animated.View pointerEvents="none" style={[styles.marker, { width: w - 2, height: h - 2 }, marker]} />
+        {/* Re-created whenever the hand grows or shrinks, so no stale tile view can outlive its tile. */}
+        <View key={`tiles-${p.hand.length}`} pointerEvents="box-none" style={StyleSheet.absoluteFill}>
         {p.slots.map((id, i) => {
           const tile = id === null ? undefined : byId.get(id);
           if (!tile) return null;
@@ -161,6 +171,7 @@ export function Rack(p: Props) {
             </DragSource>
           );
         })}
+        </View>
       </View>
     </View>
   );

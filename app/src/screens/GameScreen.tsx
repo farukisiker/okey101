@@ -278,7 +278,8 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   // Dragging from a pile: drop it on the rack to draw it into that slot.
   const dropFromPile = (source: 'deck' | 'discard') => (x: number, y: number) => {
     const slot = slotAt(rackGeom.value, x, y);
-    if (slot >= 0) draw(source, slot);
+    // Like rack drops: let the gesture finish before the pile tile can unmount.
+    if (slot >= 0) setTimeout(() => draw(source, slot), 50);
   };
 
   const openOrLay = async () => {
