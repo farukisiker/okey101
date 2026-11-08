@@ -297,13 +297,15 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   // Android back: close what's open, otherwise ask before leaving the table (never leave by accident).
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      // Result-screen navigation goes through its guarded ad gate buttons.
+      if (view.phase === 'finished') return true;
       if (zoomed) setZoomed(false);
       else if (confirmIslek !== null) setConfirmIslek(null);
       else setConfirmLeave((open) => !open);
       return true;
     });
     return () => sub.remove();
-  }, [zoomed, confirmIslek]);
+  }, [zoomed, confirmIslek, view.phase]);
 
   // The discard zone is a drop target for tiles dragged off the rack.
   const discardRef = useRef<HostInstance>(null);

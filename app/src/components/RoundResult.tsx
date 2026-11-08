@@ -2,15 +2,19 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { DUZ_START_POINTS, NOT_OPENED_PENALTY, type PlayerView, type RoomInfo, matchOver } from '@okey/shared';
 import { colors, font } from '../theme';
 import { Button } from './Button';
+import { useRef, useState } from 'react';
+import { adGate } from '../ads/interstitial';
 
 interface Props {
   view: PlayerView;
   room: RoomInfo;
-  onNext(): void;
+  onNext(): void | Promise<void>;
   onLeave(): void;
 }
 
 export function RoundResult({ view, room, onNext, onLeave }: Props) {
+  const waiting = useRef(false);
+  const [busy, setBusy] = useState(false);
   const r = view.result!;
   const duz = view.mode === 'duz';
   const nameOf = (seat: number) => (seat === view.seat ? 'Sen' : view.players[seat].name);
@@ -22,6 +26,21 @@ export function RoundResult({ view, room, onNext, onLeave }: Props) {
     .join(', ');
   // Düz okey counts down from 20; whoever has the most left when someone hits zero wins the game.
   const over = matchOver(view.mode, room.totals);
+  const proceed = async (leave: boolean) => {
+    if (waiting.current) return;
+    waiting.current = true;
+    setBusy(true);
+    try {
+      // Bot flags live on RoomInfo.seats; PlayerView.players has no isBot field.
+      const humans = room.seats.filter((p) => p && !p.isBot).length;
+      if (leave || over || humans <= 1) await adGate.showIfEligible();
+      if (leave) onLeave();
+      else await onNext();
+    } finally {
+      waiting.current = false;
+      setBusy(false);
+    }
+  };
   const left = room.totals.map((t) => DUZ_START_POINTS - t);
   const champion = left.indexOf(Math.max(...left));
 
@@ -68,8 +87,8 @@ export function RoundResult({ view, room, onNext, onLeave }: Props) {
             {duz ? `Herkes ${DUZ_START_POINTS} puanla başlar; puanı ilk biten oyunu bitirir.` : 'Düşük puan iyidir.'}
           </Text>
           <View style={styles.buttons}>
-            <Button title={over ? 'Yeni Oyun' : 'Sonraki El'} onPress={onNext} style={{ minWidth: 240, minHeight: 64 }} />
-            <Button title="Masadan kalk" variant="secondary" onPress={onLeave} />
+            <Button title={over ? 'Yeni Oyun' : 'Sonraki El'} disabled={busy} onPress={() => void proceed(false)} style={{ minWidth: 240, minHeight: 64 }} />
+            <Button title="Masadan kalk" disabled={busy} variant="secondary" onPress={() => void proceed(true)} />
           </View>
         </View>
       </ScrollView>

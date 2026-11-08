@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { useKeepAwake } from 'expo-keep-awake';
 import { StatusBar } from 'expo-status-bar';
@@ -13,6 +13,9 @@ import { Intro } from './screens/Intro';
 import { Lobby } from './screens/Lobby';
 import { WaitingRoom } from './screens/WaitingRoom';
 import { colors } from './theme';
+import { initAds } from './ads/consent';
+import { adGate } from './ads/interstitial';
+import { initPurchases, syncOnce } from './purchases';
 
 // The live server runs on the Raspberry Pi behind a Cloudflare Tunnel (docs/raspberry-pi-kurulum.md).
 // For local development, set EXPO_PUBLIC_SERVER_URL (e.g. http://localhost:3001).
@@ -26,6 +29,11 @@ export default function App() {
   }, []);
   const [intro, setIntro] = useState(true);
   const endIntro = useCallback(() => setIntro(false), []);
+  useEffect(() => {
+    if (intro) return;
+    void initPurchases().then(syncOnce);
+    void initAds().then(() => adGate.preload());
+  }, [intro]);
   const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER);
   const online = useOkey(serverUrl);
   const local = useLocalGame();
@@ -33,6 +41,29 @@ export default function App() {
   const client: OkeyClient = local.active
     ? { ...online, ...local, start: online.start, connected: true }
     : { ...online, quickPlay: local.begin };
+  // Keep completion accounting above GameScreen so transient view loss and
+  // result-screen remounts cannot count the same hand twice.
+  const completedHands = useRef(new Set<number>());
+  const finishedSeen = useRef(false);
+  const accountingSession = useRef(client.session);
+  useEffect(() => {
+    if (accountingSession.current !== client.session) {
+      if (!client.session || accountingSession.current?.roomId !== client.session.roomId) {
+        completedHands.current.clear();
+        finishedSeen.current = false;
+      }
+      accountingSession.current = client.session;
+    }
+    const round = client.room?.round;
+    if (client.view?.phase === 'playing') finishedSeen.current = false;
+    if (!client.session || round === undefined || client.view?.phase !== 'finished' || !client.view.result) return;
+    // room:state and game:view arrive separately at a new deal. A newer room
+    // number paired briefly with the old finished view is still the same hand.
+    if (finishedSeen.current || completedHands.current.has(round)) return;
+    finishedSeen.current = true;
+    completedHands.current.add(round);
+    adGate.onHandCompleted();
+  }, [client.session, client.room?.round, client.view?.phase, client.view?.result]);
 
   let screen;
   if (intro) {

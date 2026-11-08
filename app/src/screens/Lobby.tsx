@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { BackHandler, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { BackHandler, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '../components/Button';
+import { MonetizationSettings } from '../components/MonetizationSettings';
 import { loadName, saveName } from '../feedback';
 import { Salon } from './Salon';
 import type { OkeyClient } from '../net/useOkey';
@@ -102,7 +103,7 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
   }
 
   return (
-    <View style={styles.root}>
+    <ScrollView contentContainerStyle={styles.root}>
       <Text style={styles.title}>
         <Text style={styles.titleName}>Nurettin Işıker </Text>VIP Okey
       </Text>
@@ -140,7 +141,8 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
         onPress={() => setFriends(true)}
       />
       {error && <Text style={styles.warn}>{error}</Text>}
-    </View>
+      <MonetizationSettings />
+    </ScrollView>
   );
 }
 
