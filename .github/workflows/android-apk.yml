@@ -66,3 +66,27 @@ jobs:
           name: okey-apk
           path: out/*.apk
           retention-days: 30
+
+      # Play Store bundle, signed with the upload key (~/keystores/okey101-upload.jks on the PC).
+      - name: Build AAB (Play Store)
+        working-directory: app/android
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          printf '%s' "$KS_B64" | tr -d '\r\n ' | base64 -d > "$RUNNER_TEMP/upload.jks"
+          ./gradlew bundleRelease --no-daemon \
+            -Pandroid.injected.signing.store.file="$RUNNER_TEMP/upload.jks" \
+            -Pandroid.injected.signing.store.password="$KS_PASS" \
+            -Pandroid.injected.signing.key.alias="$KS_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KS_PASS"
+          cp app/build/outputs/bundle/release/app-release.aab "../../out/okey-${GITHUB_RUN_NUMBER}.aab"
+          rm -f "$RUNNER_TEMP/upload.jks"
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ hashFiles('out/*.aab') != '' }}
+        with:
+          name: okey-aab
+          path: out/*.aab
+          retention-days: 30
