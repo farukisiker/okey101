@@ -1,4 +1,4 @@
-"""Draw the Okey 101 app icons (run: python app/scripts/make-icons.py).
+"""Draw the Okey app icons (run: python app/scripts/make-icons.py).
 
 Writes into app/assets:
   icon.png                    1024 iOS/legacy icon (no alpha)
@@ -74,15 +74,25 @@ def paste_rotated(canvas, im, center, angle):
 
 
 def tiles_layer(size, scale=1.0):
-    """Three fanned tiles: two behind, the 101 tile in front."""
+    """Three fanned tiles (a 11-12-13 run) with a gold OKEY word across them: fits 101 and düz okey."""
     S = size
     layer = Image.new('RGBA', (S, S), (0, 0, 0, 0))
-    w, h = int(S * 0.36 * scale), int(S * 0.50 * scale)
-    cx, cy = S / 2, S / 2 + S * 0.02 * scale
-    off = S * 0.17 * scale
-    paste_rotated(layer, tile(int(w * 0.92), int(h * 0.92), '13', BLUE), (cx - off, cy + S * 0.01 * scale), 17)
-    paste_rotated(layer, tile(int(w * 0.92), int(h * 0.92), '1', BLACK), (cx + off, cy + S * 0.01 * scale), -17)
-    paste_rotated(layer, tile(int(w * 1.12), int(h * 1.08), '101', RED, font_scale=0.40), (cx, cy - S * 0.01 * scale), 0)
+    w, h = int(S * 0.34 * scale), int(S * 0.47 * scale)
+    cx, cy = S / 2, S / 2 - S * 0.06 * scale
+    off = S * 0.20 * scale
+    paste_rotated(layer, tile(w, h, '11', BLUE), (cx - off, cy + S * 0.03 * scale), 15)
+    paste_rotated(layer, tile(w, h, '13', BLACK), (cx + off, cy + S * 0.03 * scale), -15)
+    paste_rotated(layer, tile(int(w * 1.08), int(h * 1.08), '12', RED, font_scale=0.46), (cx, cy), 0)
+    # OKEY word, gold with a dark outline so it reads at launcher size.
+    d = ImageDraw.Draw(layer)
+    font = ImageFont.truetype(FONT, int(S * 0.27 * scale))
+    ty = cy + h * 0.62
+    sh = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    ImageDraw.Draw(sh).text((cx + S * 0.008 * scale, ty + S * 0.014 * scale), 'OKEY', font=font, anchor='mm', fill=(0, 0, 0, 170))
+    layer.alpha_composite(sh.filter(ImageFilter.GaussianBlur(S * 0.01 * scale)))
+    d = ImageDraw.Draw(layer)
+    d.text((cx, ty), 'OKEY', font=font, anchor='mm', fill=GOLD,
+           stroke_width=int(S * 0.016 * scale), stroke_fill=(74, 50, 30))
     return layer
 
 
