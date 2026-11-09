@@ -76,7 +76,7 @@ jobs:
           CI: 1
         run: |
           npx expo prebuild --platform ios --clean
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/Okey101/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/DemliOkey/Info.plist
 
       - name: Archive (unsigned)
         working-directory: app/ios
@@ -85,8 +85,8 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild archive \
-            -workspace Okey101.xcworkspace \
-            -scheme Okey101 \
+            -workspace DemliOkey.xcworkspace \
+            -scheme DemliOkey \
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/Okey101.xcarchive" \
