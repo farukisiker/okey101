@@ -15,10 +15,10 @@ export function Intro({ onDone }: { onDone(): void }) {
   return (
     <Pressable style={styles.root} onPress={onDone}>
       <Animated.Text entering={FadeIn.duration(700)} style={styles.name}>
-        Nurettin Işıker
+        Çayınız demli, masanız hazır
       </Animated.Text>
       <Animated.View entering={FadeInDown.delay(500).duration(800)} style={styles.badge}>
-        <Text style={styles.vip}>VIP</Text>
+        <Text style={styles.vip}>DEMLİ</Text>
         <Text style={styles.okey}>OKEY</Text>
       </Animated.View>
       <Animated.Text entering={FadeIn.delay(1400).duration(600)} style={styles.tap}>
@@ -30,7 +30,7 @@ export function Intro({ onDone }: { onDone(): void }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, backgroundColor: colors.felt },
-  name: { color: colors.text, fontSize: 34, fontWeight: '800', letterSpacing: 1 },
+  name: { color: colors.muted, fontSize: 24, fontWeight: '700', letterSpacing: 1 },
   badge: {
     flexDirection: 'row',
     alignItems: 'baseline',

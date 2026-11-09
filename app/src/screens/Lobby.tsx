@@ -105,7 +105,7 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
   return (
     <ScrollView contentContainerStyle={styles.root}>
       <Text style={styles.title}>
-        <Text style={styles.titleName}>Nurettin Işıker </Text>VIP Okey
+        <Text style={styles.titleName}>Demli </Text>Okey
       </Text>
       <Pressable onPress={() => setEditingName(true)} hitSlop={12}>
         <Text style={styles.welcome}>
