@@ -23,6 +23,12 @@
     "android": {
       "package": "com.farukisiker.okey101",
       "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundImage": "./assets/adaptive-icon-bg.png",
+        "monochromeImage": "./assets/adaptive-icon-mono.png",
+        "backgroundColor": "#0b3d2e"
+      },
       "permissions": ["com.android.vending.BILLING"]
     },
     "icon": "./assets/icon.png",
