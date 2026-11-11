@@ -1,0 +1,108 @@
+{
+  "_note": "Demli Okey store listing in every store language. Pushed to App Store Connect by app/scripts/asc-listing.py. Limits: name 30, subtitle 30, keywords 100, promo 170.",
+  "en-US": {
+    "name": "Demli Okey: 101 & Classic Okey",
+    "subtitle": "Turkish tile game, offline",
+    "keywords": "okey,101,rummikub,rummy,tile,turkish,board game,okey 101,classic,offline,bots,friends,tavla",
+    "promo": "Brew your tea, set your rack and take a seat. 101 Okey and Classic Okey in one app, against bots offline or with your friends.",
+    "description": "Brew your tea, line up your rack and take a seat at the table! Demli Okey brings the two favourite Turkish tile games together: 101 Okey and Classic Okey.\n\n• Two games in one: 101 Okey and Classic Okey\n• Play offline: computer opponents are always at the table, no waiting\n• Play with friends: set up your own table and invite only the people you choose\n• No chips, no coins, no gambling: just the game\n• Easy controls: drag and drop tiles or tap to move them\n• Colour-blind friendly: every colour has its own mark\n• The game shows the indicator, the okey and the sets you can open\n\nPlay ad-free\nShort ads appear between hands. A one-time purchase removes them for good.\n\nDemli Okey does not offer real-money gambling and has no prizes of any value."
+  },
+  "en-GB": {
+    "name": "Demli Okey: 101 & Classic Okey",
+    "subtitle": "Turkish tile game, offline",
+    "keywords": "okey,101,rummikub,rummy,tile,turkish,board game,okey 101,classic,offline,bots,friends,tavla",
+    "promo": "Brew your tea, set your rack and take a seat. 101 Okey and Classic Okey in one app, against bots offline or with your friends.",
+    "description": "Brew your tea, line up your rack and take a seat at the table! Demli Okey brings the two favourite Turkish tile games together: 101 Okey and Classic Okey.\n\n• Two games in one: 101 Okey and Classic Okey\n• Play offline: computer opponents are always at the table, no waiting\n• Play with friends: set up your own table and invite only the people you choose\n• No chips, no coins, no gambling: just the game\n• Easy controls: drag and drop tiles or tap to move them\n• Colour-blind friendly: every colour has its own mark\n• The game shows the indicator, the okey and the sets you can open\n\nPlay ad-free\nShort ads appear between hands. A one-time purchase removes them for good.\n\nDemli Okey does not offer real-money gambling and has no prizes of any value."
+  },
+  "tr": {
+    "name": "Demli Okey: 101 ve Düz Okey",
+    "subtitle": "Botlarla internetsiz okey",
+    "keywords": "okey,101,101 okey,düz okey,okey oyna,internetsiz,çevrimdışı,taş,ıstaka,per,çanak,arkadaş,masa",
+    "promo": "Çayını koy, ıstakanı diz, masaya otur! 101 Okey ve Düz Okey tek uygulamada: internetsiz botlarla ya da arkadaşlarınla.",
+    "description": "Demli Okey ile çayını koy, ıstakanı diz, masaya otur! Hem 101 Okey hem Düz Okey tek uygulamada.\n\n• İki oyun bir arada: 101 Okey ve Düz Okey\n• İnternetsiz oyna: bilgisayar rakipler (botlar) her an masada, beklemek yok\n• Arkadaşlarınla oyna: kendi masanı kur, sadece istediğin kişiler katılsın\n• Sanal para, çip ya da kumar yok: sadece oyunun keyfi\n• Rahat kontrol: taşları sürükleyip bırak ya da dokunarak taşı\n• Renk körlüğüne uygun: her rengin kendine ait işareti var\n• Göstergeyi, okeyi ve açılabilecek perleri oyun senin için gösterir\n\nReklamsız Oyna\nEl aralarında kısa reklamlar gösterilir. Tek seferlik satın alma ile reklamlar tamamen kalkar.\n\nDemli Okey gerçek parayla kumar sunmaz ve değeri olan hiçbir ödül vermez."
+  },
+  "es-ES": {
+    "name": "Demli Okey: 101 y Okey Clásico",
+    "subtitle": "Juego de fichas turco offline",
+    "keywords": "okey,101,rummikub,rummy,fichas,turco,juego de mesa,sin internet,offline,amigos,okey 101,clasico",
+    "promo": "Prepara el té, ordena tu atril y siéntate a la mesa. 101 Okey y Okey Clásico en una sola app, sin internet o con amigos.",
+    "description": "Prepara el té, ordena tu atril y siéntate a la mesa. Demli Okey reúne los dos juegos de fichas turcos favoritos: 101 Okey y Okey Clásico.\n\n• Dos juegos en uno: 101 Okey y Okey Clásico\n• Juega sin internet: los rivales del ordenador siempre están en la mesa, sin esperas\n• Juega con amigos: crea tu propia mesa e invita solo a quien quieras\n• Sin fichas de casino, sin monedas, sin apuestas: solo el juego\n• Controles sencillos: arrastra las fichas o tócalas para moverlas\n• Apto para daltónicos: cada color tiene su propia marca\n• El juego te muestra el indicador, el okey y las jugadas que puedes abrir\n\nJuega sin anuncios\nEntre manos aparecen anuncios breves. Una compra única los elimina para siempre.\n\nDemli Okey no ofrece apuestas con dinero real ni premios de ningún valor."
+  },
+  "es-MX": {
+    "name": "Demli Okey: 101 y Okey Clásico",
+    "subtitle": "Juego de fichas turco offline",
+    "keywords": "okey,101,rummikub,rummy,fichas,turco,juego de mesa,sin internet,offline,amigos,okey 101,clasico",
+    "promo": "Prepara el té, acomoda tu atril y siéntate a la mesa. 101 Okey y Okey Clásico en una sola app, sin internet o con amigos.",
+    "description": "Prepara el té, acomoda tu atril y siéntate a la mesa. Demli Okey reúne los dos juegos de fichas turcos favoritos: 101 Okey y Okey Clásico.\n\n• Dos juegos en uno: 101 Okey y Okey Clásico\n• Juega sin internet: los rivales de la computadora siempre están en la mesa, sin esperas\n• Juega con amigos: arma tu propia mesa e invita solo a quien quieras\n• Sin fichas de casino, sin monedas, sin apuestas: solo el juego\n• Controles sencillos: arrastra las fichas o tócalas para moverlas\n• Apto para daltónicos: cada color tiene su propia marca\n• El juego te muestra el indicador, el okey y las jugadas que puedes abrir\n\nJuega sin anuncios\nEntre manos aparecen anuncios breves. Una compra única los quita para siempre.\n\nDemli Okey no ofrece apuestas con dinero real ni premios de ningún valor."
+  },
+  "pt-BR": {
+    "name": "Demli Okey: 101 e Okey",
+    "subtitle": "Jogo de peças turco offline",
+    "keywords": "okey,101,rummikub,rummy,pecas,turco,jogo de tabuleiro,sem internet,offline,amigos,okey 101,classico",
+    "promo": "Prepare o chá, arrume seu suporte e sente-se à mesa. 101 Okey e Okey Clássico em um só app, sem internet ou com amigos.",
+    "description": "Prepare o chá, arrume seu suporte e sente-se à mesa! Demli Okey reúne os dois jogos de peças turcos favoritos: 101 Okey e Okey Clássico.\n\n• Dois jogos em um: 101 Okey e Okey Clássico\n• Jogue sem internet: os adversários do computador estão sempre à mesa, sem espera\n• Jogue com amigos: monte sua própria mesa e convide só quem você quiser\n• Sem fichas, sem moedas, sem apostas: só o jogo\n• Controles fáceis: arraste as peças ou toque para movê-las\n• Amigável para daltônicos: cada cor tem sua própria marca\n• O jogo mostra o indicador, o okey e as combinações que você pode abrir\n\nJogue sem anúncios\nAnúncios curtos aparecem entre as mãos. Uma compra única remove todos para sempre.\n\nDemli Okey não oferece apostas com dinheiro real nem prêmios de qualquer valor."
+  },
+  "fr-FR": {
+    "name": "Demli Okey : 101 et Okey",
+    "subtitle": "Jeu de tuiles turc hors ligne",
+    "keywords": "okey,101,rummikub,rami,tuiles,turc,jeu de société,hors ligne,sans internet,amis,okey 101,classique",
+    "promo": "Préparez le thé, rangez votre chevalet et prenez place. 101 Okey et Okey classique dans une seule app, hors ligne ou entre amis.",
+    "description": "Préparez le thé, rangez votre chevalet et prenez place à table ! Demli Okey réunit les deux jeux de tuiles turcs préférés : le 101 Okey et l'Okey classique.\n\n• Deux jeux en un : 101 Okey et Okey classique\n• Jouez hors ligne : des adversaires contrôlés par l'ordinateur sont toujours à table, sans attente\n• Jouez entre amis : créez votre propre table et invitez qui vous voulez\n• Pas de jetons, pas de pièces, pas de jeux d'argent : juste le jeu\n• Commandes simples : faites glisser les tuiles ou touchez-les pour les déplacer\n• Adapté aux daltoniens : chaque couleur a son propre symbole\n• Le jeu vous indique l'indicateur, l'okey et les combinaisons que vous pouvez poser\n\nJouer sans publicité\nDe courtes publicités s'affichent entre les manches. Un achat unique les supprime définitivement.\n\nDemli Okey ne propose aucun jeu d'argent réel ni aucun prix ayant une valeur."
+  },
+  "de-DE": {
+    "name": "Demli Okey: 101 & Okey",
+    "subtitle": "Türkisches Steinspiel offline",
+    "keywords": "okey,101,rummikub,rommé,steine,türkisch,brettspiel,offline,ohne internet,freunde,okey 101,klassisch",
+    "promo": "Tee aufbrühen, Steine ordnen und Platz nehmen. 101 Okey und klassisches Okey in einer App, offline gegen Bots oder mit Freunden.",
+    "description": "Tee aufbrühen, Steine auf die Bank legen und Platz nehmen! Demli Okey vereint die zwei beliebtesten türkischen Steinspiele: 101 Okey und klassisches Okey.\n\n• Zwei Spiele in einer App: 101 Okey und klassisches Okey\n• Offline spielen: Computergegner sitzen jederzeit am Tisch, kein Warten\n• Mit Freunden spielen: eigenen Tisch erstellen und nur die Leute einladen, die du willst\n• Keine Chips, keine Münzen, kein Glücksspiel: nur das Spiel\n• Einfache Steuerung: Steine ziehen und ablegen oder antippen\n• Farbenblind-freundlich: jede Farbe hat ein eigenes Zeichen\n• Das Spiel zeigt dir den Indikator, den Okey und die Kombinationen, die du auslegen kannst\n\nWerbefrei spielen\nZwischen den Runden erscheint kurze Werbung. Ein einmaliger Kauf entfernt sie dauerhaft.\n\nDemli Okey bietet kein Glücksspiel mit echtem Geld und keine Preise mit Geldwert."
+  },
+  "it": {
+    "name": "Demli Okey: 101 e Okey",
+    "subtitle": "Gioco di tessere turco offline",
+    "keywords": "okey,101,rummikub,ramino,tessere,turco,gioco da tavolo,offline,senza internet,amici,okey 101",
+    "promo": "Prepara il tè, sistema il leggio e siediti al tavolo. 101 Okey e Okey classico in un'unica app, offline o con gli amici.",
+    "description": "Prepara il tè, sistema il leggio e siediti al tavolo! Demli Okey riunisce i due giochi di tessere turchi più amati: 101 Okey e Okey classico.\n\n• Due giochi in uno: 101 Okey e Okey classico\n• Gioca offline: gli avversari del computer sono sempre al tavolo, senza attese\n• Gioca con gli amici: crea il tuo tavolo e invita solo chi vuoi\n• Niente fiches, niente monete, niente gioco d'azzardo: solo il gioco\n• Comandi semplici: trascina le tessere o toccale per spostarle\n• Adatto ai daltonici: ogni colore ha il suo simbolo\n• Il gioco ti mostra l'indicatore, l'okey e le combinazioni che puoi calare\n\nGioca senza pubblicità\nTra una mano e l'altra compaiono brevi annunci. Un acquisto unico li rimuove per sempre.\n\nDemli Okey non offre gioco d'azzardo con denaro reale né premi di alcun valore."
+  },
+  "ru": {
+    "name": "Demli Okey: 101 и Окей",
+    "subtitle": "Турецкая игра с фишками",
+    "keywords": "окей,okey,101,руммикуб,румми,фишки,турецкая,настольная игра,офлайн,без интернета,друзья",
+    "promo": "Заварите чай, расставьте фишки и садитесь за стол. 101 Окей и классический Окей в одном приложении, офлайн или с друзьями.",
+    "description": "Заварите чай, расставьте фишки и садитесь за стол! Demli Okey объединяет две самые любимые турецкие игры с фишками: 101 Окей и классический Окей.\n\n• Две игры в одной: 101 Окей и классический Окей\n• Играйте без интернета: компьютерные соперники всегда за столом, ждать не нужно\n• Играйте с друзьями: создайте свой стол и пригласите только тех, кого хотите\n• Никаких фишек казино, монет и азартных игр: только игра\n• Простое управление: перетаскивайте фишки или нажимайте на них\n• Удобно при дальтонизме: у каждого цвета свой знак\n• Игра подсказывает индикатор, окей и комбинации, которые можно выложить\n\nИграйте без рекламы\nМежду раздачами показывается короткая реклама. Одна покупка убирает её навсегда.\n\nDemli Okey не предлагает азартных игр на реальные деньги и не выдаёт призов, имеющих ценность."
+  },
+  "ja": {
+    "name": "Demli Okey: 101とオケイ",
+    "subtitle": "トルコのタイルゲーム・オフライン",
+    "keywords": "オケイ,okey,101,ラミィキューブ,ラミー,タイル,トルコ,ボードゲーム,オフライン,友達,テーブルゲーム",
+    "promo": "お茶を入れて、牌を並べて、テーブルへ。101オケイとクラシックオケイをひとつのアプリで。オフラインでも友達とでも。",
+    "description": "お茶を入れて、牌を並べて、テーブルにつこう！Demli Okey は、トルコで人気の2つのタイルゲーム「101オケイ」と「クラシックオケイ」をひとつにまとめました。\n\n• 2つのゲームが1つに：101オケイとクラシックオケイ\n• オフラインで遊べる：コンピューターの対戦相手がいつでもテーブルに。待ち時間なし\n• 友達と遊べる：自分のテーブルを作り、好きな人だけを招待\n• チップもコインもギャンブルもなし：純粋にゲームだけ\n• かんたん操作：牌をドラッグ＆ドロップ、またはタップで移動\n• 色覚に配慮：それぞれの色に専用のマーク\n• 表示牌、オケイ、出せる組み合わせをゲームが教えてくれます\n\n広告なしで遊ぶ\n対局の合間に短い広告が表示されます。一度の購入で広告が完全になくなります。\n\nDemli Okey は現金を賭けるギャンブルを提供せず、価値のある賞品もありません。"
+  },
+  "ko": {
+    "name": "Demli Okey: 101 & 오케이",
+    "subtitle": "오프라인 터키 타일 게임",
+    "keywords": "오케이,okey,101,루미큐브,러미,타일,터키,보드게임,오프라인,친구,테이블게임",
+    "promo": "차를 우리고, 타일을 정리하고, 테이블에 앉으세요. 101 오케이와 클래식 오케이를 한 앱에서. 오프라인이나 친구와 함께.",
+    "description": "차를 우리고, 타일을 정리하고, 테이블에 앉으세요! Demli Okey는 터키에서 가장 사랑받는 두 가지 타일 게임, 101 오케이와 클래식 오케이를 한데 모았습니다.\n\n• 두 게임을 하나로: 101 오케이와 클래식 오케이\n• 오프라인 플레이: 컴퓨터 상대가 언제나 테이블에 있어 기다릴 필요가 없습니다\n• 친구와 플레이: 나만의 테이블을 만들고 원하는 사람만 초대하세요\n• 칩, 코인, 도박 없음: 오직 게임만\n• 쉬운 조작: 타일을 끌어다 놓거나 탭해서 이동\n• 색맹 친화적: 각 색상마다 고유한 표시\n• 표시 타일, 오케이, 내려놓을 수 있는 조합을 게임이 알려줍니다\n\n광고 없이 플레이\n판과 판 사이에 짧은 광고가 나옵니다. 한 번 구매하면 광고가 영구히 사라집니다.\n\nDemli Okey는 실제 돈을 거는 도박을 제공하지 않으며 가치 있는 상품도 없습니다."
+  },
+  "zh-Hans": {
+    "name": "Demli Okey：101与经典Okey",
+    "subtitle": "土耳其麻将牌游戏，离线畅玩",
+    "keywords": "okey,101,拉密,拉密牌,牌,土耳其,桌游,离线,单机,好友,棋牌,经典",
+    "promo": "泡好茶，摆好牌，入座开局。101 Okey 与经典 Okey 尽在一个应用，离线对战电脑或与好友同玩。",
+    "description": "泡好茶，摆好牌架，入座开局！Demli Okey 将土耳其最受欢迎的两款牌类游戏合二为一：101 Okey 与经典 Okey。\n\n• 两款游戏合一：101 Okey 与经典 Okey\n• 离线畅玩：电脑对手随时在桌，无需等待\n• 与好友同玩：创建自己的牌桌，只邀请你想邀请的人\n• 没有筹码、没有金币、没有赌博：纯粹享受游戏\n• 操作简单：拖放牌或点击移动\n• 色盲友好：每种颜色都有专属标记\n• 游戏会为你显示指示牌、Okey 和可以亮出的组合\n\n无广告畅玩\n每局之间会显示简短广告。一次性购买即可永久移除广告。\n\nDemli Okey 不提供真钱赌博，也不提供任何有价值的奖品。"
+  },
+  "hi": {
+    "name": "Demli Okey: 101 और ओके",
+    "subtitle": "तुर्की टाइल गेम, ऑफ़लाइन",
+    "keywords": "okey,101,ओके,रमी,रम्मीक्यूब,टाइल,तुर्की,बोर्ड गेम,ऑफ़लाइन,दोस्त",
+    "promo": "चाय बनाइए, टाइलें सजाइए और टेबल पर बैठिए। 101 ओके और क्लासिक ओके एक ही ऐप में, ऑफ़लाइन या दोस्तों के साथ।",
+    "description": "चाय बनाइए, अपनी टाइलें सजाइए और टेबल पर बैठ जाइए! Demli Okey तुर्की के दो सबसे पसंदीदा टाइल गेम एक साथ लाता है: 101 ओके और क्लासिक ओके।\n\n• एक में दो गेम: 101 ओके और क्लासिक ओके\n• ऑफ़लाइन खेलें: कंप्यूटर विरोधी हमेशा टेबल पर, कोई इंतज़ार नहीं\n• दोस्तों के साथ खेलें: अपनी टेबल बनाइए और सिर्फ़ उन्हें बुलाइए जिन्हें आप चाहें\n• न चिप्स, न सिक्के, न जुआ: सिर्फ़ खेल\n• आसान कंट्रोल: टाइलें खींचकर छोड़ें या टैप करके हिलाएँ\n• कलर-ब्लाइंड के अनुकूल: हर रंग का अपना निशान\n• गेम आपको इंडिकेटर, ओके और खोले जा सकने वाले सेट दिखाता है\n\nबिना विज्ञापन खेलें\nहाथों के बीच छोटे विज्ञापन दिखते हैं। एक बार की ख़रीद से वे हमेशा के लिए हट जाते हैं।\n\nDemli Okey असली पैसे का जुआ नहीं देता और कोई मूल्यवान इनाम नहीं देता।"
+  },
+  "id": {
+    "name": "Demli Okey: 101 & Okey Klasik",
+    "subtitle": "Game ubin Turki tanpa internet",
+    "keywords": "okey,101,rummikub,remi,ubin,turki,board game,offline,tanpa internet,teman,okey 101,klasik",
+    "promo": "Seduh teh, susun ubinmu, dan duduk di meja. 101 Okey dan Okey Klasik dalam satu aplikasi, offline atau bersama teman.",
+    "description": "Seduh teh, susun ubinmu, dan duduklah di meja! Demli Okey menggabungkan dua permainan ubin Turki favorit: 101 Okey dan Okey Klasik.\n\n• Dua permainan dalam satu: 101 Okey dan Okey Klasik\n• Main tanpa internet: lawan komputer selalu ada di meja, tanpa menunggu\n• Main bersama teman: buat mejamu sendiri dan undang hanya orang yang kamu mau\n• Tanpa chip, tanpa koin, tanpa judi: hanya permainannya\n• Kontrol mudah: seret dan lepas ubin atau ketuk untuk memindahkannya\n• Ramah buta warna: setiap warna punya tandanya sendiri\n• Permainan menunjukkan indikator, okey, dan kombinasi yang bisa kamu buka\n\nMain tanpa iklan\nIklan singkat muncul di antara babak. Pembelian satu kali menghapusnya selamanya.\n\nDemli Okey tidak menyediakan judi uang sungguhan dan tidak memberikan hadiah bernilai apa pun."
+  }
+}
