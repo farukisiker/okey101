@@ -2,7 +2,7 @@
   "expo": {
     "name": "Demli Okey",
     "slug": "okey101",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "orientation": "landscape",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0b3d2e",
