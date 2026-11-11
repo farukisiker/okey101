@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSUserTrackingUsageDescription": "Size daha ilgili reklamlar göstermek için izin istiyoruz.",
+    "NSLocalNetworkUsageDescription": "Yerel ağdaki Demli Okey sunucusuna bağlanmak için."
+  }
+}

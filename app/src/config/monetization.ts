@@ -5,3 +5,4 @@ export const ADMOB_INTERSTITIAL_IOS = 'ca-app-pub-2975518552649928/7641731921';
 export const REVENUECAT_ANDROID_KEY = 'goog_uccYAPIbCLWQVkIZTtCCWfkiaPU';
 export const REVENUECAT_IOS_KEY = 'appl_lcWQjXqSSYaBfwhmgqfJuDzjnng';
 export const PRIVACY_URL = 'https://lightsoldiergames.com/okey101/gizlilik';
+export const PRIVACY_URL_EN = 'https://lightsoldiergames.com/okey101/privacy#en';

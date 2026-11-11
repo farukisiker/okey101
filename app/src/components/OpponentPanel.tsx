@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { PublicPlayer, SeatInfo } from '@okey/shared';
 import { colors, font } from '../theme';
+import { t } from '../i18n';
 
 interface Props {
   player: PublicPlayer;
@@ -25,12 +26,12 @@ export function OpponentPanel({ player, seatInfo, total, unit, active, width, he
         </Text>
         {player.opened && (
           <View style={styles.chip}>
-            <Text style={styles.chipText}>AÇTI</Text>
+            <Text style={styles.chipText}>{t('openedChip')}</Text>
           </View>
         )}
       </View>
       <Text style={styles.meta} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-        {away ? 'bağlantı koptu' : unit ? `${total} ${unit}` : `${player.handCount} taş · ${total}`}
+        {away ? t('disconnected') : unit ? t('pointsN', { n: total }) : `${t('handTiles', { n: player.handCount })} · ${total}`}
       </Text>
     </View>
   );

@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSUserTrackingUsageDescription": "Pedimos permissão para mostrar anúncios mais relevantes para você.",
+    "NSLocalNetworkUsageDescription": "Para conectar a um servidor Demli Okey na sua rede local."
+  }
+}

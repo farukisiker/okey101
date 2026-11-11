@@ -35,11 +35,13 @@ export function Button({ title, onPress, disabled, variant = 'primary', size = '
           (variant === 'secondary' || disabled) && { color: colors.text },
         ]}
         numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.55}
       >
         {title}
       </Text>
       {subtitle ? (
-        <Text style={[styles.subtitle, (variant === 'secondary' || disabled) && { color: colors.muted }]} numberOfLines={1}>
+        <Text style={[styles.subtitle, (variant === 'secondary' || disabled) && { color: colors.muted }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
           {subtitle}
         </Text>
       ) : null}

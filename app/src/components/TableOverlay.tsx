@@ -5,6 +5,7 @@ import { colors, font } from '../theme';
 import { Button } from './Button';
 import { MeldView, fitTileWidth, ownerLabel, sortMelds } from './TableMelds';
 import { TileView } from './TileView';
+import { t } from '../i18n';
 
 interface Props {
   table: TableMeld[];
@@ -35,12 +36,12 @@ export function TableOverlay({ table, players, mySeat, okey, selected, highlight
         <Text style={styles.title}>Masadaki perler</Text>
         {selected ? (
           <View style={styles.selected}>
-            <Text style={styles.hint}>Seçili taş:</Text>
+            <Text style={styles.hint}>{t('selectedTile')}</Text>
             <TileView tile={selected} okey={okey} width={30} />
-            <Text style={styles.hint}>{highlight.size ? 'yeşil pere dokun, eklensin' : 'bu taş hiçbir pere uymuyor'}</Text>
+            <Text style={styles.hint}>{highlight.size ? t('tapGreenMeld') : t('fitsNoMeld')}</Text>
           </View>
         ) : null}
-        <Button title="Kapat" onPress={onClose} style={{ minWidth: 120 }} />
+        <Button title={t('close')} onPress={onClose} style={{ minWidth: 120 }} />
       </View>
       <ScrollView
         style={{ flex: 1 }}
@@ -49,7 +50,7 @@ export function TableOverlay({ table, players, mySeat, okey, selected, highlight
       >
         {owners.map((owner) => (
           <View key={owner} style={styles.group}>
-            <Text style={styles.owner}>{owner === mySeat ? 'Senin perlerin' : `${players[owner]?.name ?? ''} perleri`}</Text>
+            <Text style={styles.owner}>{owner === mySeat ? t('yourMelds') : t('theirMelds', { name: players[owner]?.name ?? '' })}</Text>
             <View style={styles.row}>
               {melds
                 .filter((m) => m.owner === owner)

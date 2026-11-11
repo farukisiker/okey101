@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
+import { t } from '../i18n';
 import type {
   Action,
   ClientToServerEvents,
@@ -73,7 +74,7 @@ export function useOkey(serverUrl: string) {
       password?: string,
     ): Promise<Result> => {
       const socket = socketRef.current;
-      if (!socket?.connected) return { ok: false, error: 'Sunucuya bağlanılamadı' };
+      if (!socket?.connected) return { ok: false, error: t('cantReachServer') };
       const res =
         kind === 'room:join'
           ? await socket.timeout(5000).emitWithAck('room:join', { roomId, name, password })
@@ -92,11 +93,11 @@ export function useOkey(serverUrl: string) {
 
   const call = useCallback(async (fn: (s: OkeySocket) => Promise<Result>): Promise<Result> => {
     const socket = socketRef.current;
-    if (!socket?.connected) return { ok: false, error: 'Bağlantı yok' };
+    if (!socket?.connected) return { ok: false, error: t('noConnection') };
     try {
       return await fn(socket);
     } catch {
-      return { ok: false, error: 'Sunucu yanıt vermedi' };
+      return { ok: false, error: t('serverNoReply') };
     }
   }, []);
 

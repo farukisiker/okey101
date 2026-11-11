@@ -4,6 +4,7 @@ import { type GameMode, isTablePassword, type TableSummary } from '@okey/shared'
 import { Button } from '../components/Button';
 import type { OkeyClient } from '../net/useOkey';
 import { colors, font } from '../theme';
+import { t, tErr } from '../i18n';
 
 interface Props {
   client: OkeyClient;
@@ -15,7 +16,7 @@ interface Props {
 
 type Result = { ok: true } | { ok: false; error: string };
 
-const modeName = (m: GameMode) => (m === 'duz' ? 'Düz Okey' : '101 Okey');
+const modeName = (m: GameMode) => (m === 'duz' ? t('modeDuz') : t('mode101'));
 
 /** What the password box is for: locking a new table, or sitting at a locked one. */
 type PinFor = { kind: 'create' } | { kind: 'join'; table: TableSummary };
@@ -44,7 +45,7 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack }: Pr
     setError(null);
     const res = await fn();
     setBusy(false);
-    if (!res.ok) setError(res.error);
+    if (!res.ok) setError(tErr(res.error));
     return res;
   };
 
@@ -62,8 +63,8 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack }: Pr
     <View style={{ flex: 1 }}>
       {/* Back is always in the top-left corner, never scrolled out of sight. */}
       <View style={styles.header}>
-        <Button title="‹ Geri" variant="secondary" onPress={onBack} style={{ minWidth: 120 }} />
-        <Text style={styles.heading}>Salon</Text>
+        <Button title={t('back')} variant="secondary" onPress={onBack} style={{ minWidth: 120 }} />
+        <Text style={styles.heading}>{t('salon')}</Text>
         <View style={{ width: 120 }} />
       </View>
 
@@ -71,17 +72,17 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack }: Pr
         <ScrollView style={styles.list} contentContainerStyle={{ gap: 8, paddingBottom: 12 }}>
           {offline ? (
             <Text style={styles.warn}>
-              Oyun sunucusuna bağlanılamadı. Bilgisayara karşı her zaman oynayabilirsin.
+              {t('cantConnect')}
             </Text>
           ) : client.salon.length === 0 ? (
-            <Text style={styles.empty}>Şu an boş yeri olan masa yok.{'\n'}Sağdan bir masa aç, gelenler oturur.</Text>
+            <Text style={styles.empty}>{t('noTables')}</Text>
           ) : (
-            client.salon.map((t) => (
+            client.salon.map((tb) => (
               <TableRow
-                key={t.id}
-                table={t}
+                key={tb.id}
+                table={tb}
                 disabled={busy}
-                onSit={() => (t.locked ? setPinFor({ kind: 'join', table: t }) : run(() => client.joinRoom(name, t.id)))}
+                onSit={() => (tb.locked ? setPinFor({ kind: 'join', table: tb }) : run(() => client.joinRoom(name, tb.id)))}
               />
             ))
           )}
@@ -98,7 +99,7 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack }: Pr
             {(['101', 'duz'] as const).map((m) => (
               <Button
                 key={m}
-                title={m === '101' ? '101' : 'Düz'}
+                title={m === '101' ? t('modeBtn101') : t('modeBtnDuz')}
                 variant={mode === m ? 'primary' : 'secondary'}
                 onPress={() => setMode(m)}
                 style={{ flex: 1, minWidth: 0, paddingHorizontal: 4 }}
@@ -106,15 +107,15 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack }: Pr
             ))}
           </View>
           <Button
-            title="Masa Aç"
-            subtitle="Salonda görünür"
+            title={t('openTable')}
+            subtitle={t('openTableSub')}
             variant="success"
             onPress={() => run(() => client.createRoom(name, mode, true))}
             disabled={busy || offline}
           />
           <Button
-            title="Şifreli Masa"
-            subtitle="6 rakamlı şifreyle girilir"
+            title={t('lockedTable')}
+            subtitle={t('lockedTableSub')}
             variant="secondary"
             onPress={() => {
               setError(null);
@@ -126,7 +127,7 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack }: Pr
           {/* The live server address is built in (App.tsx); the field is only for development builds. */}
           {__DEV__ && (
             <>
-              <Text style={styles.label}>Sunucu adresi</Text>
+              <Text style={styles.label}>{t('serverAddress')}</Text>
               <TextInput
                 style={styles.urlInput}
                 value={url}
@@ -142,8 +143,8 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack }: Pr
       </View>
       {pinFor && (
         <PinPrompt
-          title={pinFor.kind === 'create' ? 'Masa şifresi belirle' : `${modeName(pinFor.table.mode)} masasının şifresi`}
-          action={pinFor.kind === 'create' ? 'Masayı Aç' : 'Otur'}
+          title={pinFor.kind === 'create' ? t('setPassword') : t('tablePassword', { mode: modeName(pinFor.table.mode) })}
+          action={pinFor.kind === 'create' ? t('openTheTable') : t('sit')}
           busy={busy}
           error={error}
           onSubmit={submitPin}
@@ -185,7 +186,7 @@ function PinPrompt(props: {
             <TextInput
               style={styles.pinInput}
               value={pin}
-              onChangeText={(t) => setPin(t.replace(/\D/g, '').slice(0, 6))}
+              onChangeText={(v) => setPin(v.replace(/\D/g, '').slice(0, 6))}
               placeholder="••••••"
               placeholderTextColor={colors.muted}
               keyboardType="number-pad"
@@ -200,12 +201,12 @@ function PinPrompt(props: {
               disabled={!ready || props.busy}
               style={{ minWidth: 150 }}
             />
-            <Button title="Vazgeç" variant="secondary" onPress={props.onCancel} style={{ minWidth: 130 }} />
+            <Button title={t('cancel')} variant="secondary" onPress={props.onCancel} style={{ minWidth: 130 }} />
           </View>
           {props.error ? (
             <Text style={styles.warn}>{props.error}</Text>
           ) : (
-            <Text style={styles.label}>Sadece rakam, 6 hane</Text>
+            <Text style={styles.label}>{t('digitsOnly')}</Text>
           )}
         </View>
       </View>
@@ -221,20 +222,20 @@ function TableRow({ table, disabled, onSit }: { table: TableSummary; disabled: b
           {table.locked ? '🔒 ' : ''}
           {modeName(table.mode)}
           <Text style={styles.rowState}>
-            {table.started ? '  · oyun sürüyor, bir yer boş' : `  · ${table.free} kişi bekleniyor`}
+            {'  · '}{table.started ? t('gameOn') : t('waitingN', { n: table.free })}
           </Text>
         </Text>
         <View style={styles.chips}>
           {table.seats.map((n, i) => (
             <View key={i} style={[styles.chip, n === null && styles.chipFree]}>
               <Text style={[styles.chipText, n === null && { color: colors.muted }]} numberOfLines={1}>
-                {n ?? (table.started ? 'bot' : 'boş')}
+                {n ?? (table.started ? t('bot') : t('emptySeat'))}
               </Text>
             </View>
           ))}
         </View>
       </View>
-      <Button title="Otur" onPress={onSit} disabled={disabled} style={{ minWidth: 110 }} />
+      <Button title={t('sit')} onPress={onSit} disabled={disabled} style={{ minWidth: 110 }} />
     </View>
   );
 }

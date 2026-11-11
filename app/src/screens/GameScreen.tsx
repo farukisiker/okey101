@@ -41,6 +41,7 @@ import {
   validGroups,
 } from '../game/rackLayout';
 import type { OkeyClient } from '../net/useOkey';
+import { split, t, tErr } from '../i18n';
 import { colorNames, colors, font } from '../theme';
 
 export function GameScreen({ client }: { client: OkeyClient }) {
@@ -48,7 +49,7 @@ export function GameScreen({ client }: { client: OkeyClient }) {
   if (!view || !room) {
     return (
       <View style={styles.center}>
-        <Text style={styles.waiting}>Masa hazırlanıyor…</Text>
+        <Text style={styles.waiting}>{t('tablePreparing')}</Text>
       </View>
     );
   }
@@ -81,8 +82,8 @@ function fixed(width: number, height: number) {
   return { width, minWidth: width, height, minHeight: height, paddingHorizontal: 4 };
 }
 
-function tileName(t: Tile): string {
-  return t.kind === 'fake' ? 'sahte okey' : `${colorNames[t.color]} ${t.value}`;
+function tileName(tile: Tile): string {
+  return tile.kind === 'fake' ? t('fakeOkey') : `${colorNames[tile.color]} ${tile.value}`;
 }
 
 function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; client: OkeyClient }) {
@@ -135,8 +136,8 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   // The drawn tile glows for two seconds so it can be found on the rack.
   useEffect(() => {
     if (fresh === null) return;
-    const t = setTimeout(() => setFresh(null), 2000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setFresh(null), 2000);
+    return () => clearTimeout(timer);
   }, [fresh]);
 
   useEffect(() => {
@@ -171,10 +172,9 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   useEffect(() => {
     if (gosterge === null || announcedRound.current === room.round) return;
     announcedRound.current = room.round;
-    const who = gosterge === view.seat ? 'Sen' : view.players[gosterge].name;
-    setInfo(`${who} göstergeyi gösterdi: ${gosterge === view.seat ? 'diğerleri' : 'herkes'} 1 puan kaybeder`);
-    const t = setTimeout(() => setInfo(null), 4000);
-    return () => clearTimeout(t);
+    setInfo(gosterge === view.seat ? t('gostergeMine') : t('gostergeOther', { name: view.players[gosterge].name }));
+    const timer = setTimeout(() => setInfo(null), 4000);
+    return () => clearTimeout(timer);
     // Once per deal; names and seat don't change within a round.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gosterge, room.round]);
@@ -183,11 +183,11 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   const seenReshuffles = useRef(view.reshuffles);
   useEffect(() => {
     if (view.reshuffles > seenReshuffles.current) {
-      setInfo('Ortadaki taşlar bitti — yerdekiler karıştırıldı, oyun devam ediyor');
+      setInfo(t('reshuffled'));
       play('draw');
-      const t = setTimeout(() => setInfo(null), 4000);
+      const timer = setTimeout(() => setInfo(null), 4000);
       seenReshuffles.current = view.reshuffles;
-      return () => clearTimeout(t);
+      return () => clearTimeout(timer);
     }
     seenReshuffles.current = view.reshuffles;
   }, [view.reshuffles]);
@@ -235,7 +235,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   const send = useCallback(
     async (action: Action) => {
       const res = await client.act(action);
-      if (!res.ok) showToast(res.error);
+      if (!res.ok) showToast(tErr(res.error));
       return res.ok;
     },
     [client, showToast],
@@ -246,15 +246,15 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
     void send({ type: 'discard', tileId });
   };
   const discard = (tileId: number) => {
-    if (!canPlay) return showToast(canDraw ? 'Önce taş çek' : 'Sıra sende değil');
+    if (!canPlay) return showToast(canDraw ? t('drawFirst') : t('notYourTurn'));
     // Throwing a tile that fits a meld on the table usually helps the next player: ask first.
     if (addable.has(tileId)) return setConfirmIslek(tileId);
     doDiscard(tileId);
   };
 
   const addToMeld = (tileId: number, meldId: number) => {
-    if (!canPlay) return showToast(canDraw ? 'Önce taş çek' : 'Sıra sende değil');
-    if (!me.opened) return showToast('Pere taş eklemek için önce açmalısın');
+    if (!canPlay) return showToast(canDraw ? t('drawFirst') : t('notYourTurn'));
+    if (!me.opened) return showToast(t('openFirstToAdd'));
     setSelected(null);
     void send({ type: 'addToMeld', meldId, tileIds: [tileId] });
   };
@@ -271,7 +271,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   };
 
   const draw = (source: 'deck' | 'discard', slot: number | null = null) => {
-    if (!canDraw) return showToast(myTurn ? 'Bu el taşını çektin, şimdi bir taş at' : 'Sıra sende değil');
+    if (!canDraw) return showToast(myTurn ? t('alreadyDrew') : t('notYourTurn'));
     pendingSlot.current = slot;
     void send({ type: 'draw', source });
   };
@@ -316,13 +316,14 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   const totals = duz ? room.totals.map((t) => DUZ_START_POINTS - t) : room.totals;
   const status = statusText(view, myTurn, addable.size > 0, canFinish);
   const okeyName = `${colorNames[view.okey.color]} ${view.okey.value}`;
-  const openTitle = me.opened ? 'Per İndir' : `Aç ${groupPoints}/${OPEN_THRESHOLD}`;
+  const openTitle = me.opened ? t('layMelds') : t('openBtn', { points: groupPoints, need: OPEN_THRESHOLD });
   const openSub = me.opened
     ? undefined
     : groupPoints >= OPEN_THRESHOLD
-      ? 'Açabilirsin!'
-      : `${OPEN_THRESHOLD - groupPoints} sayı daha`;
+      ? t('canOpen')
+      : t('pointsMore', { n: OPEN_THRESHOLD - groupPoints });
 
+  const duzHint2 = split('duzHint2', 'btn');
   const cellW = Math.floor((L.drawW - 12) / 2);
   const emptyFrame = <View style={[styles.emptyFrame, { width: L.pileW - 2, height: L.pileH - 2 }]} />;
 
@@ -331,7 +332,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
       {/* 1 · Header strip: leave, sound, the three opponents in seating order, the okey. */}
       <View style={[styles.row, { height: L.headH }]}>
         <Button
-          title="Çık"
+          title={t('leave')}
           variant="secondary"
           onPress={() => setConfirmLeave(true)}
           style={fixed(L.cikW, L.headH)}
@@ -351,7 +352,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
               player={view.players[seat]}
               seatInfo={room.seats[seat]}
               total={totals[seat]}
-              unit={duz ? 'puan' : undefined}
+              unit={duz ? 'points' : undefined}
               active={view.turn === seat}
               width={L.oppW}
               height={L.headH}
@@ -362,7 +363,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
         <View style={[styles.okeyBox, { width: L.okW, height: L.headH }]}>
           <TileView tile={view.indicator} width={28} />
           <View>
-            <Text style={styles.okeyLabel}>Okey</Text>
+            <Text style={styles.okeyLabel}>{t('okeyLabel')}</Text>
             <Text style={styles.okeyValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
               {okeyName}
             </Text>
@@ -407,7 +408,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
                 </Text>
               </View>
             </Pulse>
-            <Text style={styles.zoneLabel}>Deste</Text>
+            <Text style={styles.zoneLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{t('deck')}</Text>
           </View>
           <View collapsable={false} style={[styles.cell, { width: cellW }, dragging === 'discard' && styles.raised]}>
             <Pulse on={canDraw && !!leftTop}>
@@ -438,8 +439,8 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
                 </DragSource>
               )}
             </Pulse>
-            <Text style={styles.zoneLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-              Soldan al
+            <Text style={styles.zoneLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
+              {t('takeLeft')}
             </Text>
           </View>
         </View>
@@ -449,12 +450,14 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
             // Two short lines beside the score: fits the shortest zone (~90pt) on any phone.
             <View style={styles.duzCenter}>
               <View style={styles.duzScoreBox}>
-                <Text style={styles.duzScoreLabel}>Puanın</Text>
+                <Text style={styles.duzScoreLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{t('yourPoints')}</Text>
                 <Text style={styles.duzScore}>{totals[view.seat]}</Text>
               </View>
               <Text style={styles.duzHint} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75}>
-                14 taş per ya da 7 çift olunca{'\n'}
-                <Text style={{ color: colors.accent, fontWeight: '900' }}>Bitir</Text>'e bas
+                {t('duzHint1')}{'\n'}
+                {duzHint2[0]}
+                <Text style={{ color: colors.accent, fontWeight: '900' }}>{t('finishBtn')}</Text>
+                {duzHint2[1]}
               </Text>
             </View>
           ) : (
@@ -465,7 +468,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
             okey={view.okey}
             maxTileWidth={L.meldCap}
             zoomWidth={Math.round(56 * L.s)}
-            emptyText={`Açmak için ${OPEN_THRESHOLD} sayı gerekir`}
+            emptyText={t('openNeeds', { n: OPEN_THRESHOLD })}
             highlight={highlight}
             onMeldPress={onMeldPress}
             onZoom={() => view.table.length > 0 && setZoomed(true)}
@@ -480,14 +483,14 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
           style={[styles.zone, styles.cell, { width: L.discW, height: L.sideH }]}
         >
           <Pulse on={canPlay}>{myTop ? <TileView tile={myTop} okey={view.okey} width={L.pileW} /> : emptyFrame}</Pulse>
-          <Text style={styles.zoneLabel}>Buraya at</Text>
+          <Text style={styles.zoneLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{t('discardHere')}</Text>
         </Pressable>
       </View>
 
       {/* 3 · Actions: arrange · status · throw · open. */}
       <View style={[styles.row, { height: L.actH, gap: L.ag, marginTop: L.gap }]}>
         <Button
-          title="Diz"
+          title={t('sort')}
           variant="secondary"
           onPress={() => moveOnRack(autoArrange(view.hand, view.okey))}
           style={fixed(L.dizW, L.actH)}
@@ -513,15 +516,15 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
           )}
         </View>
         <Button
-          title="At"
+          title={t('discardBtn')}
           onPress={() => selected !== null && discard(selected)}
           disabled={!canPlay || selected === null}
           style={fixed(L.atW, L.actH)}
         />
         {duz ? (
           <Button
-            title="Bitir"
-            subtitle={canFinish ? 'Bitirebilirsin!' : 'Henüz bitmedi'}
+            title={t('finishBtn')}
+            subtitle={canFinish ? t('canFinish') : t('notFinished')}
             variant={canFinish ? 'success' : 'primary'}
             onPress={() => finish !== null && void send({ type: 'finish', tileId: finish })}
             disabled={!canFinish}
@@ -570,7 +573,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
           room={room}
           onNext={async () => {
             const r = await client.nextRound();
-            if (!r.ok) showToast(r.error);
+            if (!r.ok) showToast(tErr(r.error));
           }}
           onLeave={client.leave}
         />
@@ -596,9 +599,9 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
 
       {confirmIslek !== null && (
         <ConfirmDialog
-          message="Bu taş yerdeki bir pere işlenebilir. Yine de atmak istiyor musun?"
-          confirm="Evet, at"
-          cancel="Hayır"
+          message={t('confirmIslek')}
+          confirm={t('yesDiscard')}
+          cancel={t('no')}
           onConfirm={() => {
             const id = confirmIslek;
             setConfirmIslek(null);
@@ -610,9 +613,9 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
 
       {confirmLeave && (
         <ConfirmDialog
-          message="Masadan kalkmak istiyor musun?"
-          confirm="Evet, kalk"
-          cancel="Hayır, oyna"
+          message={t('confirmLeave')}
+          confirm={t('yesLeave')}
+          cancel={t('noPlay')}
           onConfirm={() => {
             setConfirmLeave(false);
             client.leave();
@@ -626,15 +629,15 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
 
 /** Short, plain instructions; while others play, say what they just did. */
 function statusText(view: PlayerView, myTurn: boolean, hasAddable: boolean, canFinish: boolean): string {
-  if (view.phase === 'finished') return 'El bitti';
+  if (view.phase === 'finished') return t('handOver');
   if (myTurn) {
-    if (view.turnPhase === 'draw') return 'SIRA SENDE — TAŞ ÇEK';
-    if (view.mustUseTileId !== null) return 'Yerden aldığın taşı kullan';
-    if (canFinish) return 'ELİN BİTTİ — BİTİR\'E BAS';
-    if (hasAddable && view.players[view.seat].opened) return '"+" işaretli taşı pere ekleyebilirsin';
-    return 'SIRA SENDE — BİR TAŞ AT';
+    if (view.turnPhase === 'draw') return t('yourTurnDraw');
+    if (view.mustUseTileId !== null) return t('useTakenTile');
+    if (canFinish) return t('handDone');
+    if (hasAddable && view.players[view.seat].opened) return t('canAddPlus');
+    return t('yourTurnDiscard');
   }
-  return lastActionText(view) ?? `${view.players[view.turn].name} oynuyor…`;
+  return lastActionText(view) ?? t('playing', { name: view.players[view.turn].name });
 }
 
 function lastActionText(view: PlayerView): string | null {
@@ -643,17 +646,17 @@ function lastActionText(view: PlayerView): string | null {
   const name = view.players[a.seat].name;
   switch (a.type) {
     case 'open':
-      return `${name} açtı (${a.points})`;
+      return t('actOpened', { name, points: a.points });
     case 'meld':
-      return `${name} per indirdi`;
+      return t('actMelded', { name });
     case 'addToMeld':
-      return `${name} pere taş işledi`;
+      return t('actAdded', { name });
     case 'draw':
-      return a.source === 'discard' ? `${name} yerden aldı` : `${name} ortadan çekti`;
+      return a.source === 'discard' ? t('actTookDiscard', { name }) : t('actDrewDeck', { name });
     case 'discard':
-      return `${name} ${tileName(a.tile)} attı`;
+      return t('actDiscarded', { name, tile: tileName(a.tile) });
     case 'finish':
-      return `${name} bitirdi`;
+      return t('actFinished', { name });
   }
 }
 

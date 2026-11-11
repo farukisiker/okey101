@@ -4,6 +4,7 @@ import { colors, font } from '../theme';
 import { Button } from './Button';
 import { useRef, useState } from 'react';
 import { adGate } from '../ads/interstitial';
+import { t } from '../i18n';
 
 interface Props {
   view: PlayerView;
@@ -17,11 +18,11 @@ export function RoundResult({ view, room, onNext, onLeave }: Props) {
   const [busy, setBusy] = useState(false);
   const r = view.result!;
   const duz = view.mode === 'duz';
-  const nameOf = (seat: number) => (seat === view.seat ? 'Sen' : view.players[seat].name);
+  const nameOf = (seat: number) => (seat === view.seat ? t('you') : view.players[seat].name);
   const iWon = r.winner === view.seat;
   const winner = r.winner === null ? null : nameOf(r.winner);
-  const title = iWon ? 'Tebrikler, sen bitirdin!' : winner ? `${winner} bitirdi` : 'Taşlar bitti, el berabere';
-  const notes = [r.okeyFinish && 'okeyle bitti', r.pairs && 'çiftle bitti', r.elden && 'elden bitti']
+  const title = iWon ? t('youFinished') : winner ? t('actFinished', { name: winner }) : t('tilesRanOut');
+  const notes = [r.okeyFinish && t('okeyFinish'), r.pairs && t('pairsFinish'), r.elden && t('eldenFinish')]
     .filter(Boolean)
     .join(', ');
   // Düz okey counts down from 20; whoever has the most left when someone hits zero wins the game.
@@ -46,10 +47,10 @@ export function RoundResult({ view, room, onNext, onLeave }: Props) {
 
   const explain = (seat: number) => {
     const p = view.players[seat];
-    if (seat === r.winner) return 'bitirdi';
-    if (duz) return seat === view.gosterge ? 'gösterge' : '';
-    if (!p.opened) return `açamadı: ${NOT_OPENED_PENALTY * r.multiplier} ceza`;
-    return 'elinde kalanlar';
+    if (seat === r.winner) return t('finishedShort');
+    if (duz) return seat === view.gosterge ? t('indicatorShort') : '';
+    if (!p.opened) return t('notOpenedPenalty', { n: NOT_OPENED_PENALTY * r.multiplier });
+    return t('leftInHand');
   };
 
   return (
@@ -59,22 +60,22 @@ export function RoundResult({ view, room, onNext, onLeave }: Props) {
           <Text style={styles.title}>{title}</Text>
           {over && (
             <Text style={styles.over}>
-              Oyun bitti! {champion === view.seat ? 'Kazanan sensin' : `Kazanan: ${nameOf(champion)}`}
+              {t('gameOver')} {champion === view.seat ? t('youWon') : t('winnerIs', { name: nameOf(champion) })}
             </Text>
           )}
-          {notes ? <Text style={styles.note}>{notes} — puanlar {r.multiplier} katı</Text> : null}
+          {notes ? <Text style={styles.note}>{t('multiplied', { notes, n: r.multiplier })}</Text> : null}
           <View style={styles.table}>
             <View style={styles.row}>
-              <Text style={[styles.cell, styles.head, { flex: 2.4 }]}>Oyuncu</Text>
-              <Text style={[styles.cell, styles.head]}>Bu el</Text>
-              <Text style={[styles.cell, styles.head]}>{duz ? 'Kalan puan' : 'Toplam'}</Text>
+              <Text style={[styles.cell, styles.head, { flex: 2.4 }]}>{t('player')}</Text>
+              <Text style={[styles.cell, styles.head]}>{t('thisHand')}</Text>
+              <Text style={[styles.cell, styles.head]}>{duz ? t('pointsLeft') : t('total')}</Text>
             </View>
             {view.players.map((p) => {
               const me = p.seat === view.seat;
               return (
                 <View key={p.seat} style={[styles.row, p.seat === r.winner && styles.winnerRow]}>
                   <Text style={[styles.cell, { flex: 2.4 }]} numberOfLines={1}>
-                    <Text style={me ? { color: colors.accent } : undefined}>{me ? 'Sen' : p.name}</Text>
+                    <Text style={me ? { color: colors.accent } : undefined}>{me ? t('you') : p.name}</Text>
                     <Text style={styles.why}>{`  ${explain(p.seat)}`}</Text>
                   </Text>
                   <Text style={styles.cell}>{duz ? (r.scores[p.seat] ? `−${r.scores[p.seat]}` : '0') : r.scores[p.seat]}</Text>
@@ -84,11 +85,11 @@ export function RoundResult({ view, room, onNext, onLeave }: Props) {
             })}
           </View>
           <Text style={styles.note}>
-            {duz ? `Herkes ${DUZ_START_POINTS} puanla başlar; puanı ilk biten oyunu bitirir.` : 'Düşük puan iyidir.'}
+            {duz ? t('duzRule', { n: DUZ_START_POINTS }) : t('lowIsGood')}
           </Text>
           <View style={styles.buttons}>
-            <Button title={over ? 'Yeni Oyun' : 'Sonraki El'} disabled={busy} onPress={() => void proceed(false)} style={{ minWidth: 240, minHeight: 64 }} />
-            <Button title="Masadan kalk" disabled={busy} variant="secondary" onPress={() => void proceed(true)} />
+            <Button title={over ? t('newGame') : t('nextHand')} disabled={busy} onPress={() => void proceed(false)} style={{ minWidth: 240, minHeight: 64 }} />
+            <Button title={t('leaveTable')} disabled={busy} variant="secondary" onPress={() => void proceed(true)} />
           </View>
         </View>
       </ScrollView>

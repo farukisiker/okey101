@@ -1,4 +1,5 @@
 import type { Color } from '@okey/shared';
+import { t } from './i18n';
 
 export const colors = {
   felt: '#0b3d2e',
@@ -26,11 +27,12 @@ export const tileColors: Record<Color, string> = {
   black: '#1d1d1d',
 };
 
+/** Colour names in the player's language. */
 export const colorNames: Record<Color, string> = {
-  red: 'Kırmızı',
-  yellow: 'Sarı',
-  blue: 'Mavi',
-  black: 'Siyah',
+  red: t('colorRed'),
+  yellow: t('colorYellow'),
+  blue: t('colorBlue'),
+  black: t('colorBlack'),
 };
 
 /** A distinct mark per colour so colour-blind players can tell tiles apart. */

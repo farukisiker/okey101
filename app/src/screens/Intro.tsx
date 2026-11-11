@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { colors } from '../theme';
+import { t } from '../i18n';
 
 const SHOW_MS = 2800;
 
@@ -15,14 +16,14 @@ export function Intro({ onDone }: { onDone(): void }) {
   return (
     <Pressable style={styles.root} onPress={onDone}>
       <Animated.Text entering={FadeIn.duration(700)} style={styles.name}>
-        Çayınız demli, masanız hazır
+        {t('introTagline')}
       </Animated.Text>
       <Animated.View entering={FadeInDown.delay(500).duration(800)} style={styles.badge}>
         <Text style={styles.vip}>DEMLİ</Text>
         <Text style={styles.okey}>OKEY</Text>
       </Animated.View>
       <Animated.Text entering={FadeIn.delay(1400).duration(600)} style={styles.tap}>
-        Başlamak için dokunun
+        {t('introTap')}
       </Animated.Text>
     </Pressable>
   );

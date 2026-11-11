@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSUserTrackingUsageDescription": "Kami meminta izin untuk menampilkan iklan yang lebih relevan bagimu.",
+    "NSLocalNetworkUsageDescription": "Untuk terhubung ke server Demli Okey di jaringan lokalmu."
+  }
+}

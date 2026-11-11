@@ -6,6 +6,7 @@ import { loadName, saveName } from '../feedback';
 import { Salon } from './Salon';
 import type { OkeyClient } from '../net/useOkey';
 import { colors, font } from '../theme';
+import { split, t, tErr } from '../i18n';
 
 interface Props {
   client: OkeyClient;
@@ -42,7 +43,7 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
     setError(null);
     const res = await fn();
     setBusy(false);
-    if (!res.ok) setError(res.error);
+    if (!res.ok) setError(tErr(res.error));
   };
 
   const confirmName = () => {
@@ -64,27 +65,28 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
     return () => sub.remove();
   }, [friends, editingName, name]);
 
+  const welcome = split('welcome', 'name');
   if (!loaded) return <View style={styles.root} />;
 
   if (name === null || editingName) {
     // Kept at the top of the screen: in landscape the keyboard covers the lower half.
     return (
       <View style={styles.nameRoot}>
-        <Text style={styles.question}>Adınız nedir?</Text>
+        <Text style={styles.question}>{t('askName')}</Text>
         <View style={styles.nameRow}>
           <TextInput
             style={styles.nameInput}
             value={draft}
             onChangeText={setDraft}
             onSubmitEditing={confirmName}
-            placeholder="Adınızı yazın"
+            placeholder={t('namePlaceholder')}
             placeholderTextColor={colors.muted}
             maxLength={20}
             disableFullscreenUI
             autoFocus
             returnKeyType="done"
           />
-          <Button title="Devam" onPress={confirmName} disabled={!draft.trim()} style={{ minWidth: 140 }} />
+          <Button title={t('continue')} onPress={confirmName} disabled={!draft.trim()} style={{ minWidth: 140 }} />
         </View>
       </View>
     );
@@ -109,15 +111,15 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
       </Text>
       <Pressable onPress={() => setEditingName(true)} hitSlop={12}>
         <Text style={styles.welcome}>
-          Hoş geldin, <Text style={{ color: colors.accent }}>{name}</Text>
-          <Text style={styles.change}>   (değiştir)</Text>
+          {welcome[0]}<Text style={{ color: colors.accent }}>{name}</Text>{welcome[1]}
+          <Text style={styles.change}>{'   '}{t('change')}</Text>
         </Text>
       </Pressable>
-      <Text style={styles.question}>Hangi oyunu oynayalım?</Text>
+      <Text style={styles.question}>{t('whichGame')}</Text>
       <View style={styles.games}>
         <Button
-          title="101 OKEY"
-          subtitle="101 sayıyla aç, yere per indir"
+          title={t('game101')}
+          subtitle={t('game101Sub')}
           size="large"
           onPress={() => {
             void run(() => client.quickPlay(name, '101'));
@@ -125,8 +127,8 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
           disabled={busy}
         />
         <Button
-          title="DÜZ OKEY"
-          subtitle="14 taşı diz, 15.'yi atıp bitir"
+          title={t('gameDuz')}
+          subtitle={t('gameDuzSub')}
           size="large"
           onPress={() => {
             void run(() => client.quickPlay(name, 'duz'));
@@ -135,8 +137,8 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
         />
       </View>
       <Button
-        title="Salon"
-        subtitle="Masaya otur, arkadaşlarınla oyna"
+        title={t('salon')}
+        subtitle={t('salonSub')}
         variant="secondary"
         onPress={() => setFriends(true)}
       />

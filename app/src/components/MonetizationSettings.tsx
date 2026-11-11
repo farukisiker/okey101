@@ -2,14 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { showPrivacyOptions, usePrivacyOptionsRequired } from '../ads/consent';
 import { adGate } from '../ads/interstitial';
-import { PRIVACY_URL } from '../config/monetization';
+import { PRIVACY_URL, PRIVACY_URL_EN } from '../config/monetization';
 import { buyRemoveAds, getRemoveAdsPackage, purchasesConfigured, restorePurchases, useAdFree } from '../purchases';
 import { colors } from '../theme';
+import { lang, t } from '../i18n';
 
 export function MonetizationSettings() {
   const adFree = useAdFree();
   const privacyRequired = usePrivacyOptionsRequired();
-  const [price, setPrice] = useState('₺149,99');
+  const [price, setPrice] = useState('');
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   useEffect(() => {
@@ -26,19 +27,19 @@ export function MonetizationSettings() {
     lock.current = true;
     setBusy(true);
     try { await action(); }
-    catch { Alert.alert('İşlem tamamlanamadı', 'Lütfen tekrar deneyin.'); }
+    catch { Alert.alert(t('failTitle'), t('tryAgain')); }
     finally { lock.current = false; setBusy(false); }
   };
   const buy = async () => {
     const result = await buyRemoveAds();
-    if (result === 'ok') Alert.alert('Teşekkürler!', 'Artık geçiş reklamları gösterilmeyecek.');
-    else if (result === 'error') Alert.alert('Satın alma tamamlanamadı', 'Lütfen tekrar deneyin.');
+    if (result === 'ok') Alert.alert(t('thanks'), t('noMoreAds'));
+    else if (result === 'error') Alert.alert(t('purchaseFailed'), t('tryAgain'));
   };
   const restore = async () => {
     const result = await restorePurchases();
-    Alert.alert('Satın Alımları Geri Yükle', result === 'ok'
-      ? 'Reklamsız oyun geri yüklendi.'
-      : result === 'empty' ? 'Geri yüklenecek satın alım bulunamadı.' : 'Geri yüklenemedi. Lütfen tekrar deneyin.');
+    Alert.alert(t('restore'), result === 'ok'
+      ? t('restored')
+      : result === 'empty' ? t('nothingToRestore') : t('restoreFailed'));
   };
   const item = (title: string, action: () => Promise<void>, accent = false) => (
     <Pressable accessibilityRole="button" disabled={busy} onPress={() => void run(action)} style={styles.button}>
@@ -47,13 +48,13 @@ export function MonetizationSettings() {
   );
   return (
     <View style={styles.row}>
-      {purchasesConfigured() && !adFree && item(`Reklamsız Oyna – ${price}`, buy, true)}
-      {purchasesConfigured() && item('Satın Alımları Geri Yükle', restore)}
-      {privacyRequired && item('Gizlilik Tercihleri', async () => {
-        if (!await showPrivacyOptions()) Alert.alert('Gizlilik Tercihleri', 'Tercihler açılamadı. Lütfen tekrar deneyin.');
+      {purchasesConfigured() && !adFree && item(price ? t('removeAds', { price }) : t('removeAds', { price: '' }).replace(/\s*–\s*$/, ''), buy, true)}
+      {purchasesConfigured() && item(t('restore'), restore)}
+      {privacyRequired && item(t('privacyChoices'), async () => {
+        if (!await showPrivacyOptions()) Alert.alert(t('privacyChoices'), t('privacyChoicesFailed'));
         void adGate.preload();
       })}
-      {item('Gizlilik Politikası', async () => { await Linking.openURL(PRIVACY_URL); })}
+      {item(t('privacyPolicy'), async () => { await Linking.openURL(lang === 'tr' ? PRIVACY_URL : PRIVACY_URL_EN); })}
     </View>
   );
 }

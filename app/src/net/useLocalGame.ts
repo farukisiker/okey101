@@ -13,6 +13,7 @@ import {
   viewFor,
 } from '@okey/shared';
 import type { Session } from './useOkey';
+import { t } from '../i18n';
 
 const BOT_DELAY_MS = 1300;
 const ME = 0;
@@ -34,7 +35,7 @@ export function useLocalGame() {
 
   const apply = useCallback((seat: number, action: Action): Result => {
     const g = gameRef.current;
-    if (!g) return { ok: false, error: 'Oyun yok' };
+    if (!g) return { ok: false, error: t('noGame') };
     const res = applyAction(g, seat, action);
     if (!res.ok) return res;
     gameRef.current = res.state;
@@ -121,7 +122,7 @@ export function useLocalGame() {
     act: async (action: Action): Promise<Result> => apply(ME, action),
     nextRound: async (): Promise<Result> => {
       const g = gameRef.current;
-      if (!g || g.phase !== 'finished' || name === null) return { ok: false, error: 'Tur bitmedi' };
+      if (!g || g.phase !== 'finished' || name === null) return { ok: false, error: t('roundNotOver') };
       // Düz okey: once someone is out of points a new game starts from scratch.
       if (matchOver(mode, totals)) setTotals([0, 0, 0, 0]);
       deal(names, round, mode);

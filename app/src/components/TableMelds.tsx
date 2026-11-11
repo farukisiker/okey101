@@ -4,6 +4,7 @@ import type { OkeyInfo, PublicPlayer, TableMeld, Tile } from '@okey/shared';
 import { useDropZones } from '../game/dropZones';
 import { colors, font } from '../theme';
 import { TileView, tileHeight } from './TileView';
+import { t } from '../i18n';
 
 const GAP = 6;
 const INSET = 4;
@@ -138,7 +139,7 @@ export function TableMelds(p: Props) {
           >
             <Text style={styles.zoomIcon}>🔍</Text>
             <Text style={[styles.zoomText, hidden > 0 && { color: '#2b1d00' }]}>
-              {hiddenLit ? 'Uyan\nper' : hidden > 0 ? `Tümü\n(${melds.length})` : 'Büyüt'}
+              {hiddenLit ? t('matchingMelds') : hidden > 0 ? t('allMelds', { n: melds.length }) : t('zoom')}
             </Text>
           </Pressable>
         </>
