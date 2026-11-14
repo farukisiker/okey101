@@ -1,7 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
-import type { PublicPlayer, SeatInfo } from '@okey/shared';
+import { type OkeyInfo, type PublicPlayer, type SeatInfo, visibleDiscard } from '@okey/shared';
 import { colors, font } from '../theme';
 import { t } from '../i18n';
+import { TileView } from './TileView';
 
 interface Props {
   player: PublicPlayer;
@@ -12,27 +13,44 @@ interface Props {
   active: boolean;
   width: number;
   height: number;
+  /** Show the top of this player's discard pile at the panel's right edge. */
+  showDiscard?: boolean;
+  okey?: OkeyInfo;
 }
 
 /** One opponent in the header strip: name (+ AÇTI) over "N taş · puan"; lit when it's their turn. */
-export function OpponentPanel({ player, seatInfo, total, unit, active, width, height }: Props) {
+export function OpponentPanel({ player, seatInfo, total, unit, active, width, height, showDiscard, okey }: Props) {
   const away = seatInfo && !seatInfo.connected;
+  const top = showDiscard ? visibleDiscard(player) : undefined;
+  // Fits inside the panel's 3pt border with a little air above and below.
+  const tileW = Math.floor((height - 10) / 1.38);
   return (
     <View style={[styles.panel, { width, height }, active && styles.active]}>
-      <View style={styles.nameRow}>
-        <Text style={[styles.name, active && { color: colors.accent }]} numberOfLines={1}>
-          {active ? '▶ ' : ''}
-          {player.name}
+      <View style={styles.info}>
+        <View style={styles.nameRow}>
+          <Text style={[styles.name, active && { color: colors.accent }]} numberOfLines={1}>
+            {active ? '▶ ' : ''}
+            {player.name}
+          </Text>
+          {player.opened && (
+            <View style={styles.chip}>
+              <Text style={styles.chipText}>{t('openedChip')}</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.meta} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+          {away ? t('disconnected') : unit ? t('pointsN', { n: total }) : `${t('handTiles', { n: player.handCount })} · ${total}`}
         </Text>
-        {player.opened && (
-          <View style={styles.chip}>
-            <Text style={styles.chipText}>{t('openedChip')}</Text>
-          </View>
-        )}
       </View>
-      <Text style={styles.meta} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-        {away ? t('disconnected') : unit ? t('pointsN', { n: total }) : `${t('handTiles', { n: player.handCount })} · ${total}`}
-      </Text>
+      {showDiscard && (
+        <View style={[styles.discard, { width: tileW }]}>
+          {top ? (
+            <TileView tile={top} okey={okey} width={tileW} />
+          ) : (
+            <View style={[styles.emptyDiscard, { width: tileW - 2, height: Math.round(tileW * 1.38) - 2 }]} />
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -44,8 +62,13 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: 'transparent',
     paddingHorizontal: 8,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
+  info: { flex: 1, justifyContent: 'center', minWidth: 0 },
+  discard: { alignItems: 'center', justifyContent: 'center' },
+  emptyDiscard: { borderRadius: 4, borderWidth: 1, borderColor: colors.muted, borderStyle: 'dashed', opacity: 0.5 },
   active: { borderColor: colors.accent, backgroundColor: colors.activePanel },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   name: { color: colors.text, fontWeight: '800', fontSize: font.body, flexShrink: 1, lineHeight: 21 },

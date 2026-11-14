@@ -1,4 +1,4 @@
-import { type Action, type PlayerView, OPEN_THRESHOLD, leftOf } from './game';
+import { type Action, type PlayerView, OPEN_THRESHOLD, canShowIndicator, leftOf } from './game';
 import { findFinish, meldCover } from './duz';
 import { analyzeMeld } from './melds';
 import { findBestMelds } from './solver';
@@ -154,6 +154,7 @@ function chooseDiscard(
  */
 function duzStep(view: PlayerView, cfg: (typeof LEVELS)['medium'], rng: Rng): Action {
   const { hand, okey } = view;
+  if (canShowIndicator(view)) return { type: 'showIndicator' };
   if (view.turnPhase === 'draw') {
     const top = view.players[leftOf(view.seat)].discards.at(-1);
     if (top && view.deckCount === 0) return { type: 'draw', source: 'discard' };

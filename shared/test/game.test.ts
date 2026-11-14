@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isJoker,
+  visibleDiscard,
   applyAction,
   createGame,
   createTileSet,
@@ -95,12 +97,37 @@ describe('sıra', () => {
     g = ok(g, 1, { type: 'discard', tileId: g.players[1].hand[0].id });
     expect(g.players[1].penalties).toBe(101);
   });
+  it('a taken pile shows empty until its owner throws again, never the older tile under it', () => {
+    let g = createGame({ rng: seededRng(3) });
+    const first = g.players[0].hand[0];
+    g = ok(g, 0, { type: 'discard', tileId: first.id });
+    // Lap 2: seat 0 throws again on top of the first tile.
+    for (const s of [1, 2, 3]) {
+      g = ok(g, s, { type: 'draw', source: 'deck' });
+      g = ok(g, s, { type: 'discard', tileId: g.players[s].hand[0].id });
+    }
+    g = ok(g, 0, { type: 'draw', source: 'deck' });
+    const second = g.players[0].hand[0];
+    g = ok(g, 0, { type: 'discard', tileId: second.id });
+    expect(visibleDiscard(viewFor(g, 2).players[0])).toEqual(second);
+    g = ok(g, 1, { type: 'draw', source: 'discard' });
+    expect(g.players[0].discards).toEqual([first]);
+    expect(visibleDiscard(viewFor(g, 2).players[0])).toBeUndefined();
+  });
+  it('throwing the okey mid-hand costs 101 in 101', () => {
+    let g = createGame({ rng: seededRng(3) });
+    const okeyTile = { kind: 'normal', color: g.okey.color, value: g.okey.value, id: 9001 } as Tile;
+    g.players[0].hand[0] = okeyTile;
+    g = ok(g, 0, { type: 'discard', tileId: okeyTile.id });
+    expect(g.players[0].penalties).toBe(101);
+  });
   it('round ends when the deck runs out (no reshuffle)', () => {
     let g = createGame({ rng: seededRng(5), reshuffles: 0 });
     g = ok(g, 0, { type: 'discard', tileId: g.players[0].hand[0].id });
     while (g.phase === 'playing') {
       g = ok(g, g.turn, { type: 'draw', source: 'deck' });
-      g = ok(g, g.turn, { type: 'discard', tileId: g.players[g.turn].hand[0].id });
+      const notOkey = g.players[g.turn].hand.find((x) => !isJoker(x, g.okey))!;
+      g = ok(g, g.turn, { type: 'discard', tileId: notOkey.id });
     }
     expect(g.deck).toHaveLength(0);
     expect(g.result?.winner).toBeNull();
@@ -203,17 +230,27 @@ describe('bitirme ve puan', () => {
     g.players[1].opened = true;
     g.players[1].hand = [t('blue', 4), t('black', 6)];
     g.players[2].opened = true;
-    g.players[2].hand = [t('red', 5), t('blue', 1)]; // okey left in hand = 101
+    g.players[2].hand = [t('red', 5), t('blue', 1)]; // okey (red 5) left: counts 5, plus a flat 101
     return { g, groups };
   }
 
-  it('winner -101, opened players pay hand sum, unopened pay 202; elden doubles', () => {
+  it('opening and finishing in one turn while others have opened is not elden', () => {
     const { g, groups } = finishSetup(t('blue', 2));
     let s = ok(g, 0, { type: 'open', melds: ids(groups) });
     s = ok(s, 0, { type: 'discard', tileId: s.players[0].hand[0].id });
     expect(s.phase).toBe('finished');
-    expect(s.result).toMatchObject({ winner: 0, elden: true, okeyFinish: false, multiplier: 2 });
-    expect(s.result!.scores).toEqual([-202, 20, 204, 404]);
+    expect(s.result).toMatchObject({ winner: 0, elden: false, okeyFinish: false, multiplier: 1 });
+    expect(s.result!.scores).toEqual([-101, 10, 107, 202]);
+  });
+
+  it('elden (nobody else opened): everyone else pays 404', () => {
+    const { g, groups } = finishSetup(t('blue', 2));
+    g.players[1].opened = false;
+    g.players[2].opened = false;
+    let s = ok(g, 0, { type: 'open', melds: ids(groups) });
+    s = ok(s, 0, { type: 'discard', tileId: s.players[0].hand[0].id });
+    expect(s.result).toMatchObject({ winner: 0, elden: true, multiplier: 2 });
+    expect(s.result!.scores).toEqual([-202, 404, 404, 404]);
   });
 
   it('finishing on a later turn is not elden; finishing with okey doubles', () => {
@@ -224,7 +261,8 @@ describe('bitirme ve puan', () => {
     void groups;
     const s = ok(g, 0, { type: 'discard', tileId: g.players[0].hand[0].id });
     expect(s.result).toMatchObject({ winner: 0, elden: false, okeyFinish: true, multiplier: 2 });
-    expect(s.result!.scores).toEqual([-202, 20, 204, 404]);
+    // The okey's flat 101 is not doubled: (5 + 1) × 2 + 101.
+    expect(s.result!.scores).toEqual([-202, 20, 113, 404]);
   });
 
   it('plain finish: multiplier 1', () => {
@@ -233,7 +271,7 @@ describe('bitirme ve puan', () => {
     g.players[0].openedOnTurn = -4;
     g.players[0].hand = [t('blue', 2)];
     const s = ok(g, 0, { type: 'discard', tileId: g.players[0].hand[0].id });
-    expect(s.result!.scores).toEqual([-101, 10, 102, 202]);
+    expect(s.result!.scores).toEqual([-101, 10, 107, 202]);
   });
 });
 

@@ -58,14 +58,32 @@ describe('düz okey: dağıtım', () => {
     expect(g.turnPhase).toBe('play');
   });
 
-  it('notes who holds the indicator twin (gösterge)', () => {
-    for (let seed = 1; seed < 20; seed++) {
-      const g = createGame({ mode: 'duz', rng: seededRng(seed) });
+  it('gösterge: only the twin holder, on their first turn before drawing, and only once', () => {
+    for (let seed = 1; seed < 40; seed++) {
+      let g = createGame({ mode: 'duz', rng: seededRng(seed) });
+      expect(g.gosterge).toBeNull();
       const holder = g.players.find((p) =>
         p.hand.some((x) => x.kind === 'normal' && x.color === g.indicator.color && x.value === g.indicator.value),
       );
-      expect(g.gosterge).toBe(holder?.seat ?? null);
+      if (!holder) continue;
+      // Play plain moves until the holder's first turn.
+      while (g.turn !== holder.seat) {
+        if (g.turnPhase === 'draw') g = ok(g, g.turn, { type: 'draw', source: 'deck' });
+        else g = ok(g, g.turn, { type: 'discard', tileId: g.players[g.turn].hand[0].id });
+      }
+      const other = (holder.seat + 1) % 4;
+      expect(applyAction(g, other, { type: 'showIndicator' }).ok).toBe(false);
+      if (g.turnNumber > 0) {
+        // After drawing it is too late.
+        const drawn = ok(g, holder.seat, { type: 'draw', source: 'deck' });
+        expect(applyAction(drawn, holder.seat, { type: 'showIndicator' }).ok).toBe(false);
+      }
+      g = ok(g, holder.seat, { type: 'showIndicator' });
+      expect(g.gosterge).toBe(holder.seat);
+      expect(applyAction(g, holder.seat, { type: 'showIndicator' }).ok).toBe(false);
+      return;
     }
+    throw new Error('no seed dealt the twin');
   });
 });
 

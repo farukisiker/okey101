@@ -1,5 +1,13 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { DUZ_START_POINTS, NOT_OPENED_PENALTY, type PlayerView, type RoomInfo, matchOver } from '@okey/shared';
+import {
+  DUZ_START_POINTS,
+  NOT_OPENED_PENALTY,
+  OKEY_IN_HAND_PENALTY,
+  type PlayerView,
+  type RoomInfo,
+  handPenalty,
+  matchOver,
+} from '@okey/shared';
 import { colors, font } from '../theme';
 import { Button } from './Button';
 import { useRef, useState } from 'react';
@@ -49,8 +57,15 @@ export function RoundResult({ view, room, onNext, onLeave }: Props) {
     const p = view.players[seat];
     if (seat === r.winner) return t('finishedShort');
     if (duz) return seat === view.gosterge ? t('indicatorShort') : '';
-    if (!p.opened) return t('notOpenedPenalty', { n: NOT_OPENED_PENALTY * r.multiplier });
-    return t('leftInHand');
+    const extra = p.penalties ? ` +${p.penalties}` : '';
+    if (!p.opened) return t('notOpenedPenalty', { n: NOT_OPENED_PENALTY * r.multiplier }) + extra;
+    // "elinde kalanlar 23 ×2 +101 Okey": the tile sum, the round multiplier, then flat penalties.
+    const hand = view.revealedHands?.[seat];
+    if (!hand) return t('leftInHand');
+    const { sum, okeys } = handPenalty(hand, view.okey);
+    const mult = r.multiplier > 1 ? ` ×${r.multiplier}` : '';
+    const okey = okeys ? ` +${okeys * OKEY_IN_HAND_PENALTY} ${t('okeyLabel')}` : '';
+    return `${t('leftInHand')} ${sum}${mult}${okey}${extra}`;
   };
 
   return (

@@ -15,9 +15,12 @@ import {
   DUZ_START_POINTS,
   OPEN_THRESHOLD,
   addableTiles,
+  canShowIndicator,
+  isJoker,
   findFinish,
   finishShape,
   leftOf,
+  visibleDiscard,
 } from '@okey/shared';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -57,7 +60,8 @@ export function GameScreen({ client }: { client: OkeyClient }) {
 }
 
 /** Gently pulses a highlight while `on`: shows where to act next. */
-function Pulse({ on, children, style }: { on: boolean; children: ReactNode; style?: object }) {
+/** Gold: something to do here. Green: the hand can finish here. */
+function Pulse({ on, green, children, style }: { on: boolean; green?: boolean; children: ReactNode; style?: object }) {
   const v = useSharedValue(0);
   useEffect(() => {
     if (on) v.value = withRepeat(withTiming(1, { duration: 700 }), -1, true);
@@ -67,8 +71,13 @@ function Pulse({ on, children, style }: { on: boolean; children: ReactNode; styl
     }
   }, [on, v]);
   const animated = useAnimatedStyle(() => ({
-    borderColor: on ? `rgba(242,182,50,${0.35 + 0.65 * v.value})` : 'transparent',
-    transform: [{ scale: 1 + 0.04 * v.value }],
+    borderColor: on
+      ? green
+        ? `rgba(95,208,125,${0.45 + 0.55 * v.value})`
+        : `rgba(242,182,50,${0.35 + 0.65 * v.value})`
+      : 'transparent',
+    backgroundColor: on && green ? `rgba(95,208,125,${0.12 + 0.28 * v.value})` : 'transparent',
+    transform: [{ scale: 1 + (green ? 0.08 : 0.04) * v.value }],
   }));
   return (
     <Animated.View collapsable={false} style={[styles.pulse, style, animated]}>
@@ -112,9 +121,9 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   const rightSeat = (view.seat + 1) % 4;
   const acrossSeat = (view.seat + 2) % 4;
   const leftSeat = leftOf(view.seat);
-  const leftTop = view.players[leftSeat].discards.at(-1);
-  const leftUnder = view.players[leftSeat].discards.at(-2);
-  const myTop = me.discards.at(-1);
+  // Only the tile each player threw this lap shows; older ones lie covered underneath.
+  const leftTop = visibleDiscard(view.players[leftSeat]);
+  const myTop = visibleDiscard(me);
 
   // Rack follows the hand; a new round's hand gets auto-arranged. Tile ids repeat
   // every round, so the round number (not the ids) tells a new deal apart.
@@ -204,11 +213,15 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
     return findFinish(view.hand, view.okey)?.tileId ?? null;
   }, [duz, canPlay, selected, view.hand, view.okey]);
   const canFinish = finish !== null;
+  // 101: one tile left after laying everything down; throwing it ends the hand.
+  const lastTile = !duz && canPlay && me.opened && view.hand.length === 1 ? view.hand[0].id : null;
+  /** The hand can end now: the deck glows and takes the finishing tile, like closing it on the middle stack. */
+  const finishReady = canFinish || lastTile !== null;
   const reachedFinish = useRef(false);
   useEffect(() => {
-    if (canFinish && !reachedFinish.current) buzz('success');
-    reachedFinish.current = canFinish;
-  }, [canFinish]);
+    if (finishReady && !reachedFinish.current) buzz('success');
+    reachedFinish.current = finishReady;
+  }, [finishReady]);
 
   // "İşlek" tiles: hand tiles that fit a meld on the table. Marked on the rack;
   // selecting one lights up the melds it fits.
@@ -217,6 +230,9 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   const highlight = useMemo(() => new Set(selected === null ? [] : (addable.get(selected) ?? [])), [addable, selected]);
   const [zoomed, setZoomed] = useState(false);
   const [confirmIslek, setConfirmIslek] = useState<number | null>(null);
+  const [confirmOkey, setConfirmOkey] = useState<number | null>(null);
+  // Düz okey: the indicator's twin can be shown on the first turn, before drawing.
+  const canShow = canShowIndicator(view);
 
   const reachedOpen = useRef(false);
   useEffect(() => {
@@ -247,6 +263,9 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   };
   const discard = (tileId: number) => {
     if (!canPlay) return showToast(canDraw ? t('drawFirst') : t('notYourTurn'));
+    // 101: throwing the okey other than as the last tile costs 101: ask first.
+    const tile = view.hand.find((x) => x.id === tileId);
+    if (!duz && tile && view.hand.length > 1 && isJoker(tile, view.okey)) return setConfirmOkey(tileId);
     // Throwing a tile that fits a meld on the table usually helps the next player: ask first.
     if (addable.has(tileId)) return setConfirmIslek(tileId);
     doDiscard(tileId);
@@ -265,8 +284,19 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
     setZoomed(true);
   };
 
+  /** The finishing tile goes face down on the middle stack. */
+  const finishOnDeck = (tileId: number | null) => {
+    if (!finishReady) return showToast(canDraw ? t('drawFirst') : myTurn ? t('notFinished') : t('notYourTurn'));
+    setSelected(null);
+    if (!duz) return void send({ type: 'discard', tileId: lastTile! });
+    const id = tileId !== null && finishShape(view.hand.filter((x) => x.id !== tileId), view.okey) ? tileId : null;
+    if (tileId !== null && id === null) return showToast(t('notFinished'));
+    void send({ type: 'finish', tileId: id ?? finish! });
+  };
+
   const onDropOnZone = (tileId: number, zone: string) => {
-    if (zone === 'discard') discard(tileId);
+    if (zone === 'deck') finishOnDeck(tileId);
+    else if (zone === 'discard') discard(tileId);
     else if (zone.startsWith('meld:')) addToMeld(tileId, Number(zone.slice(5)));
   };
 
@@ -302,19 +332,23 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
       if (view.phase === 'finished') return true;
       if (zoomed) setZoomed(false);
       else if (confirmIslek !== null) setConfirmIslek(null);
+      else if (confirmOkey !== null) setConfirmOkey(null);
       else setConfirmLeave((open) => !open);
       return true;
     });
     return () => sub.remove();
-  }, [zoomed, confirmIslek, view.phase]);
+  }, [zoomed, confirmIslek, confirmOkey, view.phase]);
 
   // The discard zone is a drop target for tiles dragged off the rack.
   const discardRef = useRef<HostInstance>(null);
   useEffect(() => zones.register('discard', discardRef), [zones]);
+  // The deck takes the finishing tile.
+  const deckRef = useRef<HostInstance>(null);
+  useEffect(() => zones.register('deck', deckRef), [zones]);
 
   // Düz okey shows what each player has left of their starting points.
   const totals = duz ? room.totals.map((t) => DUZ_START_POINTS - t) : room.totals;
-  const status = statusText(view, myTurn, addable.size > 0, canFinish);
+  const status = canShow ? t('canShowIndicator') : statusText(view, myTurn, addable.size > 0, canFinish, lastTile !== null);
   const okeyName = `${colorNames[view.okey.color]} ${view.okey.value}`;
   const openTitle = me.opened ? t('layMelds') : t('openBtn', { points: groupPoints, need: OPEN_THRESHOLD });
   const openSub = me.opened
@@ -356,19 +390,29 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
               active={view.turn === seat}
               width={L.oppW}
               height={L.headH}
+              // The left player's pile is already the big "take" pile below; the
+              // other two show theirs here, so every tile thrown this lap is visible.
+              showDiscard={seat !== leftSeat}
+              okey={view.okey}
             />
           </View>
         ))}
         <View style={{ flex: 1 }} />
-        <View style={[styles.okeyBox, { width: L.okW, height: L.headH }]}>
+        <Pressable
+          disabled={!canShow}
+          onPress={() => void send({ type: 'showIndicator' })}
+          style={[styles.okeyBox, { width: L.okW, height: L.headH }, canShow && styles.okeyShow]}
+        >
           <TileView tile={view.indicator} width={28} />
-          <View>
-            <Text style={styles.okeyLabel}>{t('okeyLabel')}</Text>
-            <Text style={styles.okeyValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+          <View style={{ flexShrink: 1 }}>
+            <Text style={[styles.okeyLabel, canShow && { color: colors.felt, fontWeight: '900' }]} numberOfLines={1}>
+              {canShow ? t('showIndicator') : t('okeyLabel')}
+            </Text>
+            <Text style={[styles.okeyValue, canShow && { color: colors.felt }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
               {okeyName}
             </Text>
           </View>
-        </View>
+        </Pressable>
       </View>
 
       {/* 2 · Zones: draw (deck, left discard) · table · discard. */}
@@ -379,8 +423,12 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
           collapsable={false}
           style={[styles.zone, styles.drawZone, { width: L.drawW, height: L.sideH }, dragging && styles.raised]}
         >
-          <View collapsable={false} style={[styles.cell, { width: cellW }, dragging === 'deck' && styles.raised]}>
-            <Pulse on={canDraw}>
+          <View
+            ref={deckRef}
+            collapsable={false}
+            style={[styles.cell, { width: cellW }, dragging === 'deck' && styles.raised]}
+          >
+            <Pulse on={canDraw || finishReady} green={finishReady}>
               {/* The stack stays put; only its top tile follows the finger, and the count drops by one. */}
               {view.deckCount > 1 && <View style={styles.stackShadow}><TileBack width={L.pileW} /></View>}
               {view.deckCount > 1 || dragging !== 'deck' ? <TileBack width={L.pileW} /> : emptyFrame}
@@ -391,7 +439,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
                   style={styles.pileTop}
                   rackGeom={rackGeom}
                   hoverSlot={hoverSlot}
-                  onTap={() => draw('deck')}
+                  onTap={() => (finishReady ? finishOnDeck(selected) : draw('deck'))}
                   onDragStart={() => {
                     setDragging('deck');
                     zones.measureAll();
@@ -408,15 +456,21 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
                 </Text>
               </View>
             </Pulse>
-            <Text style={styles.zoneLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{t('deck')}</Text>
+            <Text
+              style={[styles.zoneLabel, finishReady && { color: colors.ok }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              {finishReady ? t('finishBtn') : t('deck')}
+            </Text>
           </View>
           <View collapsable={false} style={[styles.cell, { width: cellW }, dragging === 'discard' && styles.raised]}>
             <Pulse on={canDraw && !!leftTop}>
-              {/* What stays on the table while the top tile is in the player's hand. */}
+              {/* While the top tile is in the player's hand the spot looks empty: the
+                  tiles under it were thrown a lap earlier and stay covered. */}
               {dragging === 'discard'
-                ? leftUnder
-                  ? <TileView tile={leftUnder} okey={view.okey} width={L.pileW} />
-                  : emptyFrame
+                ? emptyFrame
                 : leftTop
                   ? <TileView tile={leftTop} okey={view.okey} width={L.pileW} />
                   : emptyFrame}
@@ -611,6 +665,20 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
         />
       )}
 
+      {confirmOkey !== null && (
+        <ConfirmDialog
+          message={t('confirmOkeyDiscard')}
+          confirm={t('yesDiscard')}
+          cancel={t('no')}
+          onConfirm={() => {
+            const id = confirmOkey;
+            setConfirmOkey(null);
+            doDiscard(id);
+          }}
+          onCancel={() => setConfirmOkey(null)}
+        />
+      )}
+
       {confirmLeave && (
         <ConfirmDialog
           message={t('confirmLeave')}
@@ -628,12 +696,13 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
 }
 
 /** Short, plain instructions; while others play, say what they just did. */
-function statusText(view: PlayerView, myTurn: boolean, hasAddable: boolean, canFinish: boolean): string {
+function statusText(view: PlayerView, myTurn: boolean, hasAddable: boolean, canFinish: boolean, lastTile: boolean): string {
   if (view.phase === 'finished') return t('handOver');
   if (myTurn) {
     if (view.turnPhase === 'draw') return t('yourTurnDraw');
     if (view.mustUseTileId !== null) return t('useTakenTile');
     if (canFinish) return t('handDone');
+    if (lastTile) return t('finishOnDeck');
     if (hasAddable && view.players[view.seat].opened) return t('canAddPlus');
     return t('yourTurnDiscard');
   }
@@ -657,6 +726,8 @@ function lastActionText(view: PlayerView): string | null {
       return t('actDiscarded', { name, tile: tileName(a.tile) });
     case 'finish':
       return t('actFinished', { name });
+    case 'showIndicator':
+      return t('gostergeOther', { name });
   }
 }
 
@@ -679,6 +750,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.panel,
   },
   okeyLabel: { color: colors.muted, fontSize: font.small, fontWeight: '600', lineHeight: 18 },
+  okeyShow: { backgroundColor: colors.accent },
   okeyValue: { color: colors.text, fontSize: 17, fontWeight: '800', lineHeight: 20 },
   pulse: { borderWidth: 3, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   pileTop: { position: 'absolute', top: 0, left: 0 },

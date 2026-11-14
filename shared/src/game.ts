@@ -8,7 +8,8 @@ import {
   createTileSet,
   isJoker,
   okeyFromIndicator,
-  penaltyValue,
+  OKEY_IN_HAND_PENALTY,
+  handPenalty,
   seededRng,
   shuffle,
 } from './tiles';
@@ -18,6 +19,8 @@ export const OPEN_THRESHOLD = 101;
 export const NOT_OPENED_PENALTY = 202;
 export const FINISH_BONUS = -101;
 export const UNUSED_DISCARD_PENALTY = 101;
+/** 101: throwing the okey other than as the finishing tile. */
+export const OKEY_DISCARD_PENALTY = 101;
 /** How many times the discards may be reshuffled into a new middle stack. */
 export const DEFAULT_RESHUFFLES = 3;
 
@@ -39,6 +42,11 @@ export interface PlayerState {
   name: string;
   hand: Tile[];
   discards: Tile[];
+  /**
+   * The next player took this pile's top tile; what lies under it was thrown a
+   * lap earlier and is covered on a real table, so it is not shown.
+   */
+  topTaken?: boolean;
   opened: boolean;
   openedOnTurn: number | null;
   penalties: number;
@@ -74,7 +82,8 @@ export type LastAction =
   | { seat: number; type: 'open'; meldIds: number[]; points: number }
   | { seat: number; type: 'meld'; meldId: number }
   | { seat: number; type: 'addToMeld'; meldId: number; tileIds: number[] }
-  | { seat: number; type: 'finish'; tile: Tile; shape: FinishShape };
+  | { seat: number; type: 'finish'; tile: Tile; shape: FinishShape }
+  | { seat: number; type: 'showIndicator' };
 
 export interface GameState {
   mode: GameMode;
@@ -110,7 +119,9 @@ export type Action =
   | { type: 'addToMeld'; meldId: number; tileIds: number[] }
   | { type: 'discard'; tileId: number }
   /** Düz okey: throw this tile and finish with the 14 left in hand. */
-  | { type: 'finish'; tileId: number };
+  | { type: 'finish'; tileId: number }
+  /** Düz okey: show the indicator's twin on your first turn; everyone else loses 1. */
+  | { type: 'showIndicator' };
 
 export type ActionResult = { ok: true; state: GameState } | { ok: false; error: string };
 
@@ -153,10 +164,6 @@ export function createGame(opts: NewGameOptions = {}): GameState {
     };
   }
 
-  const twin = players.find((p) =>
-    p.hand.some((t) => t.kind === 'normal' && t.color === indicator.color && t.value === indicator.value),
-  );
-
   return {
     mode,
     phase: 'playing',
@@ -177,7 +184,8 @@ export function createGame(opts: NewGameOptions = {}): GameState {
     reshufflesLeft: mode === 'duz' ? 0 : (opts.reshuffles ?? DEFAULT_RESHUFFLES),
     reshuffles: 0,
     seed: Math.floor(rng() * 2 ** 31),
-    gosterge: mode === 'duz' ? (twin?.seat ?? null) : null,
+    // Set when the holder of the indicator's twin shows it (düz okey, first turn only).
+    gosterge: null,
   };
 }
 
@@ -199,8 +207,10 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
         tile = state.deck.pop();
         if (!tile) return fail('Ortada taş kalmadı');
       } else {
-        tile = state.players[leftOf(seat)].discards.pop();
+        const left = state.players[leftOf(seat)];
+        tile = left.discards.pop();
         if (!tile) return fail('Solunuzda atılmış taş yok');
+        left.topTaken = true;
         // In 101 a picked-up discard must be played; düz okey has no table to play it on.
         if (state.mode === '101') state.mustUseTileId = tile.id;
       }
@@ -294,6 +304,13 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
       return { ok: true, state };
     }
 
+    case 'showIndicator': {
+      if (!canShowIndicator(viewFor(prev, seat))) return fail('Göstergeyi yalnızca elinde olan, ilk turunda ve taş çekmeden gösterebilir');
+      state.gosterge = seat;
+      state.lastAction = { seat, type: 'showIndicator' };
+      return { ok: true, state };
+    }
+
     case 'discard': {
       if (state.turnPhase !== 'play') return fail('Önce taş çekmelisiniz');
       const idx = player.hand.findIndex((t) => t.id === action.tileId);
@@ -305,7 +322,11 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
         player.penalties += UNUSED_DISCARD_PENALTY;
       }
       const [tile] = player.hand.splice(idx, 1);
+      // 101: the okey may only be thrown as the finishing tile.
+      if (state.mode === '101' && player.hand.length > 0 && isJoker(tile, state.okey))
+        player.penalties += OKEY_DISCARD_PENALTY;
       player.discards.push(tile);
+      player.topTaken = false;
       state.lastAction = { seat, type: 'discard', tile };
       state.mustUseTileId = null;
 
@@ -382,21 +403,28 @@ function addTableMeld(state: GameState, owner: number, tiles: Tile[], a: MeldAna
 /**
  * Scoring (lower is better):
  * - winner: -101
- * - opened players: sum of tiles left in hand (okey in hand = 101)
- * - not opened: 202
- * Finishing with the okey and finishing "elden" (opening and finishing in the
- * same turn) each double the round. Unused discard pickups add 101.
+ * - opened players: face values of the tiles left in hand (the okey counts its
+ *   number), times the round multiplier, plus a flat 101 per okey still held
+ * - not opened: 202, times the round multiplier
+ * Finishing with the okey doubles the round. Finishing "elden" (opening and
+ * finishing in one turn while nobody else has opened) doubles it too, so
+ * everyone else pays 404 (808 if the last tile was the okey). Unused discard
+ * pickups add 101. Flat 101s are never multiplied.
  */
 export function scoreRound(state: GameState, winner: number | null, okeyFinish: boolean, pairs = false): RoundResult {
   if (state.mode === 'duz') return scoreDuz(state, winner, okeyFinish, pairs);
   const w = winner === null ? null : state.players[winner];
-  const elden = !!w && w.openedOnTurn === state.turnNumber;
+  const elden =
+    !!w && w.openedOnTurn === state.turnNumber && state.players.every((p) => p.seat === winner || !p.opened);
   const multiplier = winner === null ? 1 : (okeyFinish ? 2 : 1) * (elden ? 2 : 1);
   const scores = state.players.map((p) => {
     let s: number;
     if (p.seat === winner) s = FINISH_BONUS * multiplier;
     else if (!p.opened) s = NOT_OPENED_PENALTY * multiplier;
-    else s = p.hand.reduce((sum, t) => sum + penaltyValue(t, state.okey), 0) * multiplier;
+    else {
+      const { sum, okeys } = handPenalty(p.hand, state.okey);
+      s = sum * multiplier + okeys * OKEY_IN_HAND_PENALTY;
+    }
     return s + p.penalties;
   });
   return { winner, okeyFinish, elden, pairs: false, multiplier, scores };
@@ -438,6 +466,8 @@ export interface PublicPlayer {
   name: string;
   handCount: number;
   discards: Tile[];
+  /** The top tile was taken: the pile shows empty until this player throws again. */
+  topTaken?: boolean;
   opened: boolean;
   penalties: number;
 }
@@ -466,6 +496,23 @@ export interface PlayerView {
   gosterge: number | null;
 }
 
+/**
+ * Düz okey: the holder of the indicator's twin may show it on their first turn
+ * only, before drawing (the starting player, who does not draw, before throwing).
+ */
+export function canShowIndicator(view: PlayerView): boolean {
+  if (view.mode !== 'duz' || view.phase !== 'playing' || view.gosterge !== null) return false;
+  if (view.turn !== view.seat || view.turnNumber >= SEATS) return false;
+  if (view.turnPhase !== 'draw' && view.turnNumber !== 0) return false;
+  const ind = view.indicator;
+  return view.hand.some((t) => t.kind === 'normal' && t.color === ind.color && t.value === ind.value);
+}
+
+/** The tile a player last threw and nobody took, i.e. what a real table shows on their pile. */
+export function visibleDiscard(p: PublicPlayer): Tile | undefined {
+  return p.topTaken ? undefined : p.discards.at(-1);
+}
+
 export function viewFor(state: GameState, seat: number): PlayerView {
   return {
     mode: state.mode,
@@ -480,6 +527,7 @@ export function viewFor(state: GameState, seat: number): PlayerView {
       name: p.name,
       handCount: p.hand.length,
       discards: p.discards,
+      topTaken: !!p.topTaken,
       opened: p.opened,
       penalties: p.penalties,
     })),
