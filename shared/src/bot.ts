@@ -1,6 +1,6 @@
 import { type Action, type PlayerView, OPEN_THRESHOLD, canShowIndicator, leftOf } from './game';
 import { findFinish, meldCover } from './duz';
-import { analyzeMeld } from './melds';
+import { PAIRS_TO_OPEN, analyzeMeld, findPairs } from './melds';
 import { findBestMelds } from './solver';
 import { type OkeyInfo, type Rng, type Tile, faceOf, isJoker } from './tiles';
 
@@ -23,8 +23,9 @@ const LEVELS = {
 
 /**
  * Bot: keeps the tiles that form the most melds, opens once it has 101 (a
- * medium bot waits a while), lays/adds whatever it can afterwards and
- * discards the least useful leftover. Only sees its own PlayerView, like a human.
+ * medium bot waits a while) or, short of that, with five or more pairs;
+ * lays/adds whatever it can afterwards and discards the least useful
+ * leftover. Only sees its own PlayerView, like a human.
  */
 export function botStep(view: PlayerView, opts: BotOptions = {}): Action {
   const cfg = LEVELS[opts.level ?? 'medium'];
@@ -55,6 +56,9 @@ export function botStep(view: PlayerView, opts: BotOptions = {}): Action {
     findBestMelds(hand, okey, { maxTiles, preferTileId: mustUse ?? undefined, nodeLimit: cfg.nodeLimit });
   let best = solve(hand.length - 1);
   if (!leavesDiscard(best.melds.flat())) best = solve(hand.length - 2);
+  // Pairs, dropping the last ones until a legal discard is left.
+  const pairs = findPairs(hand, okey, mustUse ?? undefined);
+  while (pairs.length && !leavesDiscard(pairs.flat())) pairs.pop();
 
   if (!me.opened) {
     // A picked-up discard must be played this turn, so open whenever that is possible.
@@ -62,13 +66,22 @@ export function botStep(view: PlayerView, opts: BotOptions = {}): Action {
     if (best.points >= OPEN_THRESHOLD && ready && leavesDiscard(best.melds.flat())) {
       return { type: 'open', melds: best.melds.map(ids) };
     }
+    // No 101 in melds: five pairs open too (the picked-up tile has to be in one of them).
+    const usesTaken = mustUse === null || pairs.some((pr) => pr.some((t) => t.id === mustUse));
+    if (pairs.length >= PAIRS_TO_OPEN && ready && usesTaken) return { type: 'open', melds: pairs.map(ids) };
+  } else if (me.pairs) {
+    // Opened with pairs: more pairs and tiles added to the table, never a new set or run.
+    if (pairs.length) return { type: 'meld', tileIds: ids(pairs[0]) };
   } else {
     const meld = best.melds.find(leavesDiscard);
     if (meld) return { type: 'meld', tileIds: ids(meld) };
+  }
+  if (me.opened) {
     if (hand.length > 1) {
       for (const tile of hand) {
         if (isJoker(tile, okey) || !leavesDiscard([tile])) continue;
         for (const m of view.table) {
+          if (m.type === 'pair') continue;
           const a = analyzeMeld([...m.tiles, tile], okey);
           if (a && a.type === m.type) return { type: 'addToMeld', meldId: m.id, tileIds: [tile.id] };
         }
@@ -77,7 +90,9 @@ export function botStep(view: PlayerView, opts: BotOptions = {}): Action {
   }
 
   const slip = rng() < cfg.slip;
-  return { type: 'discard', tileId: chooseDiscard(hand, okey, best.melds, view.mustUseTileId, slip) };
+  // Going for pairs (opened with them, or holding enough to): keep the pairs, throw a single.
+  const keep = me.pairs || (!me.opened && best.points < OPEN_THRESHOLD && pairs.length >= PAIRS_TO_OPEN - 1) ? pairs : best.melds;
+  return { type: 'discard', tileId: chooseDiscard(hand, okey, keep, view.mustUseTileId, slip) };
 }
 
 function waitedEnough(view: PlayerView, cfg: { openAfterLaps: number; openByDeck: number }) {
@@ -102,9 +117,14 @@ function wantsDiscard(view: PlayerView, top: Tile, nodeLimit: number): boolean {
   const hand = [...view.hand, top];
   const best = findBestMelds(hand, view.okey, { maxTiles: hand.length - 1, preferTileId: top.id, nodeLimit });
   const usesTop = best.melds.some((m) => m.some((t) => t.id === top.id));
-  if (!me.opened) return usesTop && best.points >= OPEN_THRESHOLD;
-  if (usesTop) return true;
+  if (me.pairs) {
+    // A twin in hand makes a pair to lay right away.
+    const f = faceOf(top, view.okey);
+    if (f && view.hand.some((t) => faceOf(t, view.okey)?.color === f.color && faceOf(t, view.okey)?.value === f.value)) return true;
+  } else if (!me.opened) return usesTop && best.points >= OPEN_THRESHOLD;
+  else if (usesTop) return true;
   return view.table.some((m) => {
+    if (m.type === 'pair') return false;
     const a = analyzeMeld([...m.tiles, top], view.okey);
     return a !== null && a.type === m.type;
   });

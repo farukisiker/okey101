@@ -57,6 +57,8 @@ for (const k of ERR_KEYS) if (!tr[k].includes('{')) byText.set(tr[k], k);
 const PATTERNS: { re: RegExp; key: Key; names: string[] }[] = [
   { re: /^Geçersiz per: (.*)$/, key: 'errInvalidMeldTiles', names: ['tiles'] },
   { re: /^Açmak için en az (\d+) gerekli \((\d+)\)$/, key: 'errOpenNeeds', names: ['need', 'total'] },
+  { re: /^Geçersiz çift: (.*)$/, key: 'errInvalidPairTiles', names: ['tiles'] },
+  { re: /^Çiftten açmak için en az (\d+) çift gerekli \((\d+)\)$/, key: 'errPairsNeeded', names: ['need', 'count'] },
 ];
 
 export function tErr(message: string): string {

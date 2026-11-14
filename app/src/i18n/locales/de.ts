@@ -199,4 +199,19 @@ export const de: Dict = {
   errRoomFull: 'Der Tisch ist voll',
   errAlreadyStarted: 'Das Spiel hat schon begonnen',
   errNotStarted: 'Das Spiel hat noch nicht begonnen',
+
+  // 101 pairs (çift)
+  openPairsBtn: 'Mit Paaren auslegen ({n})',
+  layPairs: 'Paare ablegen',
+  pairsMore: 'noch {n} Paare',
+  actOpenedPairs: '{name} hat mit Paaren ausgelegt ({n})',
+  pairsChip: 'PAARE',
+  pairLabel: 'Paare',
+  handCancelled: 'Alle haben mit Paaren ausgelegt: Runde ungültig, keine Punkte',
+  errMixedOpen: 'Paare und Sätze kann man nicht zusammen auslegen',
+  errInvalidPairTiles: 'Ungültiges Paar: {tiles}',
+  errPairsNeeded: 'Zum Auslegen mit Paaren brauchst du mindestens {need} Paare ({count})',
+  errPairsNoNewMeld: 'Nach dem Auslegen mit Paaren kein neuer Satz; nur Paare ablegen oder an Sätze anlegen',
+  errSetsNoPairs: 'Nach dem Auslegen mit Sätzen kannst du keine Paare ablegen',
+  errInvalidPair: 'Ungültiges Paar',
 };

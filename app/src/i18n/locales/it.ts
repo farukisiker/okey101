@@ -199,4 +199,19 @@ export const it: Dict = {
   errRoomFull: 'Il tavolo è pieno',
   errAlreadyStarted: 'La partita è già iniziata',
   errNotStarted: 'La partita non è iniziata',
+
+  // 101 pairs (çift)
+  openPairsBtn: 'Apri con coppie ({n})',
+  layPairs: 'Cala coppie',
+  pairsMore: 'Mancano {n} coppie',
+  actOpenedPairs: '{name} ha aperto con coppie ({n})',
+  pairsChip: 'COPPIE',
+  pairLabel: 'coppie',
+  handCancelled: 'Tutti hanno aperto con coppie: mano annullata, nessun punto',
+  errMixedOpen: 'Non puoi aprire con coppie e combinazioni insieme',
+  errInvalidPairTiles: 'Coppia non valida: {tiles}',
+  errPairsNeeded: 'Per aprire con coppie ne servono almeno {need} ({count})',
+  errPairsNoNewMeld: 'Dopo l\'apertura con coppie niente nuove combinazioni: cala coppie o attacca tessere',
+  errSetsNoPairs: 'Dopo l\'apertura con combinazioni non puoi calare coppie',
+  errInvalidPair: 'Coppia non valida',
 };

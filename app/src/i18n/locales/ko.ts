@@ -199,4 +199,19 @@ export const ko: Dict = {
   errRoomFull: '테이블이 꽉 찼어요',
   errAlreadyStarted: '게임이 이미 시작됐어요',
   errNotStarted: '게임이 시작되지 않았어요',
+
+  // 101 pairs (çift)
+  openPairsBtn: '페어로 오픈 ({n})',
+  layPairs: '페어 내려놓기',
+  pairsMore: '{n}페어 더',
+  actOpenedPairs: '{name}님이 페어로 오픈했어요 ({n})',
+  pairsChip: '페어',
+  pairLabel: '페어',
+  handCancelled: '모두 페어로 오픈했어요: 이번 판은 무효, 점수 없음',
+  errMixedOpen: '페어와 세트를 함께 오픈할 수 없어요',
+  errInvalidPairTiles: '잘못된 페어: {tiles}',
+  errPairsNeeded: '페어로 오픈하려면 최소 {need}페어가 필요해요 ({count})',
+  errPairsNoNewMeld: '페어로 오픈한 뒤에는 새 세트를 낼 수 없어요. 페어를 내거나 세트에 붙이세요',
+  errSetsNoPairs: '세트로 오픈한 뒤에는 페어를 낼 수 없어요',
+  errInvalidPair: '잘못된 페어',
 };

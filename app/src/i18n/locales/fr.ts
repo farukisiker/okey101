@@ -199,4 +199,19 @@ export const fr: Dict = {
   errRoomFull: 'La table est pleine',
   errAlreadyStarted: 'La partie a déjà commencé',
   errNotStarted: 'La partie n\'a pas commencé',
+
+  // 101 pairs (çift)
+  openPairsBtn: 'Ouvrir en paires ({n})',
+  layPairs: 'Poser des paires',
+  pairsMore: 'Encore {n} paires',
+  actOpenedPairs: '{name} a ouvert en paires ({n})',
+  pairsChip: 'PAIRES',
+  pairLabel: 'paires',
+  handCancelled: 'Tout le monde a ouvert en paires : main annulée, aucun point',
+  errMixedOpen: 'Impossible d\'ouvrir avec des paires et des combinaisons ensemble',
+  errInvalidPairTiles: 'Paire invalide : {tiles}',
+  errPairsNeeded: 'Pour ouvrir en paires, il faut au moins {need} paires ({count})',
+  errPairsNoNewMeld: 'Après une ouverture en paires, pas de nouvelle combinaison : pose des paires ou complète les combinaisons',
+  errSetsNoPairs: 'Après une ouverture en combinaisons, tu ne peux pas poser de paires',
+  errInvalidPair: 'Paire invalide',
 };

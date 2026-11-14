@@ -29,7 +29,13 @@ export function RoundResult({ view, room, onNext, onLeave }: Props) {
   const nameOf = (seat: number) => (seat === view.seat ? t('you') : view.players[seat].name);
   const iWon = r.winner === view.seat;
   const winner = r.winner === null ? null : nameOf(r.winner);
-  const title = iWon ? t('youFinished') : winner ? t('actFinished', { name: winner }) : t('tilesRanOut');
+  const title = r.cancelled
+    ? t('handCancelled')
+    : iWon
+      ? t('youFinished')
+      : winner
+        ? t('actFinished', { name: winner })
+        : t('tilesRanOut');
   const notes = [r.okeyFinish && t('okeyFinish'), r.pairs && t('pairsFinish'), r.elden && t('eldenFinish')]
     .filter(Boolean)
     .join(', ');
@@ -57,15 +63,19 @@ export function RoundResult({ view, room, onNext, onLeave }: Props) {
     const p = view.players[seat];
     if (seat === r.winner) return t('finishedShort');
     if (duz) return seat === view.gosterge ? t('indicatorShort') : '';
+    if (r.cancelled) return p.pairs ? t('pairLabel') : '';
     const extra = p.penalties ? ` +${p.penalties}` : '';
     if (!p.opened) return t('notOpenedPenalty', { n: NOT_OPENED_PENALTY * r.multiplier }) + extra;
     // "elinde kalanlar 23 ×2 +101 Okey": the tile sum, the round multiplier, then flat penalties.
+    // A pairs opener ("çift · …") pays the tile sum twice over.
     const hand = view.revealedHands?.[seat];
-    if (!hand) return t('leftInHand');
+    const tag = p.pairs ? `${t('pairLabel')} · ` : '';
+    if (!hand) return tag + t('leftInHand');
     const { sum, okeys } = handPenalty(hand, view.okey);
-    const mult = r.multiplier > 1 ? ` ×${r.multiplier}` : '';
+    const times = r.multiplier * (p.pairs ? 2 : 1);
+    const mult = times > 1 ? ` ×${times}` : '';
     const okey = okeys ? ` +${okeys * OKEY_IN_HAND_PENALTY} ${t('okeyLabel')}` : '';
-    return `${t('leftInHand')} ${sum}${mult}${okey}${extra}`;
+    return `${tag}${t('leftInHand')} ${sum}${mult}${okey}${extra}`;
   };
 
   return (

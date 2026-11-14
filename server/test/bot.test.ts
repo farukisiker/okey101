@@ -117,3 +117,28 @@ describe('bot', () => {
     expect(botStep(viewFor(g, 0), { level: 'hard' })).toEqual({ type: 'draw', source: 'deck' });
   });
 });
+
+describe('bot and pairs (çift)', () => {
+  it('pairs openers lay only pairs and add to others’ melds; scoring follows the pairs table', () => {
+    let pairOpeners = 0;
+    for (let seed = 1; seed <= 60; seed++) {
+      const g = playBotGame(seed, 'hard');
+      for (const p of g.players) {
+        if (!p.pairs) continue;
+        pairOpeners++;
+        // A pairs opener never starts a set or run; a sets opener never lays a pair.
+        expect(g.table.filter((m) => m.owner === p.seat).every((m) => m.type === 'pair')).toBe(true);
+      }
+      for (const m of g.table) if (m.type === 'pair') expect(g.players[m.owner].pairs).toBe(true);
+      const r = g.result!;
+      if (r.cancelled) expect(r.scores).toEqual([0, 0, 0, 0]);
+      else if (r.winner !== null) {
+        const w = g.players[r.winner];
+        expect(r.pairs).toBe(w.pairs);
+        expect(r.scores[r.winner] - w.penalties).toBe(-101 * r.multiplier);
+      }
+    }
+    // The bots do go for pairs now and then (dozens of openers in 60 rounds).
+    expect(pairOpeners).toBeGreaterThan(5);
+  });
+});
