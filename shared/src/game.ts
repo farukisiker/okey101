@@ -1,3 +1,4 @@
+import type { TurnClock } from './clock';
 import { type FinishShape, finishShape } from './duz';
 import { type MeldAnalysis, type MeldType, analyzeMeld } from './melds';
 import {
@@ -494,6 +495,8 @@ export interface PlayerView {
   revealedHands: Tile[][] | null;
   /** Düz okey: who showed the indicator's twin this round. */
   gosterge: number | null;
+  /** Time the player to move has left when this view was made; null = no clock. */
+  turnMsLeft?: number | null;
 }
 
 /**
@@ -513,7 +516,7 @@ export function visibleDiscard(p: PublicPlayer): Tile | undefined {
   return p.topTaken ? undefined : p.discards.at(-1);
 }
 
-export function viewFor(state: GameState, seat: number): PlayerView {
+export function viewFor(state: GameState, seat: number, clock: TurnClock | null = null, now = Date.now()): PlayerView {
   return {
     mode: state.mode,
     seat,
@@ -541,5 +544,6 @@ export function viewFor(state: GameState, seat: number): PlayerView {
     result: state.result,
     revealedHands: state.phase === 'finished' ? state.players.map((p) => p.hand) : null,
     gosterge: state.gosterge,
+    turnMsLeft: clock ? Math.max(0, clock.deadline - now) : null,
   };
 }

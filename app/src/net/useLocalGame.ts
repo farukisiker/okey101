@@ -4,12 +4,15 @@ import {
   type GameMode,
   type GameState,
   type RoomInfo,
+  type TurnClock,
   SEATS,
   applyAction,
   botStep,
   createGame,
   matchOver,
+  nextClock,
   pickBotNames,
+  quickMove,
   viewFor,
 } from '@okey/shared';
 import type { Session } from './useOkey';
@@ -32,6 +35,13 @@ export function useLocalGame() {
   const [round, setRound] = useState(0);
   const [totals, setTotals] = useState([0, 0, 0, 0]);
   const gameRef = useRef<GameState | null>(null);
+  /** The player's turn clock (bots move on their own short delay). */
+  const [clock, setClock] = useState<TurnClock | null>(null);
+  const clockRef = useRef<TurnClock | null>(null);
+  const tick = useCallback((g: GameState, action: Action | null) => {
+    clockRef.current = nextClock(action ? clockRef.current : null, g, action, Date.now());
+    setClock(clockRef.current);
+  }, []);
 
   const apply = useCallback((seat: number, action: Action): Result => {
     const g = gameRef.current;
@@ -39,13 +49,14 @@ export function useLocalGame() {
     const res = applyAction(g, seat, action);
     if (!res.ok) return res;
     gameRef.current = res.state;
+    tick(res.state, action);
     setGame(res.state);
     if (res.state.phase === 'finished') {
       const scores = res.state.result!.scores;
       setTotals((t) => t.map((v, i) => v + scores[i]));
     }
     return { ok: true };
-  }, []);
+  }, [tick]);
 
   const deal = useCallback((seatNames: string[], roundNo: number, gameMode: GameMode) => {
     const g = createGame({
@@ -54,9 +65,22 @@ export function useLocalGame() {
       startingSeat: roundNo % SEATS,
     });
     gameRef.current = g;
+    tick(g, null);
     setGame(g);
     setRound(roundNo + 1);
-  }, []);
+  }, [tick]);
+
+  // Out of time: draw from the deck, then throw a tile that is not part of a meld.
+  // The draw leaves the clock run out, so the throw follows right after.
+  useEffect(() => {
+    if (!game || game.phase !== 'playing' || game.turn !== ME || !clock) return;
+    const timer = setTimeout(() => {
+      const g = gameRef.current;
+      if (!g || g.phase !== 'playing' || g.turn !== ME) return;
+      apply(ME, quickMove(viewFor(g, ME)));
+    }, Math.max(0, clock.deadline - Date.now()));
+    return () => clearTimeout(timer);
+  }, [game, clock, apply]);
 
   // Bots move one action at a time with a short delay so the player can follow.
   useEffect(() => {
@@ -77,7 +101,7 @@ export function useLocalGame() {
     return () => clearTimeout(timer);
   }, [game, apply]);
 
-  const view = useMemo(() => (game ? viewFor(game, ME) : null), [game]);
+  const view = useMemo(() => (game ? viewFor(game, ME, clock) : null), [game, clock]);
 
   const room = useMemo<RoomInfo | null>(
     () =>

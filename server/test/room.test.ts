@@ -28,15 +28,33 @@ describe('room', () => {
     expect(room.act(1, { type: 'draw', source: 'deck' })).toMatch(/Sıra/);
   });
 
-  it('a human who times out gets an automatic draw + discard', () => {
+  it('a human who times out gets an automatic discard; the first turn has double time', () => {
     const room = new Room('R3', () => {}, { botDelayMs: 10, turnTimeoutMs: 1000, rng: seededRng(4) });
     room.join('Ali', 's1');
     room.start();
-    vi.advanceTimersByTime(999);
+    expect(room.viewFor(0)!.turnMsLeft).toBe(2000);
+    vi.advanceTimersByTime(1999);
     expect(room.game!.turn).toBe(0);
     vi.advanceTimersByTime(1);
     expect(room.game!.players[0].hand).toHaveLength(21);
     expect(room.game!.players[0].opened).toBe(false);
+  });
+
+  it('later turns: a timed-out human draws and throws at once, on the normal budget', () => {
+    const room = new Room('R3b', () => {}, { botDelayMs: 10, turnTimeoutMs: 1000, rng: seededRng(4) });
+    room.join('Ali', 's1');
+    room.start();
+    room.act(0, { type: 'discard', tileId: room.game!.players[0].hand.find((t) => t.kind === 'fake' || t.value !== room.game!.okey.value || t.color !== room.game!.okey.color)!.id });
+    vi.advanceTimersByTime(60); // three bots, draw + throw each
+    expect(room.game!.turn).toBe(0);
+    expect(room.viewFor(0)!.turnMsLeft).toBe(1000);
+    vi.advanceTimersByTime(999);
+    expect(room.game!.turn).toBe(0);
+    vi.advanceTimersByTime(1); // out of time: draw from the deck…
+    expect(room.game!.players[0].hand).toHaveLength(22);
+    vi.advanceTimersByTime(1); // …and the throw follows straight away
+    expect(room.game!.turn).toBe(1);
+    expect(room.game!.players[0].hand).toHaveLength(21);
   });
 
   it('a disconnected human keeps the seat and can reconnect', () => {

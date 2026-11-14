@@ -11,6 +11,9 @@ import {
   matchOver,
   pickBotNames,
   viewFor,
+  type TurnClock,
+  TURN_MS,
+  nextClock,
 } from '@okey/shared';
 import { botStep, quickMove } from './bot';
 
@@ -28,7 +31,11 @@ export interface RoomOptions {
   /** Sitting down needs this 6-digit password (the table is still listed). */
   password?: string | null;
   botDelayMs?: number;
-  /** A human who doesn't move in time gets a bot move instead. 0 disables. */
+  /**
+   * A human who doesn't move in time gets a quick move instead (draw from the
+   * deck, throw a tile outside their melds). The first turn of a hand gets
+   * double; the first open/meld of a turn refills it. 0 disables.
+   */
   turnTimeoutMs?: number;
   rng?: Rng;
 }
@@ -43,6 +50,7 @@ export class Room {
   totals = [0, 0, 0, 0];
   hostSeat = 0;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private clock: TurnClock | null = null;
   private readonly botDelayMs: number;
   private readonly turnTimeoutMs: number;
   private readonly rng?: Rng;
@@ -56,7 +64,7 @@ export class Room {
     opts: RoomOptions = {},
   ) {
     this.botDelayMs = opts.botDelayMs ?? 1000;
-    this.turnTimeoutMs = opts.turnTimeoutMs ?? 60_000;
+    this.turnTimeoutMs = opts.turnTimeoutMs ?? TURN_MS;
     this.rng = opts.rng;
     this.mode = opts.mode ?? '101';
     this.isPublic = opts.isPublic ?? false;
@@ -176,6 +184,7 @@ export class Room {
       rng: this.rng,
     });
     this.round++;
+    this.tick(null);
     this.changed();
     this.schedule();
   }
@@ -185,6 +194,7 @@ export class Room {
     const res = applyAction(this.game, seat, action);
     if (!res.ok) return res.error;
     this.game = res.state;
+    this.tick(action);
     if (this.game.phase === 'finished') {
       this.game.result!.scores.forEach((s, i) => (this.totals[i] += s));
     }
@@ -210,12 +220,17 @@ export class Room {
   }
 
   viewFor(seat: number) {
-    return this.game ? viewFor(this.game, seat) : null;
+    return this.game ? viewFor(this.game, seat, this.clock) : null;
   }
 
   dispose() {
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
+  }
+
+  private tick(action: Action | null) {
+    this.clock =
+      this.game && this.turnTimeoutMs > 0 ? nextClock(this.clock, this.game, action, Date.now(), this.turnTimeoutMs) : null;
   }
 
   private changed() {
@@ -230,8 +245,9 @@ export class Room {
     if (!g || g.phase !== 'playing' || !this.hasHumans()) return;
     const seat = this.seats[g.turn]!;
     const auto = seat.isBot || seat.socketId === null;
-    const delay = auto ? this.botDelayMs : this.turnTimeoutMs;
-    if (!auto && delay <= 0) return;
+    if (!auto && !this.clock) return;
+    // A timed-out human's draw leaves the clock run out, so the throw follows at once.
+    const delay = auto ? this.botDelayMs : Math.max(0, this.clock!.deadline - Date.now());
     this.timer = setTimeout(() => this.autoPlay(), delay);
   }
 

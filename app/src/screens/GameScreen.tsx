@@ -86,6 +86,35 @@ function Pulse({ on, green, children, style }: { on: boolean; green?: boolean; c
   );
 }
 
+/**
+ * Seconds left on the turn clock. Each view carries the time left when it was
+ * made, so the countdown runs on this device's clock (no server time skew).
+ */
+function useSecondsLeft(view: PlayerView): number | null {
+  const ms = view.turnMsLeft ?? null;
+  const [deadline, setDeadline] = useState<number | null>(null);
+  const [, setNow] = useState(0);
+  useEffect(() => setDeadline(ms === null ? null : Date.now() + ms), [view, ms]);
+  useEffect(() => {
+    if (deadline === null) return;
+    const id = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(id);
+  }, [deadline]);
+  return deadline === null ? null : Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+}
+
+/** "0:24"; red in the last five seconds. */
+function TimerChip({ seconds, size }: { seconds: number; size: number }) {
+  const urgent = seconds <= 5;
+  return (
+    <View style={[styles.timer, urgent && styles.timerUrgent, { minWidth: size * 2.6, height: size * 1.6, borderRadius: size * 0.8 }]}>
+      <Text style={[styles.timerText, { fontSize: size }, urgent && { color: '#fff' }]}>
+        {`${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`}
+      </Text>
+    </View>
+  );
+}
+
 /** Exact width and height for a button, overriding its minimums. */
 function fixed(width: number, height: number) {
   return { width, minWidth: width, height, minHeight: height, paddingHorizontal: 4 };
@@ -115,6 +144,10 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
 
   const me = view.players[view.seat];
   const duz = view.mode === 'duz';
+  const secondsLeft = useSecondsLeft(view);
+  // The clock is shown for people only; bots move on their own.
+  const turnSeat = room.seats[view.turn];
+  const clockFor = view.phase === 'playing' && turnSeat && !turnSeat.isBot && turnSeat.connected ? view.turn : null;
   const myTurn = view.phase === 'playing' && view.turn === view.seat;
   const canDraw = myTurn && view.turnPhase === 'draw';
   const canPlay = myTurn && view.turnPhase === 'play';
@@ -388,6 +421,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
               total={totals[seat]}
               unit={duz ? 'points' : undefined}
               active={view.turn === seat}
+              secondsLeft={clockFor === seat ? secondsLeft : null}
               width={L.oppW}
               height={L.headH}
               // The left player's pile is already the big "take" pile below; the
@@ -549,6 +583,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
           onPress={() => moveOnRack(autoArrange(view.hand, view.okey))}
           style={fixed(L.dizW, L.actH)}
         />
+        {clockFor === view.seat && secondsLeft !== null && <TimerChip seconds={secondsLeft} size={Math.round(20 * L.s)} />}
         <View style={styles.statusBox}>
           {toast ? (
             <Text style={styles.toast} numberOfLines={2}>
@@ -794,6 +829,16 @@ const styles = StyleSheet.create({
   duzScore: { color: colors.accent, fontSize: 30, fontWeight: '900', lineHeight: 34 },
   duzHint: { flexShrink: 1, color: colors.text, fontSize: 17, fontWeight: '600', textAlign: 'center', lineHeight: 22 },
   statusBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  timer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    backgroundColor: colors.panel,
+    borderWidth: 2,
+    borderColor: colors.accent,
+  },
+  timerUrgent: { backgroundColor: colors.danger, borderColor: colors.danger },
+  timerText: { color: colors.accent, fontWeight: '900', fontVariant: ['tabular-nums'] },
   status: { color: colors.text, fontSize: font.status, fontWeight: '800', textAlign: 'center' },
   toast: {
     color: '#fff',
