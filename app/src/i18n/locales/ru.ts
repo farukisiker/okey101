@@ -202,4 +202,19 @@ export const ru: Dict = {
   errRoomFull: 'Стол заполнен',
   errAlreadyStarted: 'Игра уже началась',
   errNotStarted: 'Игра ещё не началась',
+
+  // 101 pairs (çift)
+  openPairsBtn: 'Открыть парами ({n})',
+  layPairs: 'Выложить пары',
+  pairsMore: 'ещё {n} пар',
+  actOpenedPairs: '{name} открылся парами ({n})',
+  pairsChip: 'ПАРЫ',
+  pairLabel: 'пары',
+  handCancelled: 'Все открылись парами: раздача отменена, очков нет',
+  errMixedOpen: 'Нельзя открыться парами и комбинациями вместе',
+  errInvalidPairTiles: 'Неверная пара: {tiles}',
+  errPairsNeeded: 'Чтобы открыться парами, нужно минимум {need} пар ({count})',
+  errPairsNoNewMeld: 'После открытия парами нельзя выкладывать новые комбинации; только пары или добавление к комбинациям',
+  errSetsNoPairs: 'После открытия комбинациями нельзя выкладывать пары',
+  errInvalidPair: 'Неверная пара',
 };

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addableTiles,
   analyzeMeld,
+  analyzePair,
   isJoker,
   visibleDiscard,
   applyAction,
@@ -321,6 +322,21 @@ describe('yerdeki okeyi almak', () => {
     expect(g.table[0].tiles.map((x) => x.id)).not.toContain(okey.id);
     expect(g.players[0].hand.map((x) => x.id)).toContain(okey.id);
     expect(g.players[1].penalties).toBe(101);
+  });
+
+  it('pair: the twin of the real tile frees the okey', () => {
+    const okey = t('red', 5);
+    const b9 = t('blue', 9);
+    const g = rigged([b9, t('black', 2), t('black', 3)]);
+    g.turnPhase = 'play';
+    g.players[0].opened = true;
+    const pairTiles = [t('blue', 9), okey];
+    const a = analyzePair(pairTiles, g.okey)!;
+    g.table = [{ id: 1, owner: 1, type: 'pair', points: 0, tiles: pairTiles, ordered: a.ordered, represents: a.represents }];
+    const s = ok(g, 0, { type: 'addToMeld', meldId: 1, tileIds: [b9.id] });
+    expect(s.players[0].hand.map((x) => x.id)).toContain(okey.id);
+    expect(s.table[0].tiles.map((x) => x.id)).not.toContain(okey.id);
+    expect(s.players[1].penalties).toBe(101);
   });
 
   it('taking back your own okey costs nothing; işlek marks the swap tile', () => {

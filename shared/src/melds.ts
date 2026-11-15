@@ -1,6 +1,7 @@
 import { COLORS, type OkeyInfo, type Tile, faceOf, isJoker } from './tiles';
 
-export type MeldType = 'set' | 'run';
+/** 'pair': two identical tiles, laid only by a player who opened with pairs (101). */
+export type MeldType = 'set' | 'run' | 'pair';
 
 export interface MeldAnalysis {
   type: MeldType;
@@ -116,12 +117,21 @@ export interface SwapMeld {
  *   middle of the run; at an end it could stand for either side, so it stays.
  * - set: the okeys come free once the set has all four real colours; with two
  *   real tiles and an okey both missing colours are needed (one at a time is fine).
+ * - pair: the twin of the pair's real tile frees its okey.
  * Returns the meld's new tiles and the freed okeys, or null when `added` frees none.
  */
 export function okeySwap(meld: SwapMeld, added: Tile[], okey: OkeyInfo): { tiles: Tile[]; freed: Tile[] } | null {
   const jokers = meld.tiles.filter((t) => isJoker(t, okey));
   if (jokers.length === 0 || added.length === 0 || added.some((t) => isJoker(t, okey))) return null;
   const reals = meld.tiles.filter((t) => !isJoker(t, okey));
+  if (meld.type === 'pair') {
+    // A pair's okey: the twin of its real tile frees it (two okeys together stay).
+    if (added.length !== 1 || reals.length !== 1) return null;
+    const want = faceOf(reals[0], okey)!;
+    const got = faceOf(added[0], okey)!;
+    if (want.color !== got.color || want.value !== got.value) return null;
+    return { tiles: [reals[0], added[0]], freed: jokers };
+  }
   if (meld.type === 'set') {
     const tiles = [...reals, ...added];
     if (tiles.length !== 4) return null;
@@ -155,9 +165,63 @@ export function addableTiles(
   for (const tile of hand) {
     if (isJoker(tile, okey)) continue;
     const fits = table
-      .filter((m) => okeySwap(m, [tile], okey) || analyzeMeld([...m.tiles, tile], okey)?.type === m.type)
+      .filter(
+        (m) => okeySwap(m, [tile], okey) || (m.type !== 'pair' && analyzeMeld([...m.tiles, tile], okey)?.type === m.type),
+      )
       .map((m) => m.id);
     if (fits.length) out.set(tile.id, fits);
   }
   return out;
+}
+
+/** 101 opens with pairs: at least this many, laid in one turn instead of 101 points. */
+export const PAIRS_TO_OPEN = 5;
+
+/**
+ * Two identical tiles (same colour and number) as a pair. The okey pairs with
+ * any tile and stands for its partner; two okeys stand for the okey itself.
+ * Pairs carry no points: tile values don't count toward opening.
+ */
+export function analyzePair(tiles: Tile[], okey: OkeyInfo): MeldAnalysis | null {
+  if (tiles.length !== 2 || tiles[0].id === tiles[1].id) return null;
+  const [a, b] = tiles.map((t) => faceOf(t, okey));
+  if (a && b && (a.color !== b.color || a.value !== b.value)) return null;
+  const face = a ?? b ?? { color: okey.color, value: okey.value };
+  const ordered = tiles.map((t) => t.id);
+  return { type: 'pair', points: 0, ordered, represents: { [ordered[0]]: face, [ordered[1]]: face } };
+}
+
+/**
+ * As many disjoint pairs as the hand holds: identical tiles first, then each
+ * okey with the highest leftover single (it would cost the most in hand),
+ * then spare okeys with each other. `preferTileId` is used first when it can be,
+ * and its pair comes first in the list.
+ */
+export function findPairs(hand: Tile[], okey: OkeyInfo, preferTileId?: number): Tile[][] {
+  const byFace = new Map<string, Tile[]>();
+  const jokers: Tile[] = [];
+  for (const t of hand) {
+    const f = faceOf(t, okey);
+    if (!f) jokers.push(t);
+    else {
+      const k = f.color + f.value;
+      const list = byFace.get(k) ?? [];
+      if (t.id === preferTileId) list.unshift(t);
+      else list.push(t);
+      byFace.set(k, list);
+    }
+  }
+  const pairs: Tile[][] = [];
+  const singles: Tile[] = [];
+  for (const list of byFace.values()) {
+    for (let i = 0; i + 1 < list.length; i += 2) pairs.push([list[i], list[i + 1]]);
+    if (list.length % 2) singles.push(list[list.length - 1]);
+  }
+  const value = (t: Tile) => (t.id === preferTileId ? 100 : faceOf(t, okey)!.value);
+  singles.sort((x, y) => value(y) - value(x));
+  while (jokers.length && singles.length) pairs.push([singles.shift()!, jokers.shift()!]);
+  while (jokers.length >= 2) pairs.push([jokers.shift()!, jokers.shift()!]);
+  // The pair with the preferred tile first, so it is laid even when the list gets cut.
+  const has = (pr: Tile[]) => (pr.some((t) => t.id === preferTileId) ? 0 : 1);
+  return pairs.sort((x, y) => has(x) - has(y));
 }

@@ -217,6 +217,21 @@ export const tr = {
   errRoomFull: 'Oda dolu',
   errAlreadyStarted: 'Oyun zaten başladı',
   errNotStarted: 'Oyun başlamadı',
+
+  // 101 pairs (çift)
+  openPairsBtn: 'Çiftten Aç ({n} çift)',
+  layPairs: 'Çift İndir',
+  pairsMore: '{n} çift daha',
+  actOpenedPairs: '{name} çiftten açtı ({n} çift)',
+  pairsChip: 'ÇİFT',
+  pairLabel: 'çift',
+  handCancelled: 'Herkes çiftten açtı: el iptal, puan yazılmadı',
+  errMixedOpen: 'Çift ve per birlikte açılamaz',
+  errInvalidPairTiles: 'Geçersiz çift: {tiles}',
+  errPairsNeeded: 'Çiftten açmak için en az {need} çift gerekli ({count})',
+  errPairsNoNewMeld: 'Çiftten açan yeni per açamaz; yalnızca çift indirip perlere işleyebilir',
+  errSetsNoPairs: 'Perden açan çift indiremez',
+  errInvalidPair: 'Geçersiz çift',
 };
 
 export type Key = keyof typeof tr;

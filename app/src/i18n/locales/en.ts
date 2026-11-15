@@ -203,4 +203,19 @@ export const en: Dict = {
   errRoomFull: 'The table is full',
   errAlreadyStarted: 'The game has already started',
   errNotStarted: 'The game has not started',
+
+  // 101 pairs (çift)
+  openPairsBtn: 'Open with pairs ({n})',
+  layPairs: 'Lay Pairs',
+  pairsMore: '{n} more pairs',
+  actOpenedPairs: '{name} opened with pairs ({n})',
+  pairsChip: 'PAIRS',
+  pairLabel: 'pairs',
+  handCancelled: 'Everyone opened with pairs: hand cancelled, no score',
+  errMixedOpen: 'You can\'t open with pairs and sets together',
+  errInvalidPairTiles: 'Invalid pair: {tiles}',
+  errPairsNeeded: 'Opening with pairs needs at least {need} pairs ({count})',
+  errPairsNoNewMeld: 'After opening with pairs you can\'t start a new set; lay pairs or add tiles to sets',
+  errSetsNoPairs: 'After opening with sets you can\'t lay pairs',
+  errInvalidPair: 'Invalid pair',
 };

@@ -1,4 +1,4 @@
-import { type OkeyInfo, type Tile, analyzeMeld, findBestMelds } from '@okey/shared';
+import { type OkeyInfo, type Tile, OPEN_THRESHOLD, PAIRS_TO_OPEN, analyzeMeld, analyzePair, findBestMelds, findPairs } from '@okey/shared';
 
 export const RACK_COLS = 15;
 export const RACK_ROWS = 2;
@@ -141,11 +141,27 @@ export function validGroups(slots: RackSlots, hand: Tile[], okey: OkeyInfo): Val
   return out;
 }
 
-/** Lays out the best melds first (one gap between them), leftovers after, sorted by colour/value. */
-export function autoArrange(hand: Tile[], okey: OkeyInfo): RackSlots {
-  const { melds } = findBestMelds(hand, okey);
+/** 101 pairs: rack groups of exactly two identical tiles (the okey pairs with anything). */
+export function validPairs(slots: RackSlots, hand: Tile[], okey: OkeyInfo): ValidGroup[] {
+  const byId = new Map(hand.map((t) => [t.id, t]));
+  const out: ValidGroup[] = [];
+  for (const g of rackGroups(slots)) {
+    if (g.length !== 2) continue;
+    const tiles = g.map((id) => byId.get(id)).filter((t): t is Tile => !!t);
+    const m = analyzePair(tiles, okey);
+    if (m) out.push({ tileIds: m.ordered, points: 0 });
+  }
+  return out;
+}
+
+/**
+ * Lays out the best melds first (one gap between them), leftovers after, sorted by colour/value.
+ * With `pairs` (opened with pairs, or holding enough of them and no 101 in melds) it lays out pairs instead.
+ */
+export function autoArrange(hand: Tile[], okey: OkeyInfo, pairs = false): RackSlots {
+  const melds = pairs ? findPairs(hand, okey) : findBestMelds(hand, okey).melds;
   const used = new Set(melds.flat().map((t) => t.id));
-  const ordered: number[][] = melds.map((m) => analyzeMeld(m, okey)?.ordered ?? m.map((t) => t.id));
+  const ordered: number[][] = melds.map((m) => (pairs ? null : analyzeMeld(m, okey)?.ordered) ?? m.map((t) => t.id));
   const rest = hand
     .filter((t) => !used.has(t.id))
     .sort((a, b) => sortKey(a) - sortKey(b))
@@ -167,6 +183,12 @@ export function autoArrange(hand: Tile[], okey: OkeyInfo): RackSlots {
   }
   // Anything that didn't fit goes into remaining free slots.
   return syncRack(slots, hand);
+}
+
+/** Whether "Diz" should lay out pairs: opened with pairs, or not opened, five pairs and no 101 in melds. */
+export function prefersPairs(hand: Tile[], okey: OkeyInfo, opened: boolean, openedWithPairs: boolean): boolean {
+  if (opened) return openedWithPairs;
+  return findPairs(hand, okey).length >= PAIRS_TO_OPEN && findBestMelds(hand, okey).points < OPEN_THRESHOLD;
 }
 
 function sortKey(t: Tile): number {

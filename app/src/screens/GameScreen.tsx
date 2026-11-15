@@ -14,6 +14,7 @@ import {
   type Tile,
   DUZ_START_POINTS,
   OPEN_THRESHOLD,
+  PAIRS_TO_OPEN,
   addableTiles,
   canShowIndicator,
   isJoker,
@@ -39,9 +40,11 @@ import {
   type RackSlots,
   autoArrange,
   emptyRack,
+  prefersPairs,
   slotAt,
   syncRack,
   validGroups,
+  validPairs,
 } from '../game/rackLayout';
 import type { OkeyClient } from '../net/useOkey';
 import { split, t, tErr } from '../i18n';
@@ -167,7 +170,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
     const newDeal = dealtRound.current !== room.round;
     dealtRound.current = room.round;
     setSlots((s) => {
-      if (newDeal) return autoArrange(view.hand, view.okey);
+      if (newDeal) return autoArrange(view.hand, view.okey, !duz && prefersPairs(view.hand, view.okey, false, false));
       const known = new Set(s.filter((id) => id !== null));
       const added = view.hand.filter((t) => !known.has(t.id));
       if (added.length === 1) setFresh(added[0].id);
@@ -251,9 +254,15 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
     seenReshuffles.current = view.reshuffles;
   }, [view.reshuffles]);
 
-  const groups = useMemo(() => validGroups(slots, view.hand, view.okey), [slots, view.hand, view.okey]);
-  const groupPoints = groups.reduce((s, g) => s + g.points, 0);
-  const canOpen = canPlay && !duz && !me.opened && groupPoints >= OPEN_THRESHOLD;
+  const setGroups = useMemo(() => validGroups(slots, view.hand, view.okey), [slots, view.hand, view.okey]);
+  const pairGroups = useMemo(() => validPairs(slots, view.hand, view.okey), [slots, view.hand, view.okey]);
+  const groupPoints = setGroups.reduce((s, g) => s + g.points, 0);
+  // 101 opens with 101 in sets/runs, or else with five pairs; never both kinds together.
+  const opensWithPairs = !me.opened && groupPoints < OPEN_THRESHOLD && pairGroups.length >= PAIRS_TO_OPEN;
+  const openReady = groupPoints >= OPEN_THRESHOLD || opensWithPairs;
+  // What the button lays: after a pairs opening only pairs, after a sets opening only sets/runs.
+  const groups = (me.opened ? me.pairs : opensWithPairs) ? pairGroups : setGroups;
+  const canOpen = canPlay && !duz && !me.opened && openReady;
 
   // Düz okey: the hand is checked for the player, whatever the rack order. The
   // selected tile is thrown if the rest finishes; otherwise the best tile is.
@@ -400,12 +409,22 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   const totals = duz ? room.totals.map((t) => DUZ_START_POINTS - t) : room.totals;
   const status = canShow ? t('canShowIndicator') : statusText(view, myTurn, addable.size > 0, canFinish, lastTile !== null);
   const okeyName = `${colorNames[view.okey.color]} ${view.okey.value}`;
-  const openTitle = me.opened ? t('layMelds') : t('openBtn', { points: groupPoints, need: OPEN_THRESHOLD });
+  const openTitle = me.opened
+    ? me.pairs
+      ? t('layPairs')
+      : t('layMelds')
+    : opensWithPairs
+      ? t('openPairsBtn', { n: pairGroups.length })
+      : t('openBtn', { points: groupPoints, need: OPEN_THRESHOLD });
+  // Three or more pairs on the rack and no 101 near: count the pairs still missing instead.
+  const pairsNear = pairGroups.length >= 3 && groupPoints < OPEN_THRESHOLD - 30;
   const openSub = me.opened
     ? undefined
-    : groupPoints >= OPEN_THRESHOLD
+    : openReady
       ? t('canOpen')
-      : t('pointsMore', { n: OPEN_THRESHOLD - groupPoints });
+      : pairsNear
+        ? t('pairsMore', { n: PAIRS_TO_OPEN - pairGroups.length })
+        : t('pointsMore', { n: OPEN_THRESHOLD - groupPoints });
 
   const duzHint2 = split('duzHint2', 'btn');
   const cellW = Math.floor((L.drawW - 12) / 2);
@@ -597,7 +616,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
         <Button
           title={t('sort')}
           variant="secondary"
-          onPress={() => moveOnRack(autoArrange(view.hand, view.okey))}
+          onPress={() => moveOnRack(autoArrange(view.hand, view.okey, !duz && prefersPairs(view.hand, view.okey, me.opened, me.pairs)))}
           style={fixed(L.dizW, L.actH)}
         />
         {clockFor === view.seat && secondsLeft !== null && <TimerChip seconds={secondsLeft} size={Math.round(20 * L.s)} />}
@@ -642,7 +661,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
             subtitle={openSub}
             variant={canOpen ? 'success' : 'primary'}
             onPress={openOrLay}
-            disabled={!canPlay || groups.length === 0 || (!me.opened && groupPoints < OPEN_THRESHOLD)}
+            disabled={!canPlay || groups.length === 0 || (!me.opened && !openReady)}
             style={fixed(L.acW, L.actH)}
           />
         )}
@@ -767,7 +786,7 @@ function lastActionText(view: PlayerView): string | null {
   const name = view.players[a.seat].name;
   switch (a.type) {
     case 'open':
-      return t('actOpened', { name, points: a.points });
+      return a.pairs ? t('actOpenedPairs', { name, n: a.points }) : t('actOpened', { name, points: a.points });
     case 'meld':
       return t('actMelded', { name });
     case 'addToMeld':
