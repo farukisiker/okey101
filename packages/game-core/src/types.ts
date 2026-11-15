@@ -97,7 +97,8 @@ export interface GameMeta {
  *  Opts = house rules ("kahveden kahveye değişen kurallar"), all with defaults
  *
  * Round = one hand/deal (okey el, pişti dağıtım turu, batak eli, tavla oyunu).
- * Match = rounds until `matchOver` (okey 101: fixed hands; düz: someone out of points; pişti 151; tavla 3/5).
+ * Match = rounds until `matchOver` (okey 101: never ends, players leave when they like; düz: someone out of points;
+ *         pişti 151; tavla 3/5).
  */
 export interface GameDefinition<S, A, V, Opts = unknown> extends GameMeta {
   status: 'active';
