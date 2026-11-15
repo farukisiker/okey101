@@ -1,0 +1,34 @@
+import { expect, it } from 'vitest';
+import { seededRng, nextTurnClock } from '@kahve/core';
+import { pistiDef as d } from '../src';
+import { clone } from '../src/clone';
+it('definition metadata, host clock, rename and turn keys', () => {
+    expect([d.id, d.group, d.status, d.titleKey]).toEqual(['pisti', 'kagit', 'active', 'game.pisti']);
+    expect(d.seatChoices).toEqual([2, 4]);
+    expect(d.noticeOf).toBeUndefined();
+    const s = d.create(d.defaultOptions, ['A', 'B'], seededRng(1), 0), before = clone(s);
+    expect(d.seats(s.options)).toBe(2);
+    expect(d.turn(s)).toEqual({ seat: 1, key: 0, first: true });
+    expect(d.scoreRound(s)).toEqual([0, 0]);
+    expect(nextTurnClock(null, d.turn(s), false, 100, d.clock)?.deadline).toBe(60100);
+    const renamed = d.renameSeat!(s, 0, 'New');
+    expect(renamed.players[0].name).toBe('New');
+    expect({ ...renamed, players: s.players }).toEqual(s);
+    expect(s).toEqual(before);
+    const a = d.quickMove(s, s.turn);
+    expect(d.refillsClock(a)).toBe(false);
+    const r = d.apply(s, s.turn, a);
+    if (!r.ok)
+        throw Error(r.error);
+    expect(d.turn(r.state)).toEqual({ seat: 0, key: 1, first: false });
+    expect(nextTurnClock(null, d.turn(r.state), false, 100, d.clock)?.deadline).toBe(30100);
+    r.state.phase = 'finished';
+    r.state.result = { scores: [1, 2] };
+    expect(d.turn(r.state)).toBeNull();
+    expect(d.roundOver(r.state)).toBe(true);
+    expect(d.viewFor(r.state, 0).playableCardIds).toEqual([]);
+    expect(d.apply(r.state, 0, a).ok).toBe(false);
+    const scores = d.scoreRound(r.state);
+    scores[0] = 99;
+    expect(r.state.result.scores[0]).toBe(1);
+});
