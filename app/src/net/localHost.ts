@@ -194,3 +194,18 @@ export class LocalHost<S, A, V> {
     }
   }
 }
+
+/** What the host adds to every view (server Room and LocalHost alike). */
+export interface HostTimes {
+  /** Ms left on the turn clock when the view was made (null: no clock). */
+  turnMsLeft?: number | null;
+  /** Ms left on a notice panel; the clock stands still meanwhile. */
+  noticeMsLeft?: number;
+}
+
+/** The turn clock now, counted down on this device from the moment the view arrived (`viewAt`). */
+export function msLeftNow(view: HostTimes | null, viewAt: number, now: number): number | null {
+  if (!view || view.turnMsLeft == null) return null;
+  const elapsed = Math.max(0, now - viewAt - (view.noticeMsLeft ?? 0));
+  return Math.max(0, view.turnMsLeft - elapsed);
+}
