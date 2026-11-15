@@ -263,6 +263,19 @@ export const ru: Dict = {
   'timeLeftA11y': '{n} seconds left',
   'winnersA11y': 'Winner: {names}',
 
+  // B5: card game lobby (English until translated)
+  cardPlayNow: 'Play now',
+  cardPlayNowSub: 'Against bots, no internet needed',
+  cardFriends: 'With friends',
+  cardFriendsSub: 'Open a table, lock it, or join by code',
+  seatsN: '{n} players',
+  playSolo: 'Solo',
+  playPartners: 'Partners',
+  privateTable: 'Private table',
+  privateTableSub: 'Not listed, friends join by code',
+  joinByCode: 'Join by code',
+  tableCodePlaceholder: 'Table code',
+  backToGames: 'Back to games',
   // Kartlar (B4): English placeholder, translated in phase D
   suitSpades: 'Spades',
   suitHearts: 'Hearts',

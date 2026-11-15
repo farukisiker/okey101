@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CATALOG, gamesInGroup } from '@kahve/catalog';
-import type { GameId, GameMeta, TableGroup } from '@kahve/core';
+import { CATALOG, gamesInGroup, getDefinition } from '@kahve/catalog';
+import { type GameId, type GameMeta, type TableGroup, isGameId } from '@kahve/core';
 import type { Key } from '../i18n';
 
 export const KAHVE_GAMES: readonly GameMeta[] = CATALOG;
@@ -15,7 +15,8 @@ const LAST_KEY = 'okey101.lastGame';
 export async function loadLastGame(): Promise<GameId | null> {
   try {
     const v = await AsyncStorage.getItem(LAST_KEY);
-    return v === 'okey101' || v === 'okeyDuz' ? v : null;
+    // Any playable game (B5: card games too); a game that went back to "Yakında" is forgotten.
+    return isGameId(v) && getDefinition(v) ? v : null;
   } catch {
     return null;
   }

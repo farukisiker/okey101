@@ -86,6 +86,22 @@ function renameInState<S>(def: GameDefinition<S, unknown, unknown, unknown>, sta
   return def.renameSeat ? def.renameSeat(state, seat, name) : state;
 }
 
+/**
+ * The host's additions to a view: `noticeMsLeft` during a notice panel and, for games whose view carries the raw
+ * `clock` but no `turnMsLeft` (card games), `turnMsLeft` read on the host's clock, so a device whose clock is off
+ * still counts down right. Okey views already have `turnMsLeft` and stay as they were.
+ * Copied in app/src/net/localHost.ts (proved equal in server/test/local-host-equivalence.test.ts).
+ */
+export function withHostTimes<V>(view: V, clock: TurnClock | null, now: number, frozenUntil: number): V {
+  if (typeof view !== 'object' || view === null) return view;
+  let out: V = view;
+  if ('clock' in view && !('turnMsLeft' in view)) {
+    out = { ...out, turnMsLeft: clock ? Math.max(0, clock.deadline - Math.max(now, frozenUntil)) : null };
+  }
+  const left = frozenUntil - now;
+  return left > 0 ? { ...out, noticeMsLeft: left } : out;
+}
+
 /** Rebuilds a seeded table's state from its log (bug reports, bot sims). */
 export function replay<S, A>(
   def: GameDefinition<S, A, unknown, unknown>,
@@ -351,9 +367,7 @@ export class Room<S = GameState, A = Action, V = PlayerView> {
     if (!this.game) return null;
     const now = Date.now();
     // During a notice panel the clock reads as it did when the notice came in.
-    const view = this.def.viewFor(this.game, seat, { clock: this.clock, now: Math.max(now, this.frozenUntil) });
-    const left = this.frozenUntil - now;
-    return left > 0 && typeof view === 'object' && view !== null ? { ...view, noticeMsLeft: left } : view;
+    return withHostTimes(this.def.viewFor(this.game, seat, { clock: this.clock, now: Math.max(now, this.frozenUntil) }), this.clock, now, this.frozenUntil);
   }
 
   /** Ms left on the current notice panel (0 = not frozen). */

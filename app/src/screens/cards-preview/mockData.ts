@@ -1,17 +1,36 @@
-import { type BatakView, type Card, type PistiView, createDeck, makeCard } from '../../components/cards';
+import type { PistiView } from '@kahve/catalog';
+import { type BatakView, type Card, createDeck, makeCard } from '../../components/cards';
 
 // Pre-generated deck
 const DECK = createDeck();
 
-// ---- Pişti Mock States ----
+// ---- Pişti Mock States (the engine's PistiView, B5) ----
 
-export const mockPisti2PlayerInitial: PistiView = {
-  phase: 'playing',
-  seat: 0,
-  turn: 0,
+const pistiOptions: PistiView['options'] = {
   seats: 2,
   partnerMode: false,
   targetScore: 101,
+  hiddenCards: 'reveal',
+  openingJack: 'redraw',
+  pistiPoints: 10,
+  jackPistiPoints: 20,
+  acePoints: 1,
+  jackPoints: 1,
+  clubTwoPoints: 2,
+  diamondTenPoints: 3,
+  mostCardsPoints: 3,
+};
+
+type PreviewPistiView = PistiView & { turnMsLeft?: number | null };
+
+export const mockPisti2PlayerInitial: PreviewPistiView = {
+  options: pistiOptions,
+  round: 0,
+  dealer: 1,
+  phase: 'playing',
+  seat: 0,
+  turn: 0,
+  turnNumber: 0,
   hand: [
     makeCard('S', 10, 8),
     makeCard('D', 11, 22), // Jack
@@ -23,34 +42,20 @@ export const mockPisti2PlayerInitial: PistiView = {
   topCard: makeCard('H', 10, 21),
   playableCardIds: [8, 22, 44, 14],
   players: [
-    {
-      seat: 0,
-      name: 'Sen',
-      handCount: 4,
-      capturedCount: 0,
-      pistiCount: 0,
-      totalScore: 0,
-      connected: true,
-      isBot: false,
-    },
-    {
-      seat: 1,
-      name: 'Ahmet (Bot)',
-      handCount: 4,
-      capturedCount: 0,
-      pistiCount: 0,
-      totalScore: 0,
-      connected: true,
-      isBot: true,
-    },
+    { seat: 0, name: 'Sen', team: 0, handCount: 4, capturedCount: 0, pistiCount: 0 },
+    { seat: 1, name: 'Ahmet (Bot)', team: 1, handCount: 4, capturedCount: 0, pistiCount: 0 },
   ],
+  publicHistory: [],
+  lastAction: null,
   lastCapture: null,
-  turnMsLeft: 25000,
   result: null,
+  clock: null,
+  turnMsLeft: 25000,
 };
 
-export const mockPistiOpportunity: PistiView = {
+export const mockPistiOpportunity: PreviewPistiView = {
   ...mockPisti2PlayerInitial,
+  turnNumber: 1,
   centerCount: 1,
   topCard: makeCard('S', 7, 5),
   hand: [
@@ -62,63 +67,34 @@ export const mockPistiOpportunity: PistiView = {
   turnMsLeft: 18000,
 };
 
-export const mockPistiCelebration: PistiView = {
+const pistiPlay = { turnNumber: 2, seat: 0, card: makeCard('H', 7, 18), revealedCards: [] };
+
+export const mockPistiCelebration: PreviewPistiView = {
   ...mockPisti2PlayerInitial,
+  turnNumber: 3,
   centerCount: 0,
   topCard: null,
-  hand: [
-    makeCard('S', 14, 12),
-    makeCard('D', 9, 33),
-  ],
+  hand: [makeCard('S', 14, 12), makeCard('D', 9, 33)],
   playableCardIds: [12, 33],
-  lastCapture: {
-    seat: 0,
-    card: makeCard('H', 7, 18),
-    isPisti: true,
-    isJackPisti: false,
-    pointsEarned: 10,
-    capturedCount: 2,
-  },
+  lastAction: pistiPlay,
+  publicHistory: [pistiPlay],
+  lastCapture: { seat: 0, cardId: 18, isPisti: true, isJackPisti: false, points: 10 },
   players: [
-    {
-      seat: 0,
-      name: 'Sen',
-      handCount: 2,
-      capturedCount: 12,
-      pistiCount: 1,
-      totalScore: 10,
-      connected: true,
-    },
-    {
-      seat: 1,
-      name: 'Ahmet (Bot)',
-      handCount: 2,
-      capturedCount: 6,
-      pistiCount: 0,
-      totalScore: 0,
-      connected: true,
-      isBot: true,
-    },
+    { seat: 0, name: 'Sen', team: 0, handCount: 2, capturedCount: 12, pistiCount: 1 },
+    { seat: 1, name: 'Ahmet (Bot)', team: 1, handCount: 2, capturedCount: 6, pistiCount: 0 },
   ],
 };
 
-export const mockPistiFinished: PistiView = {
+export const mockPistiFinished: PreviewPistiView = {
   ...mockPisti2PlayerInitial,
   phase: 'finished',
+  turn: null,
   centerCount: 0,
   topCard: null,
   hand: [],
   playableCardIds: [],
-  result: {
-    matchOver: false,
-    winnerSeats: [0],
-    scores: [26, 12],
-    totals: [26, 12],
-    breakdown: [
-      { seat: 0, cardsCount: 28, pistiPoints: 10, cardPoints: 13, majorityBonus: 3 },
-      { seat: 1, cardsCount: 24, pistiPoints: 0, cardPoints: 12, majorityBonus: 0 },
-    ],
-  },
+  turnMsLeft: null,
+  result: { scores: [26, 12] },
 };
 
 // ---- Batak Mock States ----

@@ -1,8 +1,10 @@
 // A2 (Claude Opus): the registry of every game in Demli Kahve.
 import type { AnyGameDefinition, GameId, GameMeta, TableGroup } from '@kahve/core';
 import { okey101Def, okeyDuzDef } from './okey';
+import { pistiDef } from './pisti';
 
 export * from './okey';
+export * from './pisti';
 
 const meta = (id: GameId, group: TableGroup, seatChoices: readonly number[]): GameMeta => ({
   id,
@@ -15,6 +17,7 @@ const meta = (id: GameId, group: TableGroup, seatChoices: readonly number[]): Ga
 const DEFINITIONS: Partial<Record<GameId, AnyGameDefinition>> = {
   okey101: okey101Def,
   okeyDuz: okeyDuzDef,
+  pisti: pistiDef,
 };
 
 const toMeta = ({ id, group, status, seatChoices, titleKey }: GameMeta): GameMeta => ({ id, group, status, seatChoices, titleKey });
@@ -22,7 +25,7 @@ const toMeta = ({ id, group, status, seatChoices, titleKey }: GameMeta): GameMet
 export const CATALOG: readonly GameMeta[] = [
   toMeta(okey101Def),
   toMeta(okeyDuzDef),
-  meta('pisti', 'kagit', [2, 4]),
+  toMeta(pistiDef),
   meta('batak', 'kagit', [4]),
   meta('tavla', 'tavla', [2]),
   meta('king', 'kagit', [4]),

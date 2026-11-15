@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { BackHandler, StyleSheet, Text, View } from 'react-native';
 import { Button } from '../components/Button';
-import type { OkeyClient } from '../net/useOkey';
+import { isOkeyGame } from '@okey/shared';
+import type { TableClient } from '../net/tableClient';
 import { colors, font } from '../theme';
-import { t, tErr } from '../i18n';
+import { type Key, t, tErr } from '../i18n';
 
-export function WaitingRoom({ client }: { client: OkeyClient }) {
+export function WaitingRoom({ client }: { client: TableClient }) {
   const { room, session } = client;
   const [error, setError] = useState<string | null>(null);
   // Android back leaves the room, like "‹ Çık".
@@ -24,7 +25,9 @@ export function WaitingRoom({ client }: { client: OkeyClient }) {
       <View style={styles.back}>
         <Button title={t('leaveBack')} variant="secondary" onPress={client.leave} style={{ minWidth: 120 }} />
       </View>
-      <Text style={styles.game}>{room.mode === 'duz' ? t('modeDuz') : t('mode101')}</Text>
+      <Text style={styles.game}>
+        {room.game && !isOkeyGame(room.game) ? t(`game.${room.game}` as Key) : room.mode === 'duz' ? t('modeDuz') : t('mode101')}
+      </Text>
       {room.password ? (
         <>
           <Text style={styles.label}>{t('passwordTell')}</Text>
