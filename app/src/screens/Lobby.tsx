@@ -152,6 +152,7 @@ export function Lobby({ client, serverUrl, onServerUrlChange, onNameReady, onExi
         onPress={() => setFriends(true)}
       />
       {error && <Text style={styles.warn}>{error}</Text>}
+      {onExit && <Button title={t('backToSalon')} variant="secondary" onPress={onExit} style={{ minWidth: 120 }} />}
       <MonetizationSettings />
     </ScrollView>
   );

@@ -33,3 +33,6 @@ Son oynanan: AsyncStorage anahtarı `okey101.lastGame` ('okey101' | 'okeyDuz'), 
 4. Salon üstünde "Son oynadığın: 101 Okey · Devam" görünür, dokununca Lobby.
 5. Arkadaşlarla (Salon) ve isim değiştir akışında geri tuşu bir adım geri gider; isim değiştirme salona atmaz.
 6. Sistem yazı boyutunu büyüt: kartlar taşmaz (ScrollView + flexWrap). Cihazda denenmedi (yalnız typecheck).
+
+## Düzeltme (Fable incelemesi)
+iOS'ta donanım geri tuşu yok: Lobby ana ekranında (isim varken, `onExit` verilmişse) ikincil "Salona dön" düğmesi eklendi (minWidth 120, Button 56 dp). Arkadaşlar alt ekranı ve isim düzenleyicide görünmez; `onExit` yoksa hiçbir şey çizilmez.
