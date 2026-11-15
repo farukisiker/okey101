@@ -7,8 +7,9 @@ import { type RackGeom, slotAt } from '../game/rackLayout';
 
 /** The held tile rides this far above the finger so the finger doesn't hide it. */
 const LIFT = 24;
-/** Gentle, quick settle with no wobble: the tile glides into place. */
-const SETTLE = { damping: 22, stiffness: 260, mass: 0.6 } as const;
+/** Quick settle with no wobble: the tile glides into place. Twice as fast as the first
+ *  tuning (stiffness x4, damping x2 keeps the same damping ratio, half the settle time). */
+const SETTLE = { damping: 44, stiffness: 1040, mass: 0.6 } as const;
 /** A tile left waiting on a drop goes home if the rack never moves it (it always should). */
 const HOLD_TIMEOUT_MS = 1000;
 
