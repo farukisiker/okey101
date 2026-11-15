@@ -10,6 +10,20 @@ type Rng = () => number;
 /** Same salt as server/src/room.ts, so a seed gives the same bot moves offline and online. */
 const BOT_SALT = 0x9e3779b9;
 
+/**
+ * Same as withHostTimes in server/src/room.ts: `noticeMsLeft` during a notice panel, and `turnMsLeft` for views that
+ * carry the raw `clock` but no `turnMsLeft` of their own (card games). Okey views are left as they are.
+ */
+export function withHostTimes<V>(view: V, clock: TurnClock | null, now: number, frozenUntil: number): V {
+  if (typeof view !== 'object' || view === null) return view;
+  let out: V = view;
+  if ('clock' in view && !('turnMsLeft' in view)) {
+    out = { ...out, turnMsLeft: clock ? Math.max(0, clock.deadline - Math.max(now, frozenUntil)) : null };
+  }
+  const left = frozenUntil - now;
+  return left > 0 ? { ...out, noticeMsLeft: left } : out;
+}
+
 export type HostLogEntry<A> = { t: 'deal'; round: number; names: string[] } | { t: 'act'; seat: number; action: A };
 
 export interface LocalHostOptions {
@@ -134,9 +148,7 @@ export class LocalHost<S, A, V> {
   /** What `seat` sees; during a notice panel the clock reads as it did when the notice came in. */
   view(seat: number, now: number): V | null {
     if (!this.state) return null;
-    const v = this.def.viewFor(this.state, seat, { clock: this.clock, now: Math.max(now, this.frozenUntil) });
-    const left = this.frozenUntil - now;
-    return left > 0 && typeof v === 'object' && v !== null ? { ...v, noticeMsLeft: left } : v;
+    return withHostTimes(this.def.viewFor(this.state, seat, { clock: this.clock, now: Math.max(now, this.frozenUntil) }), this.clock, now, this.frozenUntil);
   }
 
   private newRound(now: number) {

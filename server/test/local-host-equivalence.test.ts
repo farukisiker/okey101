@@ -146,6 +146,26 @@ describe('LocalHost = Room', () => {
     }
   });
 
+  it('card-style views get turnMsLeft on the host clock (frozen during a notice); okey views keep their own', () => {
+    const p = pair(noticeStub, { seed: 5, options: { seats: 2, target: 30 }, botDelayMs: 200, turnTimeoutMs: 3000, noticeMs: 1500 });
+    const v0 = p.room.viewFor(0) as StubView & { turnMsLeft: number | null };
+    expect(v0.turnMsLeft).toBe(v0.clock ? v0.clock.deadline - Date.now() : null);
+    for (let t = 0; t < 20_000; t += 50) {
+      vi.advanceTimersByTime(50);
+      same(p);
+      const v = p.room.viewFor(0) as StubView & { turnMsLeft?: number | null; noticeMsLeft?: number };
+      expect(v).toHaveProperty('turnMsLeft');
+      if (v.noticeMsLeft && v.clock) expect(v.turnMsLeft).toBe(v.clock.deadline - (Date.now() + v.noticeMsLeft));
+    }
+    p.stop();
+    const okey = new Room('OK', () => {}, { seed: 1, botDelayMs: 1000 });
+    okey.join('Ali', 's1');
+    okey.start();
+    // Okey's own turnMsLeft (first turn: 2 x 30 s) is not replaced.
+    expect(okey.viewFor(0)!.turnMsLeft).toBe(60_000);
+    okey.dispose();
+  });
+
   it('the host log replays to the same state (bug reports work offline too)', () => {
     const p = pair(stubDef, { seed: 99, options: { seats: 4, target: 8 }, botDelayMs: 100, turnTimeoutMs: 500 });
     run(p, 20_000, 200);
