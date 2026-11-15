@@ -116,6 +116,19 @@ Her alt aşama sonunda Fable durur, kullanıcı onaylar.
 7. **Kırmızı çizgi güncellemesi:** ORKESTRA §5.8 ve PROMPT_LOCAL "sadece sanal puan, para birimi veya satın alınabilir puan yok" diyor. Gerçek parayla jeton/hediye ve
    para ödemesi bu kuralın bilinçli olarak değişmesini gerektirir (oyun puanı yine paraya çevrilemez, hediye oyun sonucuna bağlanmaz). Kullanıcı açıkça onaylamadan E3/E4 planlanmaz.
 
+## 4e. Faz B görevleri ve Pişti/Batak bölgesel kuralları (16.11.2026)
+Görevler: `tasks/B1-CODEX.md` (cards → pisti → batak), `B4-AGY.md` (CardView + ekranlar), `B6-SONNET.md` (GameShell + reklam kapısı),
+`B7-OC.md` (docs/oyunlar, sonra sim + sızıntı testleri); B5 Opus entegrasyonu Pişti motoru birleşince yazılır.
+**Kart görseli kararı:** `react-native-svg` eklenmedi; kartlar RN View/Text + Unicode takım simgeleriyle çizilir (yeni native modül yok).
+
+**Bölgesel kurallar: AYAR olarak, önerilen varsayılanlar (kullanıcı cevabı bekleniyor; cevap sadece varsayılanı değiştirir):**
+| # | Kural | Önerilen varsayılan | Ayar seçenekleri |
+|---|---|---|---|
+| P1 | Pişti: açılıştaki 3 kapalı kart | Ortayı ilk toplayan alır; kartlar o an herkese açık gösterilir, toplayanın kart sayısına eklenir. İlk toplama (yerde 4 kart) pişti sayılmaz. | `hiddenCards: 'reveal' \| 'secret'` (secret: kimse görmez, el sonunda sayılır) |
+| P2 | Pişti: açılışta en üstteki açık kart Vale çıkarsa | Vale destenin ortasına sokulur, yeni kart açılır (açılışta valeyle başlanmaz). | `openingJack: 'redraw' \| 'allow'` |
+| K1 | Batak: renk yok, yerdeki kozu geçemiyorsa (alttan çakma) | Elinde koz varsa küçük de olsa koz atmak ZORUNLU (PROMPT_LOCAL "renk yoksa koz atmak zorunlu" ile uyumlu). | `mustTrumpWhenVoid: true \| false`, `mustOvertrump: true \| false` |
+| K2 | Eşli Batak: ihaleyi alanın ortağı | Ortağın eli kapalı kalır, herkes kendi elini oynar (60+ için sade; ilk sürüm zaten tekli). | `partnerDummy: false \| true` |
+
 ## 5. Faz C: Tavla · Faz D: Yayına hazırlık
 - C: Codex `@kahve/tavla` (hamle dizisi üretimi <50 ms, Usta 1 zar beklenen değer) · Antigravity `TavlaScreen` · Opus sunucu tarafı seed'li zar · OpenCode sim + `tavla.md`.
 - D (her adım onayla): 15 dilde mağaza metni (kullanıcı kuralı: en-US birincil), UI çevirileri, "Demli Kahve" adı, ikon, 1.1.0,

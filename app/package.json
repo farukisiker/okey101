@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@kahve/cards": "workspace:*",
     "@kahve/catalog": "workspace:*",
     "@kahve/core": "workspace:*",
     "@okey/shared": "workspace:*",

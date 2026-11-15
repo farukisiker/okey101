@@ -24,9 +24,9 @@ Komutlar: `pnpm test`, `pnpm typecheck`. Bu makinede `pnpm` PATH'te yok; `corepa
 | A4 Room / useLocalGame / protokol | Claude Opus | **birleşti** | `e4e405b`, `7c500d6` | expo export Android: 1444 modül, Hermes paketi 5.4 MB, metro ayarı gerekmedi. İstek: `requests/opus-renameSeat.md` (B öncesi) |
 | A5 Kahve kabuğu UI | Claude Sonnet | **birleşti** (1 DÜZELT turu: iOS'ta salona dönüş düğmesi; oyun listesi artık `@kahve/catalog`) | `cd64395` + ek | Cihazda denenmedi (A6) |
 | A5b i18n denetimi | Claude Haiku | **geçti** | – | 228 anahtar × 13 dosya eşit, UTF-8 temiz, yer tutucular eşit |
-| A7 okey kuralları + ceza paneli | Claude Opus (kurallar, sunucu, net) + Claude Sonnet (arayüz) | **birleşti** (2 DÜZELT turu: çoklu ceza bildirimi, yavaş testlere zaman aşımı) | `b157ac0`, `d4090a5` | Kullanıcı kararları MASTER_PLAN §4c. Cihazda denenmedi (A6'ya eklendi). v1 istemcide geri sayım donmayı göstermez |
+| A7 okey kuralları + ceza paneli | Claude Opus (kurallar, sunucu, net) + Claude Sonnet (arayüz) | **tamam** (tablette denendi) (2 DÜZELT turu: çoklu ceza bildirimi, yavaş testlere zaman aşımı) | `b157ac0`, `d4090a5` | Kullanıcı kararları MASTER_PLAN §4c. Cihazda denenmedi (A6'ya eklendi). v1 istemcide geri sayım donmayı göstermez |
 | FIX-DRAG ıstakada bırakılan taşın geri kayması | Claude Opus | **birleşti** | `a0ed5bb` | A6'da tablette bulundu. Neden: bırakınca UI thread taşı eski yuvaya yaylıyor, JS yeni yuvayı geç commit ediyor. Canlı 1.0.1'de de var (1.0.2 hotfix kararı kullanıcıda). Test 280 |
-| A6 elle deneme | Fable + kullanıcı | **kullanıcıyı bekliyor** | – | Telefon/emülatörde 101 ve Düz: çevrimdışı + yerel sunucu + mağazadaki v1.0.1; A7: ceza paneli 5 sn + saat donması, yandan alma onayı, maç uzunluğu, Maç bitti |
+| A6 elle deneme | Fable + kullanıcı | **tamam** (16.11.2026, tablette; kullanıcı: "güzel olmuş, devam B aşamasına geç") | `f69e794` | Bulunan: ıstaka bırakma geri kayması (FIX-DRAG) + oturma animasyonu %50 hızlandı |
 
 ## Ortam (15.11.2026)
 - Bu oturum Fable rolünü **Claude Opus 5.5** ile yürütüyor (`claude-fable-5-2` değil).
@@ -34,3 +34,14 @@ Komutlar: `pnpm test`, `pnpm typecheck`. Bu makinede `pnpm` PATH'te yok; `corepa
 - Antigravity `agy`: Argon `gemini-4-argon-high`, Flash `gemini-3.8-flash-high`.
 - OpenCode: PATH'te yok ama masaüstü CLI'ı var (`%APPDATA%\ai.opencode.desktop\cli\2.0.31-x64\opencode-cli.exe`). Global kurulum gerekmedi.
   Lider `opencode/glm-5.3-flash-free`, işçi `opencode/deepseek-v4.1-flash-free`.
+
+## Faz B (16.11.2026 başladı, kullanıcı onayı)
+| Görev | Sahip | Durum | Son commit | Engel / not |
+|---|---|---|---|---|
+| B1 @kahve/cards | Codex (Astra → Sol) | görev kâğıdı | – | – |
+| B2 @kahve/pisti | Codex | bekliyor | – | B1'e bağlı; bölgesel kural cevapları (MASTER_PLAN §4e) |
+| B3 @kahve/batak | Codex | bekliyor | – | B1'e bağlı; bölgesel kural cevapları |
+| B4 CardView + Pişti/Batak ekranları | Antigravity (Argon → Flash) | görev kâğıdı | – | SVG yok: RN View/Text ile (yeni native modül gerekmedi) |
+| B5 catalog/sunucu/çevrimdışı entegrasyon | Claude Opus | bekliyor | – | B2'ye bağlı |
+| B6 GameShell + reklam kapısı | Claude Sonnet | görev kâğıdı | – | – |
+| B7 docs/oyunlar + sim + sızıntı testleri | OpenCode | görev kâğıdı (docs önce) | – | sim B2/B3'e bağlı |

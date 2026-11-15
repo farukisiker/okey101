@@ -168,6 +168,9 @@ importers:
 
   app:
     dependencies:
+      '@kahve/cards':
+        specifier: workspace:*
+        version: link:../packages/cards
       '@kahve/catalog':
         specifier: workspace:*
         version: link:../packages/catalog
@@ -239,11 +242,49 @@ importers:
         specifier: ~6.0.3
         version: 6.0.3
 
-  packages/catalog:
+  packages/batak:
+    dependencies:
+      '@kahve/cards':
+        specifier: workspace:*
+        version: link:../cards
+      '@kahve/core':
+        specifier: workspace:*
+        version: link:../game-core
+    devDependencies:
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@22.20.5)(vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.2)(terser@5.51.2)(tsx@4.23.15))
+
+  packages/cards:
     dependencies:
       '@kahve/core':
         specifier: workspace:*
         version: link:../game-core
+    devDependencies:
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@22.20.5)(vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.2)(terser@5.51.2)(tsx@4.23.15))
+
+  packages/catalog:
+    dependencies:
+      '@kahve/batak':
+        specifier: workspace:*
+        version: link:../batak
+      '@kahve/cards':
+        specifier: workspace:*
+        version: link:../cards
+      '@kahve/core':
+        specifier: workspace:*
+        version: link:../game-core
+      '@kahve/pisti':
+        specifier: workspace:*
+        version: link:../pisti
       '@okey/shared':
         specifier: workspace:*
         version: link:../../shared
@@ -256,6 +297,22 @@ importers:
         version: 5.0.5(@types/node@22.20.5)(vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.2)(terser@5.51.2)(tsx@4.23.15))
 
   packages/game-core:
+    devDependencies:
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@22.20.5)(vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.2)(terser@5.51.2)(tsx@4.23.15))
+
+  packages/pisti:
+    dependencies:
+      '@kahve/cards':
+        specifier: workspace:*
+        version: link:../cards
+      '@kahve/core':
+        specifier: workspace:*
+        version: link:../game-core
     devDependencies:
       typescript:
         specifier: ~6.0.3

@@ -10,7 +10,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@kahve/batak": "workspace:*",
+    "@kahve/cards": "workspace:*",
     "@kahve/core": "workspace:*",
+    "@kahve/pisti": "workspace:*",
     "@okey/shared": "workspace:*"
   },
   "devDependencies": {
