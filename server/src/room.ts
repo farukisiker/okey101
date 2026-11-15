@@ -379,16 +379,17 @@ export class Room<S = GameState, A = Action, V = PlayerView> {
   }
 
   /**
-   * A new GameNotice (live penalty): freeze the turn clock and the bots for `noticeMs`. The player to
-   * move keeps the time they had; it runs again once the panel is gone.
+   * New GameNotices (live penalties): freeze the turn clock and the bots for `noticeMs` per new notice
+   * (two penalties in one throw: twice as long). The player to move keeps the time they had.
    */
   private freezeForNotice() {
     const notice = this.game && this.def.noticeOf ? this.def.noticeOf(this.game) : null;
-    if (!notice || notice.id === this.lastNoticeId) return;
+    if (!notice || notice.id <= this.lastNoticeId) return;
+    const fresh = notice.id - this.lastNoticeId;
     this.lastNoticeId = notice.id;
     if (this.noticeMs <= 0) return;
     const now = Date.now();
-    const until = now + this.noticeMs;
+    const until = now + this.noticeMs * fresh;
     // A notice during a running panel extends it: the clock moves by the added time only.
     this.clock = freezeClock(this.clock, until - Math.max(now, this.frozenUntil));
     this.frozenUntil = until;

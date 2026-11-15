@@ -60,6 +60,7 @@ describe('A7 fields on the wire', () => {
       expect((await state).matchOver).toBe(false);
       const v = (await view).view;
       expect(v.notice).toBeNull();
+      expect(v.notices).toEqual([]);
       expect(v.islek).toBe('all');
     },
     2000,
@@ -78,7 +79,7 @@ describe('A7 fields on the wire', () => {
       expect('game' in info).toBe(false);
       const v = await view;
       expect(v.hand.length).toBeGreaterThan(0);
-      for (const k of ['notice', 'islek', 'noticeMsLeft']) expect(k in v).toBe(false);
+      for (const k of ['notice', 'notices', 'islek', 'noticeMsLeft']) expect(k in v).toBe(false);
     },
     2000,
   );

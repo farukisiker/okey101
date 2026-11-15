@@ -37,7 +37,7 @@ function v1Info({ game: _game, matchOver: _matchOver, ...info }: RoomInfo): Room
   return info;
 }
 /** v1 game views without the A7 notice fields (1.0.1 has no notice panel). */
-function v1View({ notice: _n, noticeMsLeft: _l, islek: _i, ...view }: PlayerView): PlayerView {
+function v1View({ notice: _n, notices: _ns, noticeMsLeft: _l, islek: _i, ...view }: PlayerView): PlayerView {
   return view;
 }
 function v1Summary({ game: _game, ...table }: TableSummary): TableSummary {

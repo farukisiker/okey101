@@ -298,15 +298,25 @@ describe('karar 7: işlek', () => {
     expect(s.notice).toMatchObject({ reason: 'okeyDiscard', amount: 101 });
   });
 
-  it('unused side tile + işlek in one throw: two notices, ids 1 and 2, the view shows the last', () => {
+  it('unused side tile + işlek in one throw: two notices, ids 1 and 2, both listed in the view', () => {
     const g = table([t('yellow', 12), t('blue', 1)]);
     g.turnPhase = 'draw';
     g.players[3].discards = [t('black', 9)];
     let s = ok(g, 0, { type: 'draw', source: 'discard' });
+    expect(viewFor(s, 1).notices).toEqual([]);
     s = throwFirst(s);
     expect(s.players[0].penalties).toBe(202);
     expect(s.notice).toEqual({ id: 2, seat: 0, reason: 'islek', amount: ISLEK_PENALTY });
-    expect(viewFor(s, 1).notice).toEqual(s.notice);
+    const v = viewFor(s, 1);
+    expect(v.notice).toEqual(s.notice);
+    expect(v.notices).toEqual([
+      { id: 1, seat: 0, reason: 'sideTileUnused', amount: 101 },
+      { id: 2, seat: 0, reason: 'islek', amount: ISLEK_PENALTY },
+    ]);
+    // The next action lists only its own notices; `notice` keeps the latest of the round.
+    const next = ok(s, 1, { type: 'draw', source: 'deck' });
+    expect(viewFor(next, 0).notices).toEqual([]);
+    expect(viewFor(next, 0).notice).toEqual(s.notice);
   });
 
   it('notice ids keep counting within the round; a new deal starts at null', () => {

@@ -149,6 +149,8 @@ export interface GameState {
   islek: IslekMode;
   /** The latest live penalty of the round, or null. */
   notice: GameNotice | null;
+  /** Every notice the last action wrote, in id order (usually none or one). */
+  notices: GameNotice[];
 }
 
 export type Action =
@@ -230,6 +232,7 @@ export function createGame(opts: NewGameOptions = {}): GameState {
     gosterge: null,
     islek: opts.islek ?? DEFAULT_ISLEK,
     notice: null,
+    notices: [],
   };
 }
 
@@ -240,6 +243,7 @@ const fail = (error: string): ActionResult => ({ ok: false, error });
 function penalize(state: GameState, seat: number, reason: NoticeReason, amount: number) {
   state.players[seat].penalties += amount;
   state.notice = { id: (state.notice?.id ?? 0) + 1, seat, reason, amount };
+  state.notices.push(state.notice);
 }
 
 /** 101: does throwing `tile` cost the işlek penalty for this player under the table's rule? */
@@ -259,6 +263,8 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
   if (prev.phase !== 'playing') return fail('Oyun bitti');
   if (seat !== prev.turn) return fail('Sıra sizde değil');
   const state = clone(prev);
+  // Only this action's notices are listed; `notice` keeps the latest of the round.
+  state.notices = [];
   const player = state.players[seat];
 
   switch (action.type) {
@@ -605,7 +611,9 @@ export interface PlayerView {
   turnMsLeft?: number | null;
   /** The latest live penalty of the round (everyone sees it); null when none yet. */
   notice?: GameNotice | null;
-  /** The host froze the clock for the notice panel: ms left on the panel. */
+  /** Every notice the last action wrote, in id order: show each one with its reason. */
+  notices?: GameNotice[];
+  /** The host froze the clock for the notice panel(s): ms left in total. */
   noticeMsLeft?: number;
   /** 101 işlek rule of this table. */
   islek?: IslekMode;
@@ -658,6 +666,7 @@ export function viewFor(state: GameState, seat: number, clock: TurnClock | null 
     gosterge: state.gosterge,
     turnMsLeft: clock ? Math.max(0, clock.deadline - now) : null,
     notice: state.notice ?? null,
+    notices: state.notices ?? [],
     islek: state.islek ?? DEFAULT_ISLEK,
   };
 }

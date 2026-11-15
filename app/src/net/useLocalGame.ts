@@ -16,7 +16,7 @@ const defOf = (mode: GameMode) => (mode === 'duz' ? okeyDuzDef : okey101Def);
 /**
  * Offline game against three bots, run on the device through the same GameDefinition,
  * rules, bot and turn clock the server uses. No network needed.
- * A live penalty (GameNotice) freezes the clock and the bots for NOTICE_MS, as on the server.
+ * Each live penalty (GameNotice) freezes the clock and the bots for NOTICE_MS, as on the server.
  */
 export function useLocalGame() {
   const [name, setName] = useState<string | null>(null);
@@ -50,9 +50,10 @@ export function useLocalGame() {
       def.clock,
     );
     const notice = def.noticeOf?.(g) ?? null;
-    if (action && notice && notice.id !== lastNoticeRef.current) {
+    if (action && notice && notice.id > lastNoticeRef.current) {
+      const fresh = notice.id - lastNoticeRef.current;
       lastNoticeRef.current = notice.id;
-      const until = now + NOTICE_MS;
+      const until = now + NOTICE_MS * fresh;
       next = freezeClock(next, until - Math.max(now, frozenRef.current));
       frozenRef.current = until;
       setFrozenUntil(until);

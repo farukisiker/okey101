@@ -117,6 +117,38 @@ describe('notice freeze', () => {
     asked.dispose();
   });
 
+  it('two penalties in one throw: both in the view, the freeze lasts 2 × NOTICE_MS', () => {
+    const room = new Room('F7', () => {}, { botDelayMs: 10, turnTimeoutMs: 10_000, seed: 13 });
+    room.join('Ali', 's1');
+    room.join('Veli', 's2');
+    room.start();
+    // Rig: seat 1 (human) opened; seat 2's run is on the table; seat 0's last throw is a tile seat 1 takes and keeps.
+    const g = room.game!;
+    const c = otherColor(g);
+    const run = [tile(c, 9), tile(c, 10), tile(c, 11)];
+    const a = analyzeMeld(run, g.okey)!;
+    g.table = [{ id: 60, owner: 2, type: a.type, points: a.points, tiles: run, ordered: a.ordered, represents: a.represents }];
+    g.players[1].opened = true;
+    const fits = tile(c, 12);
+    g.players[1].hand[0] = fits;
+    const taken = tile(c, 1);
+    g.players[0].hand[0] = taken;
+    expect(room.act(0, { type: 'discard', tileId: taken.id })).toBeNull();
+    expect(room.act(1, { type: 'draw', source: 'discard' })).toBeNull();
+    expect(room.act(1, { type: 'discard', tileId: fits.id })).toBeNull();
+    const v = room.viewFor(1)!;
+    expect(v.notices!.map((x) => x.reason)).toEqual(['sideTileUnused', 'islek']);
+    expect(v.notice).toMatchObject({ id: 2, reason: 'islek' });
+    expect(v.noticeMsLeft).toBe(2 * NOTICE_MS);
+    expect(room.viewFor(2)!.turnMsLeft).toBe(10_000);
+    vi.advanceTimersByTime(2 * NOTICE_MS - 1);
+    expect(room.viewFor(2)).toMatchObject({ turnMsLeft: 10_000, noticeMsLeft: 1 });
+    expect(room.game!.turnPhase).toBe('draw'); // seat 2 is a bot: still waiting
+    vi.advanceTimersByTime(1);
+    expect(room.game!.turnPhase).toBe('play');
+    room.dispose();
+  });
+
   it('the same notice id never freezes twice; a new deal starts clean', () => {
     const room = new Room('F6', () => {}, { botDelayMs: 10, turnTimeoutMs: 10_000, seed: 11 });
     room.join('Ali', 's1');
