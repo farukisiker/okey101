@@ -243,4 +243,5 @@ export const pt: Dict = {
   'game.king': 'King',
   'game.konken': 'Konken',
   'game.elli1': 'Elli Bir',
+  serverUpdating: 'The server is being updated, please try again in a moment',
 };
