@@ -277,6 +277,20 @@ export const tr = {
   'soundOff': 'Ses kapalı',
   'timeLeftA11y': 'Kalan süre {n} saniye',
   'winnersA11y': 'Kazanan: {names}',
+
+  // B5: card game lobby
+  cardPlayNow: 'Hemen Oyna',
+  cardPlayNowSub: 'Botlara karşı, internetsiz',
+  cardFriends: 'Arkadaşlarla',
+  cardFriendsSub: 'Masa aç, şifreli masa ya da kodla katıl',
+  seatsN: '{n} kişi',
+  playSolo: 'Tekli',
+  playPartners: 'Eşli',
+  privateTable: 'Özel masa',
+  privateTableSub: 'Listede görünmez, kodla girilir',
+  joinByCode: 'Kodla katıl',
+  tableCodePlaceholder: 'Masa kodu',
+  backToGames: 'Oyunlara dön',
 };
 
 export type Key = keyof typeof tr;

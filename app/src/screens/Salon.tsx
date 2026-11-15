@@ -1,20 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { type GameMode, isTablePassword, type TableSummary } from '@okey/shared';
+import { type GameMode, isOkeyGame, isTablePassword, type TableSummary } from '@okey/shared';
+import type { GameId } from '@kahve/core';
 import { Button } from '../components/Button';
 import { DEFAULT_MATCH_END, type MatchEnd } from '@kahve/catalog';
-import type { OkeyClient } from '../net/useOkey';
+import type { TableClient } from '../net/tableClient';
 import { colors, font } from '../theme';
-import { t, tErr } from '../i18n';
+import { type Key, t, tErr } from '../i18n';
 
 interface Props {
-  client: OkeyClient;
+  client: TableClient;
   name: string;
   serverUrl: string;
   onServerUrlChange(url: string): void;
   onBack(): void;
   /** Match length for new 101 tables (from the Lobby picker). */
   matchEnd?: MatchEnd;
+  /** A card game's salon (B5): only its tables, no okey mode switch, plus a private table and join by code. Missing = okey. */
+  game?: GameId;
+  /** House rules for a new table of `game` (e.g. pişti seats). */
+  options?: unknown;
 }
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -22,19 +27,23 @@ type Result = { ok: true } | { ok: false; error: string };
 const modeName = (m: GameMode) => (m === 'duz' ? t('modeDuz') : t('mode101'));
 
 /** What the password box is for: locking a new table, or sitting at a locked one. */
-type PinFor = { kind: 'create' } | { kind: 'join'; table: TableSummary };
+type PinFor = { kind: 'create' } | { kind: 'join'; table: Pick<TableSummary, 'id' | 'mode'> };
 
 /**
  * The salon: open tables on the left, one tap to sit down (a locked table asks
  * for its 6-digit password); opening a table, open or locked, on the right.
  */
-export function Salon({ client, name, serverUrl, onServerUrlChange, onBack, matchEnd = DEFAULT_MATCH_END }: Props) {
+export function Salon({ client, name, serverUrl, onServerUrlChange, onBack, matchEnd = DEFAULT_MATCH_END, game, options }: Props) {
+  const card = game !== undefined && !isOkeyGame(game);
   const [mode, setMode] = useState<GameMode>('101');
   const [pinFor, setPinFor] = useState<PinFor | null>(null);
   const [url, setUrl] = useState(serverUrl);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [code, setCode] = useState('');
   const offline = !client.connected;
+  const tableName = (m: GameMode) => (card ? t(`game.${game}` as Key) : modeName(m));
+  const newTableOptions = card ? options : mode === '101' ? { matchEnd } : undefined;
   const { watchSalon } = client;
 
   useEffect(() => {
@@ -56,7 +65,7 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack, matc
     if (!pinFor) return { ok: false as const, error: '' };
     const res =
       pinFor.kind === 'create'
-        ? await run(() => client.createRoom(name, mode, true, pin, mode === '101' ? { matchEnd } : undefined))
+        ? await run(() => client.createRoom(name, mode, true, pin, newTableOptions))
         : await run(() => client.joinRoom(name, pinFor.table.id, pin));
     if (res.ok) setPinFor(null);
     return res;
@@ -84,6 +93,7 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack, matc
               <TableRow
                 key={tb.id}
                 table={tb}
+                label={tableName(tb.mode)}
                 disabled={busy}
                 onSit={() => (tb.locked ? setPinFor({ kind: 'join', table: tb }) : run(() => client.joinRoom(name, tb.id)))}
               />
@@ -98,7 +108,7 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack, matc
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
         >
-          <View style={styles.modeRow}>
+          {!card && (<View style={styles.modeRow}>
             {(['101', 'duz'] as const).map((m) => (
               <Button
                 key={m}
@@ -108,12 +118,12 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack, matc
                 style={{ flex: 1, minWidth: 0, paddingHorizontal: 4 }}
               />
             ))}
-          </View>
+          </View>)}
           <Button
             title={t('openTable')}
             subtitle={t('openTableSub')}
             variant="success"
-            onPress={() => run(() => client.createRoom(name, mode, true, undefined, mode === '101' ? { matchEnd } : undefined))}
+            onPress={() => run(() => client.createRoom(name, mode, true, undefined, newTableOptions))}
             disabled={busy || offline}
           />
           <Button
@@ -126,6 +136,43 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack, matc
             }}
             disabled={busy || offline}
           />
+          {card && (
+            <>
+              <Button
+                title={t('privateTable')}
+                subtitle={t('privateTableSub')}
+                variant="secondary"
+                onPress={() => run(() => client.createRoom(name, mode, false, undefined, newTableOptions))}
+                disabled={busy || offline}
+              />
+              <View style={styles.codeRow}>
+                <TextInput
+                  style={styles.codeInput}
+                  value={code}
+                  onChangeText={(v) => setCode(v.replace(/[^0-9a-z]/gi, '').toUpperCase().slice(0, 5))}
+                  placeholder={t('tableCodePlaceholder')}
+                  placeholderTextColor={colors.muted}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  maxLength={5}
+                  disableFullscreenUI
+                />
+                <Button
+                  title={t('joinByCode')}
+                  disabled={busy || offline || code.length !== 5}
+                  onPress={async () => {
+                    const res = await run(() => client.joinRoom(name, code));
+                    // A locked table asks for its password, as in the list.
+                    if (!res.ok && res.error === 'Bu masa şifreli') {
+                      setError(null);
+                      setPinFor({ kind: 'join', table: { id: code, mode } });
+                    }
+                  }}
+                  style={{ minWidth: 0, flex: 1, paddingHorizontal: 4 }}
+                />
+              </View>
+            </>
+          )}
           {error && <Text style={styles.warn}>{error}</Text>}
           {/* The live server address is built in (App.tsx); the field is only for development builds. */}
           {__DEV__ && (
@@ -146,7 +193,7 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack, matc
       </View>
       {pinFor && (
         <PinPrompt
-          title={pinFor.kind === 'create' ? t('setPassword') : t('tablePassword', { mode: modeName(pinFor.table.mode) })}
+          title={pinFor.kind === 'create' ? t('setPassword') : t('tablePassword', { mode: tableName(pinFor.table.mode) })}
           action={pinFor.kind === 'create' ? t('openTheTable') : t('sit')}
           busy={busy}
           error={error}
@@ -217,13 +264,13 @@ function PinPrompt(props: {
   );
 }
 
-function TableRow({ table, disabled, onSit }: { table: TableSummary; disabled: boolean; onSit(): void }) {
+function TableRow({ table, label, disabled, onSit }: { table: TableSummary; label: string; disabled: boolean; onSit(): void }) {
   return (
     <View style={styles.row}>
       <View style={{ flex: 1, gap: 4 }}>
         <Text style={styles.rowTitle} numberOfLines={1}>
           {table.locked ? '🔒 ' : ''}
-          {modeName(table.mode)}
+          {label}
           <Text style={styles.rowState}>
             {'  · '}{table.started ? t('gameOn') : t('waitingN', { n: table.free })}
           </Text>
@@ -265,6 +312,18 @@ const styles = StyleSheet.create({
   chipFree: { backgroundColor: 'transparent', borderWidth: 1, borderStyle: 'dashed', borderColor: colors.muted },
   chipText: { color: colors.text, fontSize: font.small, fontWeight: '700', textAlign: 'center' },
   modeRow: { flexDirection: 'row', gap: 8 },
+  codeRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  codeInput: {
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    color: colors.text,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    fontSize: 22,
+    textAlign: 'center',
+    letterSpacing: 3,
+    width: 110,
+    minHeight: 56,
+  },
   label: { color: colors.muted, fontSize: font.small },
   urlInput: {
     backgroundColor: 'rgba(0,0,0,0.3)',
