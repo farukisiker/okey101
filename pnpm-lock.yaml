@@ -269,6 +269,9 @@ importers:
       '@kahve/catalog':
         specifier: workspace:*
         version: link:../packages/catalog
+      '@kahve/core':
+        specifier: workspace:*
+        version: link:../packages/game-core
       '@okey/shared':
         specifier: workspace:*
         version: link:../shared
