@@ -32,9 +32,13 @@ export interface OkeyServer {
 /** Tables a v1 client (Demli Okey ≤ 1.0.1) can see and sit at, and a v2 salon watcher without a filter gets. */
 const OKEY_GAMES: readonly GameId[] = ['okey101', 'okeyDuz'];
 
-/** v1 payloads are exactly what 1.0.1 got: no `game` field anywhere. */
-function v1Info({ game: _game, ...info }: RoomInfo): RoomInfo {
+/** v1 payloads are exactly what 1.0.1 got: no `game` (or A7 `matchOver`) field anywhere. */
+function v1Info({ game: _game, matchOver: _matchOver, ...info }: RoomInfo): RoomInfo {
   return info;
+}
+/** v1 game views without the A7 notice fields (1.0.1 has no notice panel). */
+function v1View({ notice: _n, noticeMsLeft: _l, islek: _i, ...view }: PlayerView): PlayerView {
+  return view;
 }
 function v1Summary({ game: _game, ...table }: TableSummary): TableSummary {
   return table;
@@ -100,7 +104,7 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
         const view = room.viewFor(seat);
         if (!view) return;
         // v1 sockets only ever sit at okey tables (enforced on create/join), so `view` is a PlayerView.
-        io.to(s.socketId).emit('game:view', isV1(s.socketId) ? (view as PlayerView) : { game: room.gameId, view });
+        io.to(s.socketId).emit('game:view', isV1(s.socketId) ? v1View(view as PlayerView) : { game: room.gameId, view });
       }
     });
   };
