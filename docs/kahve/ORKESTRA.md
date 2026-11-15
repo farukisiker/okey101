@@ -94,6 +94,7 @@ codex exec -C C:/Users/mfaru/okey101/kahve-codex -m gpt-6-astra -s read-only "<g
 # Sol işçi: kod ve test
 codex exec -C C:/Users/mfaru/okey101/kahve-codex -m gpt-6.1-sol -s workspace-write "<Astra'nın alt görevi>"
 ```
+**Codex sandbox notu (15.11.2026):** `workspace-write` worktree'nin `.git` dizinine yazamıyor, Sol commit atamaz. Sol değişiklikleri commit'siz bırakır, Astra review eder, commit'i Fable atar (mesajda yazar: Sol, inceleyen: Astra).
 Model kimlikleri (Codex CLI 0.164.0 `~/.codex/models_cache.json`, 15.11.2026'da doğrulandı): **Astra = `gpt-6-astra`**, **Sol = `gpt-6.1-sol`** (config varsayılanı). Hafif işler için `gpt-6-luna`.
 
 ### 1.4 Antigravity CLI (`agy`): Gemini Argon liderliğinde (worktree `kahve-agy`)
