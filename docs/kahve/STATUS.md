@@ -8,6 +8,7 @@
 | 15.11.2026 | `1254b41` (Faz 0 merge) | 70 (5 dosya) | 23 (3 dosya) | – | **93** | shared, server, app yeşil |
 | 15.11.2026 | `fb5afcf` (A1+A2+A3+A5) | 70 | 30 + 5 beklenen hata | core 35, catalog 47 | **187** | 5 paket yeşil |
 | 15.11.2026 | A4 + A5 ek (Faz A kod tamam) | 70 | 53 | core 41, catalog 50 | **214** | 5 paket yeşil, 2 tam koşu |
+| 15.11.2026 | A7 (okey kural güncellemesi + ceza paneli) `d4090a5` | 104 | 65 | core 41, catalog 61 | **271** | 5 paket yeşil |
 
 Komutlar: `pnpm test`, `pnpm typecheck`. Bu makinede `pnpm` PATH'te yok; `corepack pnpm` kullan
 (kök script'ler içeriden `pnpm` çağırdığı için PATH'e `pnpm.cmd` = `@corepack pnpm %*` sarmalayıcısı koy).
@@ -23,7 +24,8 @@ Komutlar: `pnpm test`, `pnpm typecheck`. Bu makinede `pnpm` PATH'te yok; `corepa
 | A4 Room / useLocalGame / protokol | Claude Opus | **birleşti** | `e4e405b`, `7c500d6` | expo export Android: 1444 modül, Hermes paketi 5.4 MB, metro ayarı gerekmedi. İstek: `requests/opus-renameSeat.md` (B öncesi) |
 | A5 Kahve kabuğu UI | Claude Sonnet | **birleşti** (1 DÜZELT turu: iOS'ta salona dönüş düğmesi; oyun listesi artık `@kahve/catalog`) | `cd64395` + ek | Cihazda denenmedi (A6) |
 | A5b i18n denetimi | Claude Haiku | **geçti** | – | 228 anahtar × 13 dosya eşit, UTF-8 temiz, yer tutucular eşit |
-| A6 elle deneme | Fable + kullanıcı | **kullanıcıyı bekliyor** | – | Telefon/emülatörde 101 ve Düz: çevrimdışı + yerel sunucu + mağazadaki v1.0.1 |
+| A7 okey kuralları + ceza paneli | Claude Opus (kurallar, sunucu, net) + Claude Sonnet (arayüz) | **birleşti** (2 DÜZELT turu: çoklu ceza bildirimi, yavaş testlere zaman aşımı) | `b157ac0`, `d4090a5` | Kullanıcı kararları MASTER_PLAN §4c. Cihazda denenmedi (A6'ya eklendi). v1 istemcide geri sayım donmayı göstermez |
+| A6 elle deneme | Fable + kullanıcı | **kullanıcıyı bekliyor** | – | Telefon/emülatörde 101 ve Düz: çevrimdışı + yerel sunucu + mağazadaki v1.0.1; A7: ceza paneli 5 sn + saat donması, yandan alma onayı, maç uzunluğu, Maç bitti |
 
 ## Ortam (15.11.2026)
 - Bu oturum Fable rolünü **Claude Opus 5.5** ile yürütüyor (`claude-fable-5-2` değil).
