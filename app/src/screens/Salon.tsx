@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { type GameMode, isTablePassword, type TableSummary } from '@okey/shared';
 import { Button } from '../components/Button';
+import { DEFAULT_MATCH_END, createRoomWith, type MatchEnd } from '../components/a7adapter';
 import type { OkeyClient } from '../net/useOkey';
 import { colors, font } from '../theme';
 import { t, tErr } from '../i18n';
@@ -12,6 +13,8 @@ interface Props {
   serverUrl: string;
   onServerUrlChange(url: string): void;
   onBack(): void;
+  /** Match length for new 101 tables (from the Lobby picker). */
+  matchEnd?: MatchEnd;
 }
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -25,7 +28,7 @@ type PinFor = { kind: 'create' } | { kind: 'join'; table: TableSummary };
  * The salon: open tables on the left, one tap to sit down (a locked table asks
  * for its 6-digit password); opening a table, open or locked, on the right.
  */
-export function Salon({ client, name, serverUrl, onServerUrlChange, onBack }: Props) {
+export function Salon({ client, name, serverUrl, onServerUrlChange, onBack, matchEnd = DEFAULT_MATCH_END }: Props) {
   const [mode, setMode] = useState<GameMode>('101');
   const [pinFor, setPinFor] = useState<PinFor | null>(null);
   const [url, setUrl] = useState(serverUrl);
@@ -53,7 +56,7 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack }: Pr
     if (!pinFor) return { ok: false as const, error: '' };
     const res =
       pinFor.kind === 'create'
-        ? await run(() => client.createRoom(name, mode, true, pin))
+        ? await run(() => createRoomWith(client, name, mode, true, pin, matchEnd))
         : await run(() => client.joinRoom(name, pinFor.table.id, pin));
     if (res.ok) setPinFor(null);
     return res;
@@ -110,7 +113,7 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack }: Pr
             title={t('openTable')}
             subtitle={t('openTableSub')}
             variant="success"
-            onPress={() => run(() => client.createRoom(name, mode, true))}
+            onPress={() => run(() => createRoomWith(client, name, mode, true, undefined, matchEnd))}
             disabled={busy || offline}
           />
           <Button
