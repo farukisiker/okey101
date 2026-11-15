@@ -77,7 +77,13 @@ birleşir, A4 onun üstüne kurar. Codex ve OpenCode kendi worktree'lerinde (`ka
   bölgesel kurallar kullanıcıya sorulmadan varsayılan yapılmaz (Pişti #6, Batak #7–8, Tavla #10 B/C öncesi sorulacak).
 - **Okey'e dokunmaz.** Şartnamenin okey "yanlış" listesi çoğunlukla `game.ts` yorumunda yazılı bilinçli ev kuralları. Aşağıdaki §4c soruları cevaplanmadan okey davranışı değişmez.
 
-## 4c. Okey kural soruları (kullanıcı kararı; cevaba göre ya ayar olur ya aynen kalır)
+## 4c. Okey kural soruları: CEVAPLANDI (kullanıcı, 15.11.2026) → görev A7 (`tasks/A7-OPUS.md`, `tasks/A7-SONNET.md`)
+**Kararlar:** 1 → okey sayısı × 101 (sayı değeri eklenmez) · 2 → aynen · 3 → aynen + açmamış oyuncuya onay diyaloğu · 4 → kendisi açmadan işleyemez (eşli mod gelince) ·
+5 → ilk turda taş atana kadar · 6 → sayı sınırı kesinleştiriyorsa uçtaki okey alınır · 7 → +101, ayar, varsayılan 'opened' (Fable önerisi) ·
+8 → ayar, varsayılan 5 el (Fable önerisi). **Yeni:** her canlı cezada herkese 5 sn bilgi paneli, panel süresince saat ve botlar durur.
+Sadece `feat/kahve`; `feat/okey101-app`'e gitmez.
+
+Asıl sorular:
 | # | Konu | Bugün (kod) | Alternatif |
 |---|---|---|---|
 | 1 | 101: elde kalan gerçek okeyin cezası | okeyin sayısı + 101 | sadece 101 |
