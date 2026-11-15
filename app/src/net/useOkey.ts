@@ -91,16 +91,18 @@ export function useOkey(serverUrl: string) {
       isPublic = false,
       password?: string,
       game: GameId = gameOfMode(mode),
+      options?: unknown,
     ): Promise<Result> => {
       const socket = socketRef.current;
       if (!socket?.connected) return { ok: false, error: t('cantReachServer') };
-      // `mode` is still sent: an old server only reads that.
+      // `mode` is still sent: an old server only reads that. `options` (house rules) only when given.
+      const extra = options === undefined ? {} : { options };
       const res =
         kind === 'room:join'
           ? await socket.timeout(5000).emitWithAck('room:join', { roomId, name, password })
           : kind === 'room:create'
-            ? await socket.timeout(5000).emitWithAck(kind, { name, mode, game, isPublic, password })
-            : await socket.timeout(5000).emitWithAck(kind, { name, mode, game });
+            ? await socket.timeout(5000).emitWithAck(kind, { name, mode, game, isPublic, password, ...extra })
+            : await socket.timeout(5000).emitWithAck(kind, { name, mode, game, ...extra });
       if (!res.ok) return res;
       // An old server ignores `game` and seats us at an okey table (its room:state arrives before the ack).
       if (kind !== 'room:join' && !isOkeyGame(game) && roomRef.current?.game !== game) {
@@ -140,10 +142,14 @@ export function useOkey(serverUrl: string) {
     session,
     room,
     view,
-    quickPlay: (name: string, mode: GameMode = '101') => enter('room:quickPlay', name, '', mode),
+    /** The last finished round ended the match (101 matchEnd, düz: someone out of points). Old servers: false. */
+    matchOver: room?.matchOver ?? false,
+    /** `options`: house rules for a new table (okey: OkeyOptions), normalized by the server. */
+    quickPlay: (name: string, mode: GameMode = '101', options?: unknown) =>
+      enter('room:quickPlay', name, '', mode, false, undefined, gameOfMode(mode), options),
     /** `isPublic`: the table shows up in the salon. `password` (6 digits): it shows up locked. */
-    createRoom: (name: string, mode: GameMode = '101', isPublic = false, password?: string) =>
-      enter('room:create', name, '', mode, isPublic, password),
+    createRoom: (name: string, mode: GameMode = '101', isPublic = false, password?: string, options?: unknown) =>
+      enter('room:create', name, '', mode, isPublic, password, gameOfMode(mode), options),
     salon,
     watchSalon,
     joinRoom: (name: string, roomId: string, password?: string) => enter('room:join', name, roomId, '101', false, password),
