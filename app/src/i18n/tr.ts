@@ -259,6 +259,20 @@ export const tr = {
   'game.konken': 'Konken',
   'game.elli1': 'Elli Bir',
   serverUpdating: 'Sunucu güncelleniyor, biraz sonra tekrar deneyin',
+  'notice.islek': '{name} işlek taş attı: +{amount} ceza',
+  'notice.okeyDiscard': '{name} okey attı: +{amount} ceza',
+  'notice.sideTileUnused': '{name} yandan aldığı taşla açamadı: +{amount} ceza',
+  'notice.okeyTaken': '{name} perindeki okey alındı: +{amount} ceza',
+  'sideTakeConfirm': 'Bu taşla açamazsan 101 puan ceza yersin. Emin misin?',
+  'sideTakeYes': 'Evet, al',
+  'sideTakeNo': 'Vazgeç',
+  'matchLen': '101 maçı',
+  'matchLenNone': 'Sınırsız',
+  'matchLenHands': '{n} el',
+  'matchLenPoints': '{n} puan',
+  'matchOver': 'Maç bitti!',
+  'standings': 'Sıralama',
+  'newMatch': 'Yeni maç',
 };
 
 export type Key = keyof typeof tr;
