@@ -1,2 +1,4 @@
-// A1 (Codex) adds the seeded RNG and seat helpers here; types.ts is Fable's and frozen.
 export * from './types';
+export { seededRng, shuffle, randomInt, pick, newSeed } from './rng';
+export { nextSeat, prevSeat, seatOrder, partnerOf } from './seats';
+export { sumTotals } from './scores';
