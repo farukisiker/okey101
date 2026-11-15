@@ -104,7 +104,9 @@ function useSecondsLeft(view: PlayerView): number | null {
   useEffect(() => setDeadline(ms === null ? null : Date.now() + frozenMs + ms), [view, ms, frozenMs]);
   useEffect(() => {
     if (deadline === null) return;
-    const id = setInterval(() => setNow(Date.now()), 250);
+    // Poll 4x a second but re-render the table only when the shown second changes:
+    // every render competes with drops for the JS thread on slow tablets.
+    const id = setInterval(() => setNow(Math.ceil((deadline - Date.now()) / 1000)), 250);
     return () => clearInterval(id);
   }, [deadline]);
   if (deadline === null || ms === null) return null;

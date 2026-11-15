@@ -3,7 +3,7 @@ import { type HostInstance, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { type SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import type { OkeyInfo, Tile } from '@okey/shared';
 import { useDropZones } from '../game/dropZones';
-import { RACK_COLS, RACK_ROWS, type RackGeom, type RackSlots, placeTile, slotAt } from '../game/rackLayout';
+import { RACK_COLS, RACK_ROWS, type RackGeom, type RackSlots, placeTile, rackDrop, slotAt } from '../game/rackLayout';
 import { colors } from '../theme';
 import { DragSource } from './DragSource';
 import { TileView, tileHeight } from './TileView';
@@ -71,7 +71,7 @@ export function Rack(p: Props) {
     zones.measureAll();
   }, [zones, measure]);
 
-  const handlers = useRef(new Map<number, { tap(): void; drop(x: number, y: number): void }>());
+  const handlers = useRef(new Map<number, { tap(): void; drop(x: number, y: number): boolean }>());
   const handlersFor = (id: number) => {
     let hnd = handlers.current.get(id);
     if (!hnd) {
@@ -80,13 +80,20 @@ export function Rack(p: Props) {
           const { selectedId, onSelect } = latest.current;
           onSelect(selectedId === id ? null : id);
         },
+        // True when the tile moves to another slot: it waits where it was dropped
+        // and glides in from there; otherwise DragSource sends it home.
         drop: (x, y) => {
           const cur = latest.current;
           const slot = slotAt(rackGeom.value, x, y);
           if (slot >= 0) {
-            if (cur.slots[slot] === id) return;
-            const next = placeTile(cur.slots, id, slot);
-            return next === cur.slots ? cur.onBlocked() : cur.onSlotsChange(next);
+            if (cur.slots[slot] === id) return false;
+            const next = rackDrop(cur.slots, id, slot);
+            if (!next) {
+              cur.onBlocked();
+              return false;
+            }
+            cur.onSlotsChange(next);
+            return true;
           }
           const hit = zones.hitTest(x, y);
           // Play the tile only after the drag has fully settled. Removing it from the
@@ -96,6 +103,7 @@ export function Rack(p: Props) {
             const zone = hit.key;
             setTimeout(() => latest.current.onDropOnZone(id, zone), DROP_SETTLE_MS);
           }
+          return false;
         },
       };
       handlers.current.set(id, hnd);
@@ -163,6 +171,7 @@ export function Rack(p: Props) {
               style={{ position: 'absolute', left: (i % RACK_COLS) * w, top: GAP + Math.floor(i / RACK_COLS) * rowH }}
               rackGeom={rackGeom}
               hoverSlot={hoverSlot}
+              slot={i}
               onTap={hnd.tap}
               onDragStart={onDragStart}
               onDrop={hnd.drop}
