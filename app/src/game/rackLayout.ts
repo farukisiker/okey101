@@ -18,11 +18,48 @@ export function syncRack(slots: RackSlots, hand: Tile[], preferSlot: number | nu
   const placed = new Set(next.filter((id): id is number => id !== null));
   for (const t of hand) {
     if (placed.has(t.id)) continue;
-    let slot = preferSlot !== null && next[preferSlot] === null ? preferSlot : next.lastIndexOf(null);
+    // A tile dragged onto the rack goes where it was dropped, nudging neighbours aside.
+    const inserted = preferSlot !== null ? insertAt(next, t.id, preferSlot) : null;
     preferSlot = null;
+    if (inserted) {
+      next.splice(0, next.length, ...inserted);
+      continue;
+    }
+    const slot = next.lastIndexOf(null);
     if (slot < 0) break;
     next[slot] = t.id;
   }
+  return next;
+}
+
+/**
+ * Puts a tile (not on the rack) into slot `to`. An occupied slot makes room
+ * like a real istaka: tiles slide one step toward the nearest gap in that row.
+ * Null when the row is full.
+ */
+function insertAt(slots: RackSlots, tileId: number, to: number): RackSlots | null {
+  if (to < 0 || to >= RACK_SLOTS) return null;
+  const next = slots.slice();
+  if (next[to] === null) {
+    next[to] = tileId;
+    return next;
+  }
+  const rowStart = to - (to % RACK_COLS);
+  const rowEnd = rowStart + RACK_COLS - 1;
+  let right = -1;
+  for (let i = to + 1; i <= rowEnd; i++) if (next[i] === null) { right = i; break; }
+  let left = -1;
+  for (let i = to - 1; i >= rowStart; i--) if (next[i] === null) { left = i; break; }
+  if (right < 0 && left < 0) return null;
+  if (right >= 0 && (left < 0 || right - to <= to - left)) {
+    for (let i = right; i > to; i--) next[i] = next[i - 1];
+  } else {
+    // Room only on the left: the tiles before the drop point slide left, the tile lands just before the old occupant.
+    for (let i = left; i < to - 1; i++) next[i] = next[i + 1];
+    next[to - 1] = tileId;
+    return next;
+  }
+  next[to] = tileId;
   return next;
 }
 
@@ -57,14 +94,17 @@ export function emptyRack(): RackSlots {
   return Array(RACK_SLOTS).fill(null);
 }
 
-/** Moves a tile to an empty slot. Occupied slots are left alone: the player arranges by hand. */
+/**
+ * Moves a tile on the rack to slot `to`. If that slot is taken, the tiles there
+ * slide one step toward the nearest gap in the row to make room. Returns the
+ * same array when nothing can move (a full row).
+ */
 export function placeTile(slots: RackSlots, tileId: number, to: number): RackSlots {
   const from = slots.indexOf(tileId);
-  if (from < 0 || to < 0 || to >= RACK_SLOTS || from === to || slots[to] !== null) return slots;
-  const next = slots.slice();
-  next[from] = null;
-  next[to] = tileId;
-  return next;
+  if (from < 0 || to < 0 || to >= RACK_SLOTS || from === to) return slots;
+  const without = slots.slice();
+  without[from] = null;
+  return insertAt(without, tileId, to) ?? slots;
 }
 
 /** Tiles touching each other in a row form a group, like on a real istaka. */
