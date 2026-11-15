@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { type Action, type GameMode, type GameState, type RoomInfo, pickBotNames } from '@okey/shared';
-import { nextTurnClock, type TurnClock } from '@kahve/core';
-import { okey101Def, okeyDuzDef } from '@kahve/catalog';
+import { type Action, type GameMode, type GameState, type RoomInfo, freezeClock, pickBotNames } from '@okey/shared';
+import { NOTICE_MS, nextTurnClock, type TurnClock } from '@kahve/core';
+import { okey101Def, okeyDuzDef, type OkeyOptions } from '@kahve/catalog';
 import type { Session } from './useOkey';
 import { t } from '../i18n';
 
@@ -16,6 +16,7 @@ const defOf = (mode: GameMode) => (mode === 'duz' ? okeyDuzDef : okey101Def);
 /**
  * Offline game against three bots, run on the device through the same GameDefinition,
  * rules, bot and turn clock the server uses. No network needed.
+ * Each live penalty (GameNotice) freezes the clock and the bots for NOTICE_MS, as on the server.
  */
 export function useLocalGame() {
   const [name, setName] = useState<string | null>(null);
@@ -23,22 +24,42 @@ export function useLocalGame() {
   const [names, setNames] = useState<string[]>([]);
   const [game, setGame] = useState<GameState | null>(null);
   const [round, setRound] = useState(0);
+  /** `round` when the current match started (101 matchEnd counts hands from here). */
+  const [matchStart, setMatchStart] = useState(0);
   const [totals, setTotals] = useState([0, 0, 0, 0]);
   const gameRef = useRef<GameState | null>(null);
+  const optionsRef = useRef<OkeyOptions>(okey101Def.defaultOptions);
   /** The player's turn clock (bots move on their own short delay). */
   const [clock, setClock] = useState<TurnClock | null>(null);
   const clockRef = useRef<TurnClock | null>(null);
+  /** Epoch ms until which the clock and bots are frozen for a notice panel (0 = not frozen). */
+  const [frozenUntil, setFrozenUntil] = useState(0);
+  const frozenRef = useRef(0);
+  const lastNoticeRef = useRef(0);
   const defRef = useRef(okey101Def);
+
   const tick = useCallback((g: GameState, action: Action | null) => {
     const def = defRef.current;
-    clockRef.current = nextTurnClock(
+    const now = Date.now();
+    // A clock started or refilled during a notice panel starts counting when the panel goes away.
+    let next = nextTurnClock(
       action ? clockRef.current : null,
       def.turn(g),
       action !== null && def.refillsClock(action),
-      Date.now(),
+      Math.max(now, frozenRef.current),
       def.clock,
     );
-    setClock(clockRef.current);
+    const notice = def.noticeOf?.(g) ?? null;
+    if (action && notice && notice.id > lastNoticeRef.current) {
+      const fresh = notice.id - lastNoticeRef.current;
+      lastNoticeRef.current = notice.id;
+      const until = now + NOTICE_MS * fresh;
+      next = freezeClock(next, until - Math.max(now, frozenRef.current));
+      frozenRef.current = until;
+      setFrozenUntil(until);
+    }
+    clockRef.current = next;
+    setClock(next);
   }, []);
 
   const apply = useCallback((seat: number, action: Action): Result => {
@@ -60,8 +81,11 @@ export function useLocalGame() {
   const deal = useCallback((seatNames: string[], roundNo: number, gameMode: GameMode) => {
     const def = defOf(gameMode);
     defRef.current = def;
-    const g = def.create(def.defaultOptions, seatNames, Math.random, roundNo);
+    const g = def.create(optionsRef.current, seatNames, Math.random, roundNo);
     gameRef.current = g;
+    lastNoticeRef.current = 0;
+    frozenRef.current = 0;
+    setFrozenUntil(0);
     tick(g, null);
     setGame(g);
     setRound(roundNo + 1);
@@ -79,7 +103,7 @@ export function useLocalGame() {
     return () => clearTimeout(timer);
   }, [game, clock, apply]);
 
-  // Bots move one action at a time with a short delay so the player can follow.
+  // Bots move one action at a time with a short delay so the player can follow; they wait out a notice panel.
   useEffect(() => {
     const turn = game ? defRef.current.turn(game) : null;
     if (!turn || turn.seat === ME) return;
@@ -92,13 +116,31 @@ export function useLocalGame() {
         // Should not happen; fall back to the game's minimal legal move.
         apply(seat, def.quickMove(g, seat));
       }
-    }, BOT_DELAY_MS);
+    }, Math.max(BOT_DELAY_MS, frozenUntil - Date.now()));
     return () => clearTimeout(timer);
-  }, [game, apply]);
+  }, [game, frozenUntil, apply]);
 
-  const view = useMemo(
-    () => (game ? defRef.current.viewFor(game, ME, { clock, now: Date.now() }) : null),
-    [game, clock],
+  // Redraw once the panel goes away so the view's clock starts moving again.
+  const [, setThawed] = useState(0);
+  useEffect(() => {
+    const left = frozenUntil - Date.now();
+    if (left <= 0) return;
+    const timer = setTimeout(() => setThawed((n) => n + 1), left);
+    return () => clearTimeout(timer);
+  }, [frozenUntil]);
+
+  const frozen = frozenUntil > Date.now();
+  const view = useMemo(() => {
+    if (!game) return null;
+    const v = defRef.current.viewFor(game, ME, { clock, now: Math.max(Date.now(), frozenUntil) });
+    const left = frozenUntil - Date.now();
+    return left > 0 ? { ...v, noticeMsLeft: left } : v;
+    // `frozen` makes the view refresh when the panel ends.
+  }, [game, clock, frozenUntil, frozen]);
+
+  const matchOver = useMemo(
+    () => !!game && defRef.current.roundOver(game) && defRef.current.matchOver(totals, round - matchStart, optionsRef.current),
+    [game, totals, round, matchStart],
   );
 
   const room = useMemo<RoomInfo | null>(
@@ -118,8 +160,9 @@ export function useLocalGame() {
             started: true,
             round,
             totals,
+            matchOver,
           },
-    [name, mode, names, round, totals],
+    [name, mode, names, round, totals, matchOver],
   );
 
   const session = useMemo<Session | null>(
@@ -132,22 +175,29 @@ export function useLocalGame() {
     session,
     room,
     view,
-    begin: async (playerName: string, gameMode: GameMode = '101'): Promise<Result> => {
+    /** The last finished round ended the match (101 matchEnd, düz: someone out of points). */
+    matchOver,
+    /** `options`: house rules (OkeyOptions), normalized like the server does. */
+    begin: async (playerName: string, gameMode: GameMode = '101', options?: unknown): Promise<Result> => {
       const seatNames = [playerName, ...pickBotNames(3, [playerName])];
+      optionsRef.current = defOf(gameMode).normalizeOptions(options);
       setName(playerName);
       setMode(gameMode);
       setNames(seatNames);
       setTotals([0, 0, 0, 0]);
+      setMatchStart(0);
       deal(seatNames, 0, gameMode);
       return { ok: true };
     },
     act: async (action: Action): Promise<Result> => apply(ME, action),
     nextRound: async (): Promise<Result> => {
       const g = gameRef.current;
-      const def = defRef.current;
-      if (!g || !def.roundOver(g) || name === null) return { ok: false, error: t('roundNotOver') };
-      // Match over (düz okey: someone is out of points): a new game starts from scratch.
-      if (def.matchOver(totals, round, def.defaultOptions)) setTotals([0, 0, 0, 0]);
+      if (!g || !defRef.current.roundOver(g) || name === null) return { ok: false, error: t('roundNotOver') };
+      // Match over (düz okey: someone is out of points; 101: matchEnd): a new match starts from scratch.
+      if (matchOver) {
+        setTotals([0, 0, 0, 0]);
+        setMatchStart(round);
+      }
       deal(names, round, mode);
       return { ok: true };
     },
@@ -156,6 +206,7 @@ export function useLocalGame() {
       setGame(null);
       setName(null);
       setRound(0);
+      setMatchStart(0);
     },
   };
 }

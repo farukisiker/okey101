@@ -66,6 +66,8 @@ export interface RoomInfo {
   mode: GameMode;
   /** v2 server always sets it. Missing = old server: derive with gameOfMode(mode). */
   game?: GameId;
+  /** The last finished round ended the match (per the table's options); "Yeni maç" then starts from zero. Missing = false. */
+  matchOver?: boolean;
   seats: (SeatInfo | null)[];
   hostSeat: number;
   started: boolean;

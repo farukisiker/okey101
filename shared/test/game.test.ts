@@ -232,7 +232,7 @@ describe('bitirme ve puan', () => {
     g.players[1].opened = true;
     g.players[1].hand = [t('blue', 4), t('black', 6)];
     g.players[2].opened = true;
-    g.players[2].hand = [t('red', 5), t('blue', 1)]; // okey (red 5) left: counts 5, plus a flat 101
+    g.players[2].hand = [t('red', 5), t('blue', 1)]; // okey (red 5) left: a flat 101, its number not added
     return { g, groups };
   }
 
@@ -242,7 +242,7 @@ describe('bitirme ve puan', () => {
     s = ok(s, 0, { type: 'discard', tileId: s.players[0].hand[0].id });
     expect(s.phase).toBe('finished');
     expect(s.result).toMatchObject({ winner: 0, elden: false, okeyFinish: false, multiplier: 1 });
-    expect(s.result!.scores).toEqual([-101, 10, 107, 202]);
+    expect(s.result!.scores).toEqual([-101, 10, 102, 202]);
   });
 
   it('elden (nobody else opened): everyone else pays 404', () => {
@@ -263,8 +263,8 @@ describe('bitirme ve puan', () => {
     void groups;
     const s = ok(g, 0, { type: 'discard', tileId: g.players[0].hand[0].id });
     expect(s.result).toMatchObject({ winner: 0, elden: false, okeyFinish: true, multiplier: 2 });
-    // The okey's flat 101 is not doubled: (5 + 1) × 2 + 101.
-    expect(s.result!.scores).toEqual([-202, 20, 113, 404]);
+    // The okey's flat 101 is not doubled and its number is not added: 1 × 2 + 101.
+    expect(s.result!.scores).toEqual([-202, 20, 103, 404]);
   });
 
   it('plain finish: multiplier 1', () => {
@@ -273,7 +273,7 @@ describe('bitirme ve puan', () => {
     g.players[0].openedOnTurn = -4;
     g.players[0].hand = [t('blue', 2)];
     const s = ok(g, 0, { type: 'discard', tileId: g.players[0].hand[0].id });
-    expect(s.result!.scores).toEqual([-101, 10, 107, 202]);
+    expect(s.result!.scores).toEqual([-101, 10, 102, 202]);
   });
 });
 

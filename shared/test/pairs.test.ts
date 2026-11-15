@@ -144,7 +144,7 @@ describe('çiftten açma', () => {
 describe('çift puanlama', () => {
   /**
    * Seat 0 finishes by throwing its last tile. Seat 1 opened with sets (hand 4+6=10),
-   * seat 2 opened with pairs (hand 1+2=3, plus an okey: 5 more and a flat 101),
+   * seat 2 opened with pairs (hand 1+2=3, plus an okey: a flat 101, its number not added),
    * seat 3 never opened.
    */
   function setup(winnerPairs: boolean, last: Tile) {
@@ -159,18 +159,18 @@ describe('çift puanlama', () => {
   it('a pairs opener pays its leftover twice; the flat okey 101 is not doubled', () => {
     const s = finish(setup(false, t('blue', 2)));
     expect(s.result).toMatchObject({ multiplier: 1, pairs: false });
-    // seat 2: (1 + 2 + 5) × 2 + 101
-    expect(s.result!.scores).toEqual([-101, 10, 117, 202]);
+    // seat 2: (1 + 2) × 2 + 101
+    expect(s.result!.scores).toEqual([-101, 10, 107, 202]);
   });
   it('finishing from pairs doubles the round: −202, sets ×2, pairs ×4, not opened 404', () => {
     const s = finish(setup(true, t('blue', 2)));
     expect(s.result).toMatchObject({ winner: 0, pairs: true, multiplier: 2, okeyFinish: false });
-    expect(s.result!.scores).toEqual([-202, 20, 8 * 4 + 101, 404]);
+    expect(s.result!.scores).toEqual([-202, 20, 3 * 4 + 101, 404]);
   });
   it('pairs + okey finish: −404, sets ×4, pairs ×8, not opened 808', () => {
     const s = finish(setup(true, t('red', 5)));
     expect(s.result).toMatchObject({ pairs: true, okeyFinish: true, multiplier: 4 });
-    expect(s.result!.scores).toEqual([-404, 40, 8 * 8 + 101, 808]);
+    expect(s.result!.scores).toEqual([-404, 40, 3 * 8 + 101, 808]);
   });
   it('a drawn round still doubles a pairs opener’s leftover', () => {
     let g = setup(false, t('blue', 2));
@@ -179,7 +179,7 @@ describe('çift puanlama', () => {
     g.reshufflesLeft = 0;
     g = ok(g, 0, { type: 'discard', tileId: g.players[0].hand[0].id });
     expect(g.result).toMatchObject({ winner: null, multiplier: 1 });
-    expect(g.result!.scores[2]).toBe(8 * 2 + 101);
+    expect(g.result!.scores[2]).toBe(3 * 2 + 101);
   });
 });
 

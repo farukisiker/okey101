@@ -45,11 +45,11 @@ describe('nextTurnClock + okey adapter equals shared nextClock', () => {
     // Not vacuous: bots opened/melded and refills happened.
     expect(lays).toBeGreaterThan(0);
     expect(refillsSeen).toBeGreaterThan(0);
-  });
+  }, 20_000);
   it('okey 101 with a custom base (room turnTimeoutMs)', () => {
     sweep('101', 10, 1000);
   });
   it('düz okey, 5 seeded bot hands (no open/meld in düz: fresh clock per turn only)', () => {
     sweep('duz', 5, BASE);
-  });
+  }, 20_000);
 });

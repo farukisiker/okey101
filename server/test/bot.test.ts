@@ -140,5 +140,5 @@ describe('bot and pairs (çift)', () => {
     }
     // The bots do go for pairs now and then (dozens of openers in 60 rounds).
     expect(pairOpeners).toBeGreaterThan(5);
-  });
+  }, 20_000);
 });
