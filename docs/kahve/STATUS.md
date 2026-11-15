@@ -14,12 +14,12 @@ Komutlar: `pnpm test`, `pnpm typecheck`. Bu makinede `pnpm` PATH'te yok; `corepa
 | Görev | Sahip | Durum | Son commit | Engel / not |
 |---|---|---|---|---|
 | F0 çift açma merge | Claude Opus (alt ajan) → Fable review | **birleşti** | `1254b41` | Çift açma `feat/okey101-app`'te yok; canlıya alınması kullanıcı kararı |
-| A0 sözleşmeler | Fable | **birleşti** (onay bekliyor) | A0 commit'i | `@kahve/core` types + protocol v2 ekleri |
-| A1 game-core | Codex (Astra → Sol) | plan bekliyor | – | Kullanıcı onayı bekleniyor |
-| A2 okey adaptörü + catalog | Claude Opus | plan bekliyor | – | Kullanıcı onayı bekleniyor |
-| A3 uyumluluk fikstürleri | OpenCode (yedek: Claude Haiku) | plan bekliyor | – | Kullanıcı onayı bekleniyor |
+| A0 sözleşmeler | Fable | **birleşti** | `2d1c37b`, `c14725b` | `@kahve/core` types + protocol v2 ekleri |
+| A1 game-core | Codex (Astra → Sol) | yapılıyor (plan onaylı) | – | – |
+| A2 okey adaptörü + catalog | Claude Opus | yapılıyor (plan onaylı) | – | – |
+| A3 uyumluluk fikstürleri | OpenCode (yedek: Claude Haiku) | yapılıyor (plan onaylı) | – | – |
 | A4 Room / useLocalGame / protokol | Claude Opus | bekliyor | – | A1, A2'ye bağlı |
-| A5 Kahve kabuğu UI | Claude Sonnet | plan bekliyor | – | Kullanıcı onayı bekleniyor |
+| A5 Kahve kabuğu UI | Claude Sonnet | **birleşti** (1 DÜZELT turu: iOS'ta salona dönüş düğmesi) | `cd64395` | Cihazda denenmedi (A6) |
 | A6 elle deneme | Fable + kullanıcı | bekliyor | – | En son |
 
 ## Ortam (15.11.2026)
