@@ -258,6 +258,7 @@ export const tr = {
   'game.king': 'King',
   'game.konken': 'Konken',
   'game.elli1': 'Elli Bir',
+  serverUpdating: 'Sunucu güncelleniyor, biraz sonra tekrar deneyin',
 };
 
 export type Key = keyof typeof tr;

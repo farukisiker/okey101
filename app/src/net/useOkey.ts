@@ -1,17 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { t } from '../i18n';
-import type {
-  Action,
-  ClientToServerEvents,
-  GameMode,
-  PlayerView,
-  RoomInfo,
-  ServerToClientEvents,
-  TableSummary,
+import {
+  type Action,
+  type GameId,
+  type GameMode,
+  type GameViewEnvelope,
+  type KahveClientToServerEvents,
+  type KahveServerToClientEvents,
+  type PlayerView,
+  type RoomInfo,
+  type TableSummary,
+  PROTOCOL_VERSION,
+  gameOfMode,
+  isOkeyGame,
 } from '@okey/shared';
 
-type OkeySocket = Socket<ServerToClientEvents, ClientToServerEvents>;
+type OkeySocket = Socket<KahveServerToClientEvents, KahveClientToServerEvents>;
+
+/** v2 servers wrap every view as { game, view }; old (v1) servers send the bare okey PlayerView. */
+const isEnvelope = (p: PlayerView | GameViewEnvelope): p is GameViewEnvelope =>
+  typeof p === 'object' && p !== null && 'view' in p && 'game' in p;
 
 export interface Session {
   roomId: string;
@@ -33,12 +42,14 @@ export function useOkey(serverUrl: string) {
   const [connected, setConnected] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [room, setRoom] = useState<RoomInfo | null>(null);
+  const roomRef = useRef<RoomInfo | null>(null);
   const [view, setView] = useState<PlayerView | null>(null);
   const [salon, setSalon] = useState<TableSummary[]>([]);
   const watchingSalon = useRef(false);
 
   useEffect(() => {
-    const socket: OkeySocket = io(serverUrl, { transports: ['websocket'], reconnection: true });
+    // auth.v tells a v2 server we understand the { game, view } envelope; old servers ignore it.
+    const socket: OkeySocket = io(serverUrl, { transports: ['websocket'], reconnection: true, auth: { v: PROTOCOL_VERSION } });
     socketRef.current = socket;
     socket.on('connect', () => {
       setConnected(true);
@@ -54,8 +65,15 @@ export function useOkey(serverUrl: string) {
         });
     });
     socket.on('disconnect', () => setConnected(false));
-    socket.on('room:state', setRoom);
-    socket.on('game:view', setView);
+    socket.on('room:state', (r) => {
+      roomRef.current = r;
+      setRoom(r);
+    });
+    socket.on('game:view', (p) => {
+      if (!isEnvelope(p)) return setView(p);
+      // Only okey has a game screen so far; other games' views are ignored until they get one.
+      if (isOkeyGame(p.game)) setView(p.view as PlayerView);
+    });
     socket.on('salon:list', setSalon);
     return () => {
       socket.removeAllListeners();
@@ -72,16 +90,26 @@ export function useOkey(serverUrl: string) {
       mode: GameMode = '101',
       isPublic = false,
       password?: string,
+      game: GameId = gameOfMode(mode),
     ): Promise<Result> => {
       const socket = socketRef.current;
       if (!socket?.connected) return { ok: false, error: t('cantReachServer') };
+      // `mode` is still sent: an old server only reads that.
       const res =
         kind === 'room:join'
           ? await socket.timeout(5000).emitWithAck('room:join', { roomId, name, password })
           : kind === 'room:create'
-            ? await socket.timeout(5000).emitWithAck(kind, { name, mode, isPublic, password })
-            : await socket.timeout(5000).emitWithAck(kind, { name, mode });
+            ? await socket.timeout(5000).emitWithAck(kind, { name, mode, game, isPublic, password })
+            : await socket.timeout(5000).emitWithAck(kind, { name, mode, game });
       if (!res.ok) return res;
+      // An old server ignores `game` and seats us at an okey table (its room:state arrives before the ack).
+      if (kind !== 'room:join' && !isOkeyGame(game) && roomRef.current?.game !== game) {
+        socket.emit('room:leave');
+        roomRef.current = null;
+        setRoom(null);
+        setView(null);
+        return { ok: false, error: t('serverUpdating') };
+      }
       watchingSalon.current = false;
       const s = { roomId: res.roomId, seat: res.seat, name, password };
       sessionRef.current = s;
@@ -126,6 +154,7 @@ export function useOkey(serverUrl: string) {
       socketRef.current?.emit('room:leave');
       sessionRef.current = null;
       setSession(null);
+      roomRef.current = null;
       setRoom(null);
       setView(null);
     },
