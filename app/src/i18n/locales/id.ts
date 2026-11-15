@@ -202,4 +202,19 @@ export const id: Dict = {
   errRoomFull: 'Meja penuh',
   errAlreadyStarted: 'Permainan sudah dimulai',
   errNotStarted: 'Permainan belum dimulai',
+
+  // 101 pairs (çift)
+  openPairsBtn: 'Buka dengan pasangan ({n})',
+  layPairs: 'Turunkan pasangan',
+  pairsMore: 'kurang {n} pasangan',
+  actOpenedPairs: '{name} membuka dengan pasangan ({n})',
+  pairsChip: 'PASANGAN',
+  pairLabel: 'pasangan',
+  handCancelled: 'Semua membuka dengan pasangan: ronde batal, tanpa poin',
+  errMixedOpen: 'Tidak bisa membuka dengan pasangan dan set sekaligus',
+  errInvalidPairTiles: 'Pasangan tidak valid: {tiles}',
+  errPairsNeeded: 'Buka dengan pasangan butuh minimal {need} pasangan ({count})',
+  errPairsNoNewMeld: 'Setelah buka dengan pasangan tidak boleh set baru; turunkan pasangan atau tambah ke set',
+  errSetsNoPairs: 'Setelah buka dengan set tidak boleh menurunkan pasangan',
+  errInvalidPair: 'Pasangan tidak valid',
 };

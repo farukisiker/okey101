@@ -202,4 +202,19 @@ export const zh: Dict = {
   errRoomFull: '牌桌已满',
   errAlreadyStarted: '游戏已经开始了',
   errNotStarted: '游戏还没开始',
+
+  // 101 pairs (çift)
+  openPairsBtn: '对子开牌（{n}）',
+  layPairs: '亮对子',
+  pairsMore: '还差{n}对',
+  actOpenedPairs: '{name}用对子开牌了（{n}）',
+  pairsChip: '对子',
+  pairLabel: '对子',
+  handCancelled: '所有人都用对子开牌：本局作废，不计分',
+  errMixedOpen: '对子和牌组不能一起开牌',
+  errInvalidPairTiles: '无效对子：{tiles}',
+  errPairsNeeded: '对子开牌至少需要{need}对（{count}）',
+  errPairsNoNewMeld: '用对子开牌后不能亮新牌组，只能亮对子或往牌组上加牌',
+  errSetsNoPairs: '用牌组开牌后不能亮对子',
+  errInvalidPair: '无效对子',
 };

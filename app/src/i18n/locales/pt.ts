@@ -202,4 +202,19 @@ export const pt: Dict = {
   errRoomFull: 'A mesa está cheia',
   errAlreadyStarted: 'O jogo já começou',
   errNotStarted: 'O jogo não começou',
+
+  // 101 pairs (çift)
+  openPairsBtn: 'Abrir com pares ({n})',
+  layPairs: 'Baixar pares',
+  pairsMore: 'Faltam {n} pares',
+  actOpenedPairs: '{name} abriu com pares ({n})',
+  pairsChip: 'PARES',
+  pairLabel: 'pares',
+  handCancelled: 'Todos abriram com pares: mão anulada, sem pontos',
+  errMixedOpen: 'Não dá para abrir com pares e combinações juntos',
+  errInvalidPairTiles: 'Par inválido: {tiles}',
+  errPairsNeeded: 'Para abrir com pares você precisa de pelo menos {need} pares ({count})',
+  errPairsNoNewMeld: 'Depois de abrir com pares não pode baixar combinação nova; baixe pares ou encaixe peças',
+  errSetsNoPairs: 'Depois de abrir com combinações não pode baixar pares',
+  errInvalidPair: 'Par inválido',
 };

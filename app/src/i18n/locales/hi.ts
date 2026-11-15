@@ -202,4 +202,19 @@ export const hi: Dict = {
   errRoomFull: 'टेबल भरी हुई है',
   errAlreadyStarted: 'खेल पहले ही शुरू हो चुका है',
   errNotStarted: 'खेल अभी शुरू नहीं हुआ',
+
+  // 101 pairs (çift)
+  openPairsBtn: 'जोड़ों से खोलो ({n})',
+  layPairs: 'जोड़े रखो',
+  pairsMore: '{n} जोड़े और',
+  actOpenedPairs: '{name} ने जोड़ों से खोला ({n})',
+  pairsChip: 'जोड़े',
+  pairLabel: 'जोड़े',
+  handCancelled: 'सबने जोड़ों से खोला: हाथ रद्द, कोई अंक नहीं',
+  errMixedOpen: 'जोड़े और सेट एक साथ नहीं खोल सकते',
+  errInvalidPairTiles: 'गलत जोड़ा: {tiles}',
+  errPairsNeeded: 'जोड़ों से खोलने के लिए कम से कम {need} जोड़े चाहिए ({count})',
+  errPairsNoNewMeld: 'जोड़ों से खोलने के बाद नया सेट नहीं; सिर्फ जोड़े रखो या सेट में टाइल जोड़ो',
+  errSetsNoPairs: 'सेट से खोलने के बाद जोड़े नहीं रख सकते',
+  errInvalidPair: 'गलत जोड़ा',
 };

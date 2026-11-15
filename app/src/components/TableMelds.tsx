@@ -173,7 +173,7 @@ export function MeldView({ meld, owner, okey, tileWidth, lit, dim, onPress, drop
         ))}
       </View>
       <Text style={styles.owner} numberOfLines={1}>
-        {owner} · {meld.points}
+        {owner} · {meld.type === 'pair' ? t('pairLabel') : meld.points}
       </Text>
     </Pressable>
   );

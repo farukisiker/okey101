@@ -36,7 +36,7 @@ export function OpponentPanel({ player, seatInfo, total, unit, active, width, he
           </Text>
           {player.opened && (
             <View style={styles.chip}>
-              <Text style={styles.chipText}>{t('openedChip')}</Text>
+              <Text style={styles.chipText}>{player.pairs ? t('pairsChip') : t('openedChip')}</Text>
             </View>
           )}
         </View>

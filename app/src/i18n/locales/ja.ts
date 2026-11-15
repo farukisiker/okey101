@@ -202,4 +202,19 @@ export const ja: Dict = {
   errRoomFull: 'テーブルは満席です',
   errAlreadyStarted: 'ゲームはもう始まっています',
   errNotStarted: 'ゲームはまだ始まっていません',
+
+  // 101 pairs (çift)
+  openPairsBtn: 'ペアでオープン（{n}）',
+  layPairs: 'ペアを出す',
+  pairsMore: 'あと{n}ペア',
+  actOpenedPairs: '{name}がペアでオープン（{n}）',
+  pairsChip: 'ペア',
+  pairLabel: 'ペア',
+  handCancelled: '全員がペアでオープン：この回は無効、得点なし',
+  errMixedOpen: 'ペアとセットを一緒にオープンできません',
+  errInvalidPairTiles: '無効なペア：{tiles}',
+  errPairsNeeded: 'ペアでのオープンには最低{need}ペア必要です（{count}）',
+  errPairsNoNewMeld: 'ペアでオープンした後は新しいセットを出せません。ペアを出すかセットに付け足してください',
+  errSetsNoPairs: 'セットでオープンした後はペアを出せません',
+  errInvalidPair: '無効なペア',
 };

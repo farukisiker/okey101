@@ -1,6 +1,6 @@
 import type { TurnClock } from './clock';
 import { type FinishShape, finishShape } from './duz';
-import { type MeldAnalysis, type MeldType, analyzeMeld, okeySwap } from './melds';
+import { type MeldAnalysis, type MeldType, PAIRS_TO_OPEN, analyzeMeld, analyzePair, okeySwap } from './melds';
 import {
   type NormalTile,
   type OkeyInfo,
@@ -54,6 +54,8 @@ export interface PlayerState {
    */
   topTaken?: boolean;
   opened: boolean;
+  /** 101: opened with pairs. May lay more pairs and add to melds, never start a set or run. */
+  pairs: boolean;
   openedOnTurn: number | null;
   penalties: number;
 }
@@ -75,8 +77,10 @@ export interface RoundResult {
   winner: number | null;
   okeyFinish: boolean;
   elden: boolean;
-  /** Düz okey: finished with seven pairs. */
+  /** Düz okey: finished with seven pairs. 101: the winner had opened with pairs. */
   pairs: boolean;
+  /** 101: all four players opened with pairs, so the hand was cancelled with no score. */
+  cancelled: boolean;
   multiplier: number;
   /** Points per seat for this round (lower is better; in düz okey, points lost). */
   scores: number[];
@@ -85,7 +89,8 @@ export interface RoundResult {
 export type LastAction =
   | { seat: number; type: 'draw'; source: 'deck' | 'discard'; tile?: Tile }
   | { seat: number; type: 'discard'; tile: Tile }
-  | { seat: number; type: 'open'; meldIds: number[]; points: number }
+  /** `points`: the melds' total, or with `pairs` the number of pairs laid. */
+  | { seat: number; type: 'open'; meldIds: number[]; points: number; pairs?: boolean }
   | { seat: number; type: 'meld'; meldId: number }
   | { seat: number; type: 'addToMeld'; meldId: number; tileIds: number[]; tookOkeys?: number; from?: number }
   | { seat: number; type: 'finish'; tile: Tile; shape: FinishShape }
@@ -165,6 +170,7 @@ export function createGame(opts: NewGameOptions = {}): GameState {
       hand: deck.splice(0, i === 0 ? first : rest),
       discards: [],
       opened: false,
+      pairs: false,
       openedOnTurn: null,
       penalties: 0,
     };
@@ -236,22 +242,32 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
       if (action.melds.length === 0) return fail('Per seçilmedi');
       const groups = takeGroups(player.hand, action.melds);
       if (typeof groups === 'string') return fail(groups);
+      // Groups of two are pairs; an opening is all pairs or all sets/runs.
+      const pairs = groups.some((g) => g.length === 2);
+      if (pairs && groups.some((g) => g.length !== 2)) return fail('Çift ve per birlikte açılamaz');
       const analyses: MeldAnalysis[] = [];
       for (const g of groups) {
-        const a = analyzeMeld(g, state.okey);
-        if (!a) return fail('Geçersiz per: ' + g.map(tileText).join(' '));
+        const a = pairs ? analyzePair(g, state.okey) : analyzeMeld(g, state.okey);
+        if (!a) return fail((pairs ? 'Geçersiz çift: ' : 'Geçersiz per: ') + g.map(tileText).join(' '));
         analyses.push(a);
       }
       const total = analyses.reduce((s, a) => s + a.points, 0);
-      if (total < OPEN_THRESHOLD) return fail(`Açmak için en az ${OPEN_THRESHOLD} gerekli (${total})`);
+      if (pairs && groups.length < PAIRS_TO_OPEN)
+        return fail(`Çiftten açmak için en az ${PAIRS_TO_OPEN} çift gerekli (${groups.length})`);
+      if (!pairs && total < OPEN_THRESHOLD) return fail(`Açmak için en az ${OPEN_THRESHOLD} gerekli (${total})`);
       const used = new Set(action.melds.flat());
       const keep = keepsDiscard(state, player, used);
       if (keep) return fail(keep);
       player.hand = player.hand.filter((t) => !used.has(t.id));
       const meldIds = groups.map((g, i) => addTableMeld(state, seat, g, analyses[i]));
       player.opened = true;
+      player.pairs = pairs;
       player.openedOnTurn = state.turnNumber;
-      state.lastAction = { seat, type: 'open', meldIds, points: total };
+      state.lastAction = pairs
+        ? { seat, type: 'open', meldIds, points: groups.length, pairs: true }
+        : { seat, type: 'open', meldIds, points: total };
+      // Everyone opened with pairs: the hand is void.
+      if (pairs && state.players.every((p) => p.pairs)) cancelRound(state);
       return { ok: true, state };
     }
 
@@ -261,8 +277,11 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
       if (!player.opened) return fail('Önce elinizi açmalısınız');
       const groups = takeGroups(player.hand, [action.tileIds]);
       if (typeof groups === 'string') return fail(groups);
-      const a = analyzeMeld(groups[0], state.okey);
-      if (!a) return fail('Geçersiz per');
+      const isPair = groups[0].length === 2;
+      if (player.pairs && !isPair) return fail('Çiftten açan yeni per açamaz; yalnızca çift indirip perlere işleyebilir');
+      if (!player.pairs && isPair) return fail('Perden açan çift indiremez');
+      const a = isPair ? analyzePair(groups[0], state.okey) : analyzeMeld(groups[0], state.okey);
+      if (!a) return fail(isPair ? 'Geçersiz çift' : 'Geçersiz per');
       const ids = new Set(action.tileIds);
       const keep = keepsDiscard(state, player, ids);
       if (keep) return fail(keep);
@@ -278,6 +297,7 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
       if (!player.opened) return fail('İşlemek için önce açmalısınız');
       const meld = state.table.find((m) => m.id === action.meldId);
       if (!meld) return fail('Per bulunamadı');
+      if (meld.type === 'pair') return fail('Bu taş bu pere işlenemez');
       const groups = takeGroups(player.hand, [action.tileIds]);
       if (typeof groups === 'string') return fail(groups);
       const ids = new Set(action.tileIds);
@@ -427,30 +447,33 @@ function addTableMeld(state: GameState, owner: number, tiles: Tile[], a: MeldAna
  * Scoring (lower is better):
  * - winner: -101
  * - opened players: face values of the tiles left in hand (the okey counts its
- *   number), times the round multiplier, plus a flat 101 per okey still held
+ *   number), times the round multiplier, plus a flat 101 per okey still held;
+ *   a player who opened with pairs pays the tile sum twice over
  * - not opened: 202, times the round multiplier
- * Finishing with the okey doubles the round. Finishing "elden" (opening and
- * finishing in one turn while nobody else has opened) doubles it too, so
- * everyone else pays 404 (808 if the last tile was the okey). Unused discard
- * pickups add 101. Flat 101s are never multiplied.
+ * Finishing with the okey doubles the round, and so does finishing after
+ * opening with pairs. Finishing "elden" (opening and finishing in one turn
+ * while nobody else has opened) doubles it too, so everyone else pays 404
+ * (808 if the last tile was the okey). Unused discard pickups add 101. Flat
+ * 101s are never multiplied.
  */
 export function scoreRound(state: GameState, winner: number | null, okeyFinish: boolean, pairs = false): RoundResult {
   if (state.mode === 'duz') return scoreDuz(state, winner, okeyFinish, pairs);
   const w = winner === null ? null : state.players[winner];
   const elden =
     !!w && w.openedOnTurn === state.turnNumber && state.players.every((p) => p.seat === winner || !p.opened);
-  const multiplier = winner === null ? 1 : (okeyFinish ? 2 : 1) * (elden ? 2 : 1);
+  const pairsFinish = !!w?.pairs;
+  const multiplier = winner === null ? 1 : (okeyFinish ? 2 : 1) * (elden ? 2 : 1) * (pairsFinish ? 2 : 1);
   const scores = state.players.map((p) => {
     let s: number;
     if (p.seat === winner) s = FINISH_BONUS * multiplier;
     else if (!p.opened) s = NOT_OPENED_PENALTY * multiplier;
     else {
       const { sum, okeys } = handPenalty(p.hand, state.okey);
-      s = sum * multiplier + okeys * OKEY_IN_HAND_PENALTY;
+      s = sum * multiplier * (p.pairs ? 2 : 1) + okeys * OKEY_IN_HAND_PENALTY;
     }
     return s + p.penalties;
   });
-  return { winner, okeyFinish, elden, pairs: false, multiplier, scores };
+  return { winner, okeyFinish, elden, pairs: pairsFinish, cancelled: false, multiplier, scores };
 }
 
 /**
@@ -465,7 +488,7 @@ function scoreDuz(state: GameState, winner: number | null, okeyFinish: boolean, 
     if (state.gosterge !== null && p.seat !== state.gosterge) s += DUZ_GOSTERGE_LOSS;
     return s;
   });
-  return { winner, okeyFinish, elden: false, pairs, multiplier, scores };
+  return { winner, okeyFinish, elden: false, pairs, cancelled: false, multiplier, scores };
 }
 
 /** Düz okey game over: someone has lost all their starting points. */
@@ -476,6 +499,12 @@ export function matchOver(mode: GameMode, totals: number[]): boolean {
 function finishRound(state: GameState, winner: number | null, okeyFinish: boolean, pairs = false) {
   state.phase = 'finished';
   state.result = scoreRound(state, winner, okeyFinish, pairs);
+}
+
+/** 101: all four opened with pairs. Nobody scores anything this hand, penalties included. */
+function cancelRound(state: GameState) {
+  state.phase = 'finished';
+  state.result = { winner: null, okeyFinish: false, elden: false, pairs: true, cancelled: true, multiplier: 1, scores: [0, 0, 0, 0] };
 }
 
 export function tileText(t: Tile): string {
@@ -492,6 +521,8 @@ export interface PublicPlayer {
   /** The top tile was taken: the pile shows empty until this player throws again. */
   topTaken?: boolean;
   opened: boolean;
+  /** 101: opened with pairs. */
+  pairs: boolean;
   penalties: number;
 }
 
@@ -554,6 +585,7 @@ export function viewFor(state: GameState, seat: number, clock: TurnClock | null 
       discards: p.discards,
       topTaken: !!p.topTaken,
       opened: p.opened,
+      pairs: p.pairs,
       penalties: p.penalties,
     })),
     table: state.table,
