@@ -90,11 +90,11 @@ git -C C:/Users/mfaru/okey101/kahve worktree add -b feat/kahve-oc    ../kahve-oc
 
 ```bash
 # Astra: plan ve review (kendisi dosya düzenlemez)
-codex exec -C C:/Users/mfaru/okey101/kahve-codex -m <ASTRA_MODEL> -s read-only "<görev kâğıdı + ORKESTRA §3>"
+codex exec -C C:/Users/mfaru/okey101/kahve-codex -m gpt-6-astra -s read-only "<görev kâğıdı + ORKESTRA §3>"
 # Sol işçi: kod ve test
 codex exec -C C:/Users/mfaru/okey101/kahve-codex -m gpt-6.1-sol -s workspace-write "<Astra'nın alt görevi>"
 ```
-`<ASTRA_MODEL>`: Fable ilk adımda Codex'in model listesinden tam kimliği doğrular ve buraya yazar.
+Model kimlikleri (Codex CLI 0.164.0 `~/.codex/models_cache.json`, 15.11.2026'da doğrulandı): **Astra = `gpt-6-astra`**, **Sol = `gpt-6.1-sol`** (config varsayılanı). Hafif işler için `gpt-6-luna`.
 
 ### 1.4 Antigravity CLI (`agy`): Gemini Argon liderliğinde (worktree `kahve-agy`)
 - **Argon** alt planlayıcı ve review'cudur, kod yazmaz. **Flash** ve benzeri işçiler kodu yazar.
@@ -106,14 +106,18 @@ codex exec -C C:/Users/mfaru/okey101/kahve-codex -m gpt-6.1-sol -s workspace-wri
   - D: 11 dile çeviri taslakları (`scripts/` ve `docs/store/` düzeniyle), mağaza görselleri (`app/scripts/make-store-art.py`)
 
 ```bash
-agy -p --model <ARGON_MODEL> --mode plan        --add-dir C:/Users/mfaru/okey101/kahve-agy "<görev kâğıdı>"
-agy -p --model <FLASH_MODEL> --mode accept-edits --add-dir C:/Users/mfaru/okey101/kahve-agy "<Argon'un alt görevi>"
+agy -p --model gemini-4-argon-high --mode plan        --add-dir C:/Users/mfaru/okey101/kahve-agy "<görev kâğıdı>"
+agy -p --model gemini-3.8-flash-high --mode accept-edits --add-dir C:/Users/mfaru/okey101/kahve-agy "<Argon'un alt görevi>"
 ```
+Model kimlikleri (`agy models`, 15.11.2026): **Argon = `gemini-4-argon-high`**, **Flash = `gemini-3.8-flash-high`** (toplu/mekanik iş: `gemini-3.8-flash-medium`).
+Argon kotası biterse plan/review `claude-sonnet-5-5-high` (agy içinde) veya Claude takımına geçer.
 
 ### 1.5 OpenCode CLI (worktree `kahve-oc`)
-- **Durum:** `~/.config/opencode` var ama `opencode` komutu kurulu değil.
-  Kurulum (`npm i -g opencode-ai`) yeni bir global araç olduğu için **kullanıcıya sorulur**.
-  Kurulmazsa bu takımın işi Claude Haiku/Sonnet'e geçer.
+- **Durum (15.11.2026):** PATH'te `opencode` yok, ama OpenCode masaüstünün CLI'ı kurulu:
+  `%APPDATA%\ai.opencode.desktop\cli\2.0.31-x64\opencode-cli.exe` (v2.0.31). **Yeni global kurulum gerekmez.**
+  En yeni klasörü çöz: `$oc = (Get-ChildItem "$env:APPDATA\ai.opencode.desktop\cli" -Directory | Sort-Object Name -Descending | Select-Object -First 1).FullName + "\opencode-cli.exe"`.
+  Sadece ücretsiz `opencode/*` modelleri. `--standalone` ile, aynı anda en fazla 2-4 çalıştır, her işe zaman aşımı koy
+  (öğleden sonra ücretsiz sağlayıcılar takılabiliyor). Takılırsa iş Claude Haiku/Sonnet veya agy Flash'a geçer.
 - Yapı aynı: lider model planlar ve review eder; ücretsiz işçi modeller yazar ve test eder.
 - Alan: **bağımsız doğrulama** (başkasının kodunu yazmaz, kırmaya çalışır).
   - A: "eski istemci" uyumluluk test fikstürleri: v1.0.1 mesaj dizileri kaydı, `mode:'101'|'duz'` ile masa açıp oynama, `salon:watch` filtresiz → sadece okey
@@ -121,9 +125,11 @@ agy -p --model <FLASH_MODEL> --mode accept-edits --add-dir C:/Users/mfaru/okey10
   - Belgeler: `docs/oyunlar/pisti.md`, `batak.md`, `tavla.md` taslakları (kurallar ve ayarlar); README "Kurallar" linkleri
 
 ```bash
-opencode run -m <OC_LEAD_MODEL>   "<görev kâğıdı>"   # plan + review
-opencode run -m <OC_WORKER_MODEL> "<alt görev>"      # kod + test
+& $oc run --standalone -m opencode/glm-5.3-flash-free "<görev kâğıdı>"            # lider: plan + review
+& $oc run --standalone --auto -m opencode/deepseek-v4.1-flash-free "<alt görev>"  # işçi: kod + test
 ```
+Model kimlikleri (`opencode-cli models`, 15.11.2026): **lider = `opencode/glm-5.3-flash-free`** (en dikkatli review),
+**işçi = `opencode/deepseek-v4.1-flash-free`** (hızlı, doğru kod), ikinci review'cu `opencode/big-pickle`.
 
 ### 1.6 Yedek
 - Bir CLI çalışmazsa (kota, oturum, kurulum) Fable o işi Claude takımına verir ve `STATUS.md`'ye yazar.

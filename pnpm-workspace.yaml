@@ -3,6 +3,7 @@ packages:
   - app
   - server
   - shared
+  - packages/*
 allowBuilds:
   esbuild: true
 minimumReleaseAgeExclude:
