@@ -39,7 +39,7 @@ Komutlar: `pnpm test`, `pnpm typecheck`. Bu makinede `pnpm` PATH'te yok; `corepa
 | Görev | Sahip | Durum | Son commit | Engel / not |
 |---|---|---|---|---|
 | B1 @kahve/cards | Codex (Astra → Sol) | **birleşti** (Astra ONAY) | `307dcdb` | 36 test |
-| B2 @kahve/pisti | Codex (Sol) → Claude Opus review | review | – | Astra 1 GERİ GÖNDER (bot hafızası); 02:40'ta **Codex kotası bitti (04:23'e kadar)** → structuredClone + yeniden review Claude Opus'a (ORKESTRA §1.6) |
+| B2 @kahve/pisti | Codex (Sol) + Claude Opus review | **birleşti** | `e372901` | Astra 1 GERİ GÖNDER (bot hafızası) → Sol düzeltti; Codex kotası bitince yeniden review + structuredClone→JSON clone Claude Opus. 46 test, 200 seed 0 geçersiz |
 | B3 @kahve/batak | **Claude Opus** (Codex kotası yok, bu gece) | plan | – | worktree kahve-b3 |
 | B4 CardView + Pişti/Batak ekranları | Antigravity (Argon → Flash) | **birleşti** (Argon 1 GERİ GÖNDER) | `bae492b` | SVG yok. agy headless komut çalıştıramıyor: Flash sadece dosya yazar, typecheck/commit Fable. Sesler (.wav) henüz yok. Açık: köşe takım simgesi 12 pt |
 | B5 catalog/sunucu/çevrimdışı entegrasyon | Claude Opus | yapılıyor (b,c,e bitti) | – | a,d,f,g,h B2 birleşince |
