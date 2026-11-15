@@ -106,7 +106,7 @@ describe('server with a non-okey table', () => {
     stubTable('PST03');
     const c = v2();
     expect(await c.emitWithAck('room:create', { name: 'Ali', game: 'satranc' as never })).toEqual({ ok: false, error: 'Bilinmeyen oyun' });
-    expect(await c.emitWithAck('room:quickPlay', { name: 'Ali', game: 'pisti' })).toEqual({ ok: false, error: 'Bu oyun yakında geliyor' });
+    expect(await c.emitWithAck('room:quickPlay', { name: 'Ali', game: 'batak' })).toEqual({ ok: false, error: 'Bu oyun yakında geliyor' });
     expect(await c.emitWithAck('room:join', { roomId: 'PST03', name: 'Ali', game: 'okey101' })).toEqual({
       ok: false,
       error: 'Bu masa başka bir oyun',

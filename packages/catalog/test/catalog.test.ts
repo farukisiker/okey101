@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GAME_IDS } from '@kahve/core';
 import { DEFAULT_RESHUFFLES, seededRng, TURN_MS } from '@okey/shared';
-import { CATALOG, gamesInGroup, getDefinition, okey101Def, okeyDuzDef } from '../src';
+import { CATALOG, gamesInGroup, getDefinition, okey101Def, okeyDuzDef, pistiDef } from '../src';
 
 describe('CATALOG', () => {
   it('lists every game id once, with titleKey game.<id>', () => {
@@ -9,9 +9,9 @@ describe('CATALOG', () => {
     for (const g of CATALOG) expect(g.titleKey).toBe(`game.${g.id}`);
   });
 
-  it('only okey is active; seat choices and groups', () => {
+  it('okey and pişti are active; seat choices and groups', () => {
     const by = Object.fromEntries(CATALOG.map((g) => [g.id, g]));
-    expect(CATALOG.filter((g) => g.status === 'active').map((g) => g.id)).toEqual(['okey101', 'okeyDuz']);
+    expect(CATALOG.filter((g) => g.status === 'active').map((g) => g.id)).toEqual(['okey101', 'okeyDuz', 'pisti']);
     expect(by.pisti!.seatChoices).toEqual([2, 4]);
     expect(by.batak!.seatChoices).toEqual([4]);
     expect(by.tavla!.seatChoices).toEqual([2]);
@@ -22,10 +22,11 @@ describe('CATALOG', () => {
     expect(gamesInGroup('dama')).toEqual([]);
   });
 
-  it('getDefinition returns okey defs and null for soon games', () => {
+  it('getDefinition returns okey and pişti defs and null for soon games', () => {
     expect(getDefinition('okey101')).toBe(okey101Def);
     expect(getDefinition('okeyDuz')).toBe(okeyDuzDef);
-    for (const id of ['pisti', 'batak', 'tavla', 'king', 'konken', 'elli1'] as const) expect(getDefinition(id)).toBeNull();
+    expect(getDefinition('pisti')).toBe(pistiDef);
+    for (const id of ['batak', 'tavla', 'king', 'konken', 'elli1'] as const) expect(getDefinition(id)).toBeNull();
   });
 
   it('is plain JSON', () => {
