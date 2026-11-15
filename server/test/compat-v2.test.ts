@@ -14,10 +14,10 @@ import {
 import { createOkeyServer, type OkeyServer } from '../src/server';
 
 /*
- * Contract tests for the v2 (Demli Kahve) client. Today's server only speaks v1, so every
- * scenario here is an `it.fails`: it must fail now and pass, unchanged, once A4 makes the
- * server answer v2 sockets with the envelope, `game` in RoomInfo/TableSummary, the salon
- * filter and ERR_UPDATE_APP for a v1 client asking for a non-okey table.
+ * Contract tests for the v2 (Demli Kahve) client. Written in A3 as `it.fails` against the
+ * v1-only server; A4 made the server answer v2 sockets with the envelope, `game` in
+ * RoomInfo/TableSummary, the salon filter and ERR_UPDATE_APP for a v1 client asking for a
+ * non-okey table, so they are plain `it` now (bodies unchanged).
  * Every wait is capped well under the 2 s per-test budget so a missing answer fails the
  * body instead of hanging the file.
  */
@@ -82,7 +82,7 @@ async function within<T>(p: Promise<T>, ms = WAIT_MS): Promise<T> {
 }
 
 describe('compat v2 (Demli Kahve client)', () => {
-  it.fails(
+  it(
     'v2 quickPlay gets the { game, view } envelope on game:view',
     async () => {
       const c = v2();
@@ -99,7 +99,7 @@ describe('compat v2 (Demli Kahve client)', () => {
     2000,
   );
 
-  it.fails(
+  it(
     'v1 socket asking for a pisti table is told to update the app',
     async () => {
       const c = v1();
@@ -109,7 +109,7 @@ describe('compat v2 (Demli Kahve client)', () => {
     2000,
   );
 
-  it.fails(
+  it(
     'v2 salon:watch filter lists tables with game filled in',
     async () => {
       const host = v1();
@@ -128,7 +128,7 @@ describe('compat v2 (Demli Kahve client)', () => {
     2000,
   );
 
-  it.fails(
+  it(
     'v2 RoomInfo.game is okey101 for a 101 table',
     async () => {
       const c = v2();
@@ -143,7 +143,7 @@ describe('compat v2 (Demli Kahve client)', () => {
     2000,
   );
 
-  it.fails(
+  it(
     'v2 RoomInfo.game is okeyDuz for a düz table',
     async () => {
       const c = v2();
