@@ -232,6 +232,32 @@ export const tr = {
   errPairsNoNewMeld: 'Çiftten açan yeni per açamaz; yalnızca çift indirip perlere işleyebilir',
   errSetsNoPairs: 'Perden açan çift indiremez',
   errInvalidPair: 'Geçersiz çift',
+
+  // Kahve (A5)
+  introKahve: 'Kahveye hoş geldin',
+  salonTitle: 'Kahve Salonu',
+  groupOkey: 'Okey Masaları',
+  groupKagit: 'Kağıt Masaları',
+  groupTavla: 'Tavla Köşesi',
+  groupDama: 'Dama & Domino',
+  groupOkeySub: '101 ve Düz Okey',
+  groupKagitSub: 'Pişti, Batak ve daha fazlası',
+  groupTavlaSub: 'Tavla',
+  groupDamaSub: 'Dama ve Domino',
+  soon: 'Yakında',
+  soonA11y: '{name}, yakında',
+  lastPlayed: 'Son oynadığın',
+  resume: 'Devam',
+  pickGame: 'Hangi masaya oturalım?',
+  backToSalon: 'Salona dön',
+  'game.okey101': '101 Okey',
+  'game.okeyDuz': 'Düz Okey',
+  'game.pisti': 'Pişti',
+  'game.batak': 'Batak',
+  'game.tavla': 'Tavla',
+  'game.king': 'King',
+  'game.konken': 'Konken',
+  'game.elli1': 'Elli Bir',
 };
 
 export type Key = keyof typeof tr;

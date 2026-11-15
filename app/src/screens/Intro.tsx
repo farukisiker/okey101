@@ -18,6 +18,9 @@ export function Intro({ onDone }: { onDone(): void }) {
       <Animated.Text entering={FadeIn.duration(700)} style={styles.name}>
         {t('introTagline')}
       </Animated.Text>
+      <Animated.Text entering={FadeIn.delay(1000).duration(600)} style={styles.kahve}>
+        {t('introKahve')}
+      </Animated.Text>
       <Animated.View entering={FadeInDown.delay(500).duration(800)} style={styles.badge}>
         <Text style={styles.vip}>DEMLİ</Text>
         <Text style={styles.okey}>OKEY</Text>
@@ -45,5 +48,6 @@ const styles = StyleSheet.create({
   },
   vip: { color: colors.accent, fontSize: 56, fontWeight: '900', letterSpacing: 4 },
   okey: { color: colors.text, fontSize: 56, fontWeight: '900', letterSpacing: 4 },
+  kahve: { color: colors.accent, fontSize: 28, fontWeight: '800' },
   tap: { color: colors.muted, fontSize: 18 },
 });
