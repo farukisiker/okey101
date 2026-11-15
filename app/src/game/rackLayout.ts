@@ -107,6 +107,18 @@ export function placeTile(slots: RackSlots, tileId: number, to: number): RackSlo
   return insertAt(without, tileId, to) ?? slots;
 }
 
+/**
+ * A rack tile dropped on slot `to`: the new arrangement, or null when the tile
+ * ends up where it started (its own slot, a full row, or a nudge that puts it
+ * straight back). The dragged tile waits where it was dropped until this
+ * answers, so null must mean "glide home" and non-null "it moves".
+ */
+export function rackDrop(slots: RackSlots, tileId: number, to: number): RackSlots | null {
+  const from = slots.indexOf(tileId);
+  const next = placeTile(slots, tileId, to);
+  return next === slots || next.indexOf(tileId) === from ? null : next;
+}
+
 /** Tiles touching each other in a row form a group, like on a real istaka. */
 export function rackGroups(slots: RackSlots): number[][] {
   const groups: number[][] = [];
