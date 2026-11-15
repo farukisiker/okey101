@@ -25,6 +25,7 @@ Komutlar: `pnpm test`, `pnpm typecheck`. Bu makinede `pnpm` PATH'te yok; `corepa
 | A5 Kahve kabuğu UI | Claude Sonnet | **birleşti** (1 DÜZELT turu: iOS'ta salona dönüş düğmesi; oyun listesi artık `@kahve/catalog`) | `cd64395` + ek | Cihazda denenmedi (A6) |
 | A5b i18n denetimi | Claude Haiku | **geçti** | – | 228 anahtar × 13 dosya eşit, UTF-8 temiz, yer tutucular eşit |
 | A7 okey kuralları + ceza paneli | Claude Opus (kurallar, sunucu, net) + Claude Sonnet (arayüz) | **birleşti** (2 DÜZELT turu: çoklu ceza bildirimi, yavaş testlere zaman aşımı) | `b157ac0`, `d4090a5` | Kullanıcı kararları MASTER_PLAN §4c. Cihazda denenmedi (A6'ya eklendi). v1 istemcide geri sayım donmayı göstermez |
+| FIX-DRAG ıstakada bırakılan taşın geri kayması | Claude Opus | **birleşti** | `a0ed5bb` | A6'da tablette bulundu. Neden: bırakınca UI thread taşı eski yuvaya yaylıyor, JS yeni yuvayı geç commit ediyor. Canlı 1.0.1'de de var (1.0.2 hotfix kararı kullanıcıda). Test 280 |
 | A6 elle deneme | Fable + kullanıcı | **kullanıcıyı bekliyor** | – | Telefon/emülatörde 101 ve Düz: çevrimdışı + yerel sunucu + mağazadaki v1.0.1; A7: ceza paneli 5 sn + saat donması, yandan alma onayı, maç uzunluğu, Maç bitti |
 
 ## Ortam (15.11.2026)
