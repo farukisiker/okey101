@@ -168,6 +168,12 @@ importers:
 
   app:
     dependencies:
+      '@kahve/catalog':
+        specifier: workspace:*
+        version: link:../packages/catalog
+      '@kahve/core':
+        specifier: workspace:*
+        version: link:../packages/game-core
       '@okey/shared':
         specifier: workspace:*
         version: link:../shared
@@ -233,14 +239,36 @@ importers:
         specifier: ~6.0.3
         version: 6.0.3
 
+  packages/catalog:
+    dependencies:
+      '@kahve/core':
+        specifier: workspace:*
+        version: link:../game-core
+      '@okey/shared':
+        specifier: workspace:*
+        version: link:../../shared
+    devDependencies:
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@22.20.5)(vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.2)(terser@5.51.2)(tsx@4.23.15))
+
   packages/game-core:
     devDependencies:
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@22.20.5)(vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.2)(terser@5.51.2)(tsx@4.23.15))
 
   server:
     dependencies:
+      '@kahve/catalog':
+        specifier: workspace:*
+        version: link:../packages/catalog
       '@okey/shared':
         specifier: workspace:*
         version: link:../shared
