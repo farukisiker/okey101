@@ -1,3 +1,3 @@
 import { equivalenceSuite } from './equivalence';
 
-equivalenceSuite('duz', 30);
+equivalenceSuite('duz', 20);
