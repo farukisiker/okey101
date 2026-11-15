@@ -118,10 +118,11 @@ Her alt aşama sonunda Fable durur, kullanıcı onaylar.
 
 ## 4e. Faz B görevleri ve Pişti/Batak bölgesel kuralları (16.11.2026)
 Görevler: `tasks/B1-CODEX.md` (cards → pisti → batak), `B4-AGY.md` (CardView + ekranlar), `B6-SONNET.md` (GameShell + reklam kapısı),
-`B7-OC.md` (docs/oyunlar, sonra sim + sızıntı testleri); B5 Opus entegrasyonu Pişti motoru birleşince yazılır.
+`B7-OC.md` (docs/oyunlar), `B8-CLINE.md` (1000 seed sim, kapsam, viewFor sızıntı testleri; Cline); B5 Opus entegrasyonu Pişti motoru birleşince yazılır.
 **Kart görseli kararı:** `react-native-svg` eklenmedi; kartlar RN View/Text + Unicode takım simgeleriyle çizilir (yeni native modül yok).
 
-**Bölgesel kurallar: AYAR olarak, önerilen varsayılanlar (kullanıcı cevabı bekleniyor; cevap sadece varsayılanı değiştirir):**
+**Bölgesel kurallar: AYAR olarak. Kullanıcı (16.11.2026): "genel kabul gören kurallarla yap şimdilik. Oyunu bitir önce sonra bakarız o sorulara."**
+Aşağıdaki varsayılanlar UYGULANIR (genel kabul / KURALLAR_argon "Seçenek A"); Faz B sonunda kullanıcıya liste olarak gösterilir, soru sorulmaz:
 | # | Kural | Önerilen varsayılan | Ayar seçenekleri |
 |---|---|---|---|
 | P1 | Pişti: açılıştaki 3 kapalı kart | Ortayı ilk toplayan alır; kartlar o an herkese açık gösterilir, toplayanın kart sayısına eklenir. İlk toplama (yerde 4 kart) pişti sayılmaz. | `hiddenCards: 'reveal' \| 'secret'` (secret: kimse görmez, el sonunda sayılır) |

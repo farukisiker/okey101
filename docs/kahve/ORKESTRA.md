@@ -133,6 +133,17 @@ Argon kotası biterse plan/review `claude-sonnet-5-5-high` (agy içinde) veya Cl
 Model kimlikleri (`opencode-cli models`, 15.11.2026): **lider = `opencode/glm-5.3-flash-free`** (en dikkatli review),
 **işçi = `opencode/deepseek-v4.1-flash-free`** (hızlı, doğru kod), ikinci review'cu `opencode/big-pickle`.
 
+### 1.5b Cline CLI (worktree `kahve-cline`, kullanıcı ekledi 16.11.2026: "Clinepass var onu da ekle ajanlara")
+- Kurulu: `cline` v3.0.74 (npm global). Sağlayıcı `cline-pass` (kullanıcının Cline Pass aboneliği), model `cline-pass/deepseek-v4.1-flash`.
+- Yapı aynı: önce plan modunda (`-p`) plan → Fable onayı → act modunda işçi; işçi kendi testlerini çalıştırır.
+- Sadece kendi worktree'sinde: `-c C:/Users/mfaru/okey101/kahve-cline`. `--worktree` KULLANILMAZ (bizim düzenimiz). Kendi dalına
+  (feat/kahve-cline) commit atabilir; başka worktree'ye/dala dokunmak, push, merge yasak; entegrasyonu Fable yapar. Prompt'a anahtar/kimlik bilgisi konmaz.
+- Alan: **bağımsız doğrulama araçları**: `tools/sim/**` (1000 seed bot-bot sim), kapsam raporu, `viewFor` sızıntı testleri (B8).
+```bash
+cline -c C:/Users/mfaru/okey101/kahve-cline -P cline-pass -p -t 900 "<görev kâğıdı: plan>"      # plan (salt okunur)
+cline -c C:/Users/mfaru/okey101/kahve-cline -P cline-pass --thinking medium -t 2400 "<onaylı alt görev>"  # işçi
+```
+
 ### 1.6 Yedek
 - Bir CLI çalışmazsa (kota, oturum, kurulum) Fable o işi Claude takımına verir ve `STATUS.md`'ye yazar.
   Kimse bir CLI'yı zorla çalıştırmak için ayar veya kimlik bilgisi değiştirmez.
@@ -150,7 +161,8 @@ Model kimlikleri (`opencode-cli models`, 15.11.2026): **lider = `opencode/glm-5.
 | `packages/catalog`, `server/**`, `app/src/net/**`, `app/src/App.tsx` | Claude Opus | Okur. |
 | `app/src/screens/KahveSalonu.tsx`, `OyunSecimi.tsx`, `components/GameShell.tsx`, `Intro.tsx` | Claude Sonnet | Okur. |
 | `app/src/components/cards/**`, `tavla/**`, `screens/Pisti*`, `Batak*`, `Tavla*`, yeni ses dosyaları | Antigravity | Okur. |
-| `tools/sim/**`, `server/test/compat*.test.ts`, `docs/oyunlar/**` | OpenCode | Okur. |
+| `server/test/compat*.test.ts`, `docs/oyunlar/**` | OpenCode | Okur. |
+| `tools/sim/**`, `packages/*/test/leak*.test.ts` (B8) | Cline | Okur. |
 | `app/src/i18n/tr.ts`, `en.ts` | Claude Sonnet (birleştirir) | Diğerleri anahtar önerisini `docs/kahve/i18n-istek-<takim>.md` dosyasına yazar. |
 | `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml` | **Fable** veya Opus | Bağımlılık isteği gerekçeyle gelir. |
 
