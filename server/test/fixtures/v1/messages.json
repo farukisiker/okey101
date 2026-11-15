@@ -1,0 +1,58 @@
+{
+  "source": "c19eea2:app/src/net/useOkey.ts",
+  "transport": "socket.io-client { transports: ['websocket'] } — v1.0.1 sends no handshake.auth, so the server sees protocol 1",
+  "placeholders": {
+    "$roomId": "roomId from the last successful room:create ack (the client keeps it in its session)"
+  },
+  "steps": [
+    {
+      "event": "salon:watch",
+      "payload": true,
+      "note": "watchSalon(true): v1 sends the boolean alone, no SalonFilter"
+    },
+    {
+      "event": "room:create",
+      "payload": { "name": "Ali", "mode": "101", "isPublic": true },
+      "expectAck": { "ok": true }
+    },
+    {
+      "event": "room:start",
+      "expectAck": { "ok": true }
+    },
+    {
+      "event": "game:action",
+      "payload": { "type": "draw", "source": "deck" },
+      "expectAck": { "ok": false, "error": "Bu tur zaten taş çektiniz" },
+      "note": "the starting seat holds 22 tiles and only discards; act() sends draw only when turnPhase is 'draw'"
+    },
+    {
+      "event": "room:nextRound",
+      "expectAck": { "ok": false, "error": "Tur bitmedi" }
+    },
+    {
+      "event": "room:leave"
+    },
+    {
+      "event": "room:create",
+      "payload": { "name": "Ali", "mode": "duz", "isPublic": false, "password": "482913" },
+      "expectAck": { "ok": true }
+    },
+    {
+      "event": "room:join",
+      "payload": { "roomId": "$roomId", "name": "Ali", "password": "482913" },
+      "expectAck": { "ok": true },
+      "note": "what useOkey emits on 'connect' to reclaim a seat after a dropped connection: roomId + name + password"
+    },
+    {
+      "event": "room:leave"
+    },
+    {
+      "event": "room:quickPlay",
+      "payload": { "name": "Ali", "mode": "101" },
+      "expectAck": { "ok": true }
+    },
+    {
+      "event": "room:leave"
+    }
+  ]
+}
