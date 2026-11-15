@@ -44,16 +44,18 @@ describe('okey definition details', () => {
 
   it('normalizeOptions repairs bad input and drops unknown keys', () => {
     const n = okey101Def.normalizeOptions;
-    expect(okey101Def.defaultOptions).toEqual({ reshuffles: DEFAULT_RESHUFFLES });
-    expect(n({ reshuffles: 0 })).toEqual({ reshuffles: 0 });
-    expect(n({ reshuffles: 5, extra: true })).toEqual({ reshuffles: 5 });
+    // A7: islek and matchEnd joined the options (user decisions 7 and 8).
+    const rest = { islek: 'opened', matchEnd: { kind: 'hands', n: 5 } };
+    expect(okey101Def.defaultOptions).toEqual({ reshuffles: DEFAULT_RESHUFFLES, ...rest });
+    expect(n({ reshuffles: 0 })).toEqual({ reshuffles: 0, ...rest });
+    expect(n({ reshuffles: 5, extra: true })).toEqual({ reshuffles: 5, ...rest });
     for (const bad of [null, undefined, 'x', [], {}, { reshuffles: -1 }, { reshuffles: 1.5 }, { reshuffles: '2' }, { reshuffles: 99 }])
-      expect(n(bad)).toEqual({ reshuffles: DEFAULT_RESHUFFLES });
+      expect(n(bad)).toEqual({ reshuffles: DEFAULT_RESHUFFLES, ...rest });
   });
 
   it('seats, create, refillsClock, matchOver', () => {
     expect(okey101Def.seats(okey101Def.defaultOptions)).toBe(4);
-    const s = okeyDuzDef.create({ reshuffles: 0 }, ['A', 'B', 'C', 'D'], seededRng(1), 5);
+    const s = okeyDuzDef.create({ ...okeyDuzDef.defaultOptions, reshuffles: 0 }, ['A', 'B', 'C', 'D'], seededRng(1), 5);
     expect(s.mode).toBe('duz');
     expect(s.startingSeat).toBe(1);
     expect(s.reshufflesLeft).toBe(0);
@@ -63,7 +65,9 @@ describe('okey definition details', () => {
     expect(okey101Def.refillsClock({ type: 'addToMeld', meldId: 0, tileIds: [1] })).toBe(true);
     expect(okey101Def.refillsClock({ type: 'discard', tileId: 1 })).toBe(false);
     expect(okey101Def.refillsClock({ type: 'draw', source: 'deck' })).toBe(false);
-    expect(okey101Def.matchOver([999, 0, 0, 0], 50, okey101Def.defaultOptions)).toBe(false);
+    // A7: 101 now ends after five hands by default; 'none' keeps the old endless table.
+    expect(okey101Def.matchOver([999, 0, 0, 0], 50, { ...okey101Def.defaultOptions, matchEnd: { kind: 'none' } })).toBe(false);
+    expect(okey101Def.matchOver([999, 0, 0, 0], 50, okey101Def.defaultOptions)).toBe(true);
     expect(okeyDuzDef.matchOver([20, 0, 0, 0], 3, okeyDuzDef.defaultOptions)).toBe(true);
     expect(okeyDuzDef.matchOver([19, 0, 0, 0], 3, okeyDuzDef.defaultOptions)).toBe(false);
   });

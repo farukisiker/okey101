@@ -113,8 +113,9 @@ export interface SwapMeld {
 
 /**
  * Taking an okey off the table ("yerdeki okeyi almak"), the majority house rule:
- * - run: the exact tile an okey stands for frees it, but only an okey in the
- *   middle of the run; at an end it could stand for either side, so it stays.
+ * - run: the exact tile an okey stands for frees it when the okey is in the
+ *   middle of the run; at an end it could stand for either side, so it stays,
+ *   unless the number limit decides the side (see `endOkey`).
  * - set: the okeys come free once the set has all four real colours; with two
  *   real tiles and an okey both missing colours are needed (one at a time is fine).
  * Returns the meld's new tiles and the freed okeys, or null when `added` frees none.
@@ -138,10 +139,36 @@ export function okeySwap(meld: SwapMeld, added: Tile[], okey: OkeyInfo): { tiles
     const r = meld.represents?.[t.id];
     return !!r && r.color === face.color && r.value === face.value;
   });
-  if (!j || !realValues.some((v) => v < face.value) || !realValues.some((v) => v > face.value)) return null;
-  const tiles = [...meld.tiles.filter((t) => t.id !== j.id), added[0]];
+  const middle = !!j && realValues.some((v) => v < face.value) && realValues.some((v) => v > face.value);
+  const freed = middle ? j : endOkey(meld, jokers, realValues, face.value, okey);
+  if (!freed) return null;
+  const tiles = [...meld.tiles.filter((t) => t.id !== freed.id), added[0]];
   const a = analyzeMeld(tiles, okey);
-  return a?.type === 'run' ? { tiles, freed: [j] } : null;
+  return a?.type === 'run' ? { tiles, freed: [freed] } : null;
+}
+
+/**
+ * An okey at the end of a run comes off only when the number limit fixes its side
+ * (user decision, 15.11.2026): a 13 added next to a highest real 12 (11-12-O: the okey is 13),
+ * or a 1 next to a lowest real 2 (O-2-3: the okey is 1). It must be a spare okey, not one
+ * filling a gap. Two-way ends (O-5-6) stay, as before.
+ */
+function endOkey(meld: SwapMeld, jokers: Tile[], realValues: number[], value: number, okey: OkeyInfo): Tile | null {
+  const low = Math.min(...realValues);
+  const high = Math.max(...realValues);
+  if (!((value === 13 && high === 12) || (value === 1 && low === 2))) return null;
+  const gaps = high - low + 1 - realValues.length;
+  if (jokers.length <= gaps) return null;
+  // Prefer the okey already read as this tile; otherwise any okey standing outside the real tiles.
+  const rep = (t: Tile) => meld.represents?.[t.id]?.value;
+  return (
+    jokers.find((t) => rep(t) === value) ??
+    jokers.find((t) => {
+      const v = rep(t);
+      return v === undefined || v < low || v > high;
+    }) ??
+    null
+  );
 }
 
 /**

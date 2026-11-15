@@ -58,7 +58,7 @@ describe('düz okey: dağıtım', () => {
     expect(g.turnPhase).toBe('play');
   });
 
-  it('gösterge: only the twin holder, on their first turn before drawing, and only once', () => {
+  it('gösterge: only the twin holder, on their first turn until they throw (also after drawing), and only once', () => {
     for (let seed = 1; seed < 40; seed++) {
       let g = createGame({ mode: 'duz', rng: seededRng(seed) });
       expect(g.gosterge).toBeNull();
@@ -74,9 +74,9 @@ describe('düz okey: dağıtım', () => {
       const other = (holder.seat + 1) % 4;
       expect(applyAction(g, other, { type: 'showIndicator' }).ok).toBe(false);
       if (g.turnNumber > 0) {
-        // After drawing it is too late.
+        // After drawing it is still allowed (user decision, 15.11.2026).
         const drawn = ok(g, holder.seat, { type: 'draw', source: 'deck' });
-        expect(applyAction(drawn, holder.seat, { type: 'showIndicator' }).ok).toBe(false);
+        expect(applyAction(drawn, holder.seat, { type: 'showIndicator' }).ok).toBe(true);
       }
       g = ok(g, holder.seat, { type: 'showIndicator' });
       expect(g.gosterge).toBe(holder.seat);
