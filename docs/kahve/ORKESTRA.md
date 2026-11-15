@@ -107,8 +107,9 @@ Model kimlikleri (Codex CLI 0.164.0 `~/.codex/models_cache.json`, 15.11.2026'da 
   - D: 11 dile çeviri taslakları (`scripts/` ve `docs/store/` düzeniyle), mağaza görselleri (`app/scripts/make-store-art.py`)
 
 ```bash
-agy -p --model gemini-4-argon-high --mode plan        --add-dir C:/Users/mfaru/okey101/kahve-agy "<görev kâğıdı>"
-agy -p --model gemini-3.8-flash-high --mode accept-edits --add-dir C:/Users/mfaru/okey101/kahve-agy "<Argon'un alt görevi>"
+agy --model gemini-4-argon-high  --mode plan         --add-dir C:/Users/mfaru/okey101/kahve-agy -p "<görev kâğıdı>"
+agy --model gemini-3.8-flash-high --mode accept-edits --add-dir C:/Users/mfaru/okey101/kahve-agy -p "<Argon'un alt görevi>"
+# DİKKAT: -p (prompt) EN SONDA olmalı; `agy -p --model ...` hata verir (15.11.2026).
 ```
 Model kimlikleri (`agy models`, 15.11.2026): **Argon = `gemini-4-argon-high`**, **Flash = `gemini-3.8-flash-high`** (toplu/mekanik iş: `gemini-3.8-flash-medium`).
 Argon kotası biterse plan/review `claude-sonnet-5-5-high` (agy içinde) veya Claude takımına geçer.

@@ -70,6 +70,46 @@ birleşir, A4 onun üstüne kurar. Codex ve OpenCode kendi worktree'lerinde (`ka
 
 **Önkoşul (kullanıcı kararı):** `react-native-svg` app'te **yok**. Expo'nun hazır modülü ama native modül sayılır → B'den önce sorulacak.
 
+## 4b. Kural kaynağı (B ve C görev kâğıtları için)
+- `docs/kahve/arastirma/KURALLAR_argon.md`: 11 oyunun kural şartnamesi, test senaryoları, ev kuralı ayarları (Argon, web kaynaklı).
+- B/C görev kâğıtları (Pişti, Batak, Tavla) **girdi olarak** bunu kullanır: kural bölümü, `Opts` taslağı (Bölüm 2), test senaryoları (her oyunun §9'u).
+- Kurala bağlayıcı olan `PROMPT_LOCAL.md`'dir; şartname onunla çelişirse PROMPT_LOCAL kazanır. "DOĞRULANMALI" işaretli ve Bölüm 3'teki
+  bölgesel kurallar kullanıcıya sorulmadan varsayılan yapılmaz (Pişti #6, Batak #7–8, Tavla #10 B/C öncesi sorulacak).
+- **Okey'e dokunmaz.** Şartnamenin okey "yanlış" listesi çoğunlukla `game.ts` yorumunda yazılı bilinçli ev kuralları. Aşağıdaki §4c soruları cevaplanmadan okey davranışı değişmez.
+
+## 4c. Okey kural soruları (kullanıcı kararı; cevaba göre ya ayar olur ya aynen kalır)
+| # | Konu | Bugün (kod) | Alternatif |
+|---|---|---|---|
+| 1 | 101: elde kalan gerçek okeyin cezası | okeyin sayısı + 101 | sadece 101 |
+| 2 | 101: "elden" bitme | masada hiç kimse açmamış olmalı | biten kişi o tura kadar açmamışsa yeter (×2) |
+| 3 | 101: yandan alınan taşla açamamak | alabilir, açamazsa +101 ceza | açamayacaksa yandan alamaz |
+| 4 | Eşli 101: ortağın perine işlemek | (eşli mod yok) | kendisi açmadan işleyemez / işleyebilir |
+| 5 | Düz: gösterge ne zaman | sadece taş çekmeden önce | ilk turda taş atmadan önce her an |
+| 6 | Seri ucundaki okeyi almak (ör. Mavi 11-12-Okey) | uçtaki okey alınamaz (iki yöne okunabilir diye) | sayı sınırı yönü kesinleştiriyorsa (12 sonrası 13, 1 öncesi yok) alınır |
+| 7 | 101: işlenebilecek taşı yere atma (işlek) cezası | ceza yok | +101 (ayar) |
+| 8 | 101: maç sonu | hiç bitmez, oyuncular istediğinde kalkar | N el (5/7/11) veya ceza barajı (501/1001), ayar |
+| – | Ayrıca not: çiftteki okey alınamaz (Faz 0 kararı); `viewFor` tüm ıskarta geçmişini gönderiyor (masada kronoloji için kullanılıyor; "hafıza yardımı" ayarı adayı) |
+
+## 4d. Faz E önerisi: Kahve havası (C'den sonra, D'den önce) · ÖNERİ, İŞ BAŞLAMADI
+Kaynak: `docs/kahve/arastirma/SOSYAL_HEDIYE_claude.md` (§4 zarar etmeyen lot defteri, §10 alt aşamalar, §10b Argon çapraz kontrolü), `KAHVE_HAVASI_argon.md`.
+| Alt aşama | İçerik | Önerilen takım |
+|---|---|---|
+| E1 Hesap + profil fotoğrafı | Apple/Google girişi, kalıcı DB (Postgres, Pi'de değil), foto yükleme + 2 katmanlı yapay zekâ moderasyonu, yönetim kuyruğu, hesap silme | Opus (sunucu, güvenlik) · Antigravity (foto ekranı) · OpenCode (moderasyon test seti) |
+| E2 Sohbet | Hazır mesaj + metin, sesli masa (LiveKit), şikâyet/engelleme | Opus (token servisi) · Antigravity (mikrofon arayüzü) · Sonnet (ayarlar) |
+| E3 Hediyeler (ödemesiz) | Jeton satın alma, `@kahve/economy` lot defteri, hediye animasyonları, harcama tavanı | Codex (saf economy paketi + test) · Opus (webhook, defter) · Antigravity (arayüz) |
+| E4 Para ödemesi | Onaylı hesap (KYC), IBAN, ay sonu ödeme listesi, iade geri alma | Sadece şirket/hukuk hazır ve ödeme şalteri açılınca · Opus + Fable |
+Her alt aşama sonunda Fable durur, kullanıcı onaylar.
+
+**Başlamadan önce kullanıcı kararları** (SOSYAL_HEDIYE §11):
+1. Yeni native modüller (LiveKit WebRTC, `expo-image-picker`/`expo-image-manipulator`).
+2. Ses sunucusu: kendi VPS mi, Agora / LiveKit Cloud mu?
+3. Şirket + mali müşavir; hazır olana kadar hediyeler ödemesiz mi?
+4. Alıcı payı (öneri: net gelirin %40'ı).
+5. Ödeme kuruluşu (iyzico / Papara / PayTR / Param) ve KYC yöntemi.
+6. Kişi başı aylık harcama tavanı.
+7. **Kırmızı çizgi güncellemesi:** ORKESTRA §5.8 ve PROMPT_LOCAL "sadece sanal puan, para birimi veya satın alınabilir puan yok" diyor. Gerçek parayla jeton/hediye ve
+   para ödemesi bu kuralın bilinçli olarak değişmesini gerektirir (oyun puanı yine paraya çevrilemez, hediye oyun sonucuna bağlanmaz). Kullanıcı açıkça onaylamadan E3/E4 planlanmaz.
+
 ## 5. Faz C: Tavla · Faz D: Yayına hazırlık
 - C: Codex `@kahve/tavla` (hamle dizisi üretimi <50 ms, Usta 1 zar beklenen değer) · Antigravity `TavlaScreen` · Opus sunucu tarafı seed'li zar · OpenCode sim + `tavla.md`.
 - D (her adım onayla): 15 dilde mağaza metni (kullanıcı kuralı: en-US birincil), UI çevirileri, "Demli Kahve" adı, ikon, 1.1.0,
