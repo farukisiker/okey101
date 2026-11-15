@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  addableTiles,
+  analyzeMeld,
   isJoker,
   visibleDiscard,
   applyAction,
@@ -272,6 +274,63 @@ describe('bitirme ve puan', () => {
     g.players[0].hand = [t('blue', 2)];
     const s = ok(g, 0, { type: 'discard', tileId: g.players[0].hand[0].id });
     expect(s.result!.scores).toEqual([-101, 10, 107, 202]);
+  });
+});
+
+describe('yerdeki okeyi almak', () => {
+  // Okey = red 5. Seat 1 owns a meld on the table; seat 0 has opened and plays.
+  function withMeld(tiles: Tile[], hand: Tile[]) {
+    const g = rigged(hand);
+    g.turnPhase = 'play';
+    g.players[0].opened = true;
+    const a = analyzeMeld(tiles, g.okey)!;
+    g.table = [{ id: 1, owner: 1, type: a.type, points: a.points, tiles, ordered: a.ordered, represents: a.represents }];
+    return g;
+  }
+
+  it('run: the tile an okey stands for in the middle takes it; the owner pays 101', () => {
+    const okey = t('red', 5);
+    const blue7 = t('blue', 7);
+    const g = withMeld([t('blue', 6), okey, t('blue', 8)], [blue7, t('black', 2), t('black', 3)]);
+    const s = ok(g, 0, { type: 'addToMeld', meldId: 1, tileIds: [blue7.id] });
+    expect(s.players[0].hand.map((x) => x.id)).toContain(okey.id);
+    expect(s.table[0].tiles.map((x) => x.id)).not.toContain(okey.id);
+    expect(s.players[1].penalties).toBe(101);
+    expect(s.lastAction).toMatchObject({ type: 'addToMeld', tookOkeys: 1, from: 1 });
+  });
+
+  it('run: an okey at the end stays (the tile just extends the run)', () => {
+    const okey = t('red', 5);
+    const blue9 = t('blue', 9);
+    const g = withMeld([t('blue', 7), t('blue', 8), okey], [blue9, t('black', 2), t('black', 3)]);
+    // The end okey reads as blue 9, but it could be blue 6 too: not takeable.
+    const s = ok(g, 0, { type: 'addToMeld', meldId: 1, tileIds: [blue9.id] });
+    expect(s.table[0].tiles.map((x) => x.id)).toContain(okey.id);
+    expect(s.players[1].penalties).toBe(0);
+  });
+
+  it('set: two colours + okey needs both missing colours; the okey comes off with the last one', () => {
+    const okey = t('red', 5);
+    const y12 = t('yellow', 12);
+    const k12 = t('black', 12);
+    let g = withMeld([t('red', 12), t('blue', 12), okey], [y12, k12, t('black', 2), t('black', 3)]);
+    g = ok(g, 0, { type: 'addToMeld', meldId: 1, tileIds: [y12.id] });
+    expect(g.table[0].tiles).toHaveLength(4);
+    expect(g.players[0].hand.map((x) => x.id)).not.toContain(okey.id);
+    g = ok(g, 0, { type: 'addToMeld', meldId: 1, tileIds: [k12.id] });
+    expect(g.table[0].tiles.map((x) => x.id)).not.toContain(okey.id);
+    expect(g.players[0].hand.map((x) => x.id)).toContain(okey.id);
+    expect(g.players[1].penalties).toBe(101);
+  });
+
+  it('taking back your own okey costs nothing; işlek marks the swap tile', () => {
+    const okey = t('red', 5);
+    const blue7 = t('blue', 7);
+    const g = withMeld([t('blue', 6), okey, t('blue', 8)], [blue7, t('black', 2)]);
+    g.table[0].owner = 0;
+    expect(addableTiles(g.players[0].hand, g.table, g.okey).get(blue7.id)).toEqual([1]);
+    const s = ok(g, 0, { type: 'addToMeld', meldId: 1, tileIds: [blue7.id] });
+    expect(s.players[0].penalties).toBe(0);
   });
 });
 

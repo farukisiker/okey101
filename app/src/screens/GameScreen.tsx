@@ -221,6 +221,23 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gosterge, room.round]);
 
+  // An okey came off the table: tell the taker it is theirs now, and the owner what it cost.
+  useEffect(() => {
+    if (lastAction?.type !== 'addToMeld' || !lastAction.tookOkeys) return;
+    const msg =
+      lastAction.seat === view.seat
+        ? t('youTookOkey')
+        : lastAction.from === view.seat
+          ? t('okeyTakenFromYou', { name: view.players[lastAction.seat].name })
+          : null;
+    if (!msg) return;
+    setInfo(msg);
+    const timer = setTimeout(() => setInfo(null), 4000);
+    return () => clearTimeout(timer);
+    // Once per action; names don't change within a round.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastAction]);
+
   // Middle ran out and the discards were shuffled back in: say so, the game goes on.
   const seenReshuffles = useRef(view.reshuffles);
   useEffect(() => {
@@ -754,7 +771,7 @@ function lastActionText(view: PlayerView): string | null {
     case 'meld':
       return t('actMelded', { name });
     case 'addToMeld':
-      return t('actAdded', { name });
+      return a.tookOkeys ? t('actTookOkey', { name }) : t('actAdded', { name });
     case 'draw':
       return a.source === 'discard' ? t('actTookDiscard', { name }) : t('actDrewDeck', { name });
     case 'discard':

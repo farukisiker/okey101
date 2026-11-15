@@ -1,6 +1,6 @@
 import { type Action, type PlayerView, OPEN_THRESHOLD, canShowIndicator, leftOf } from './game';
 import { findFinish, meldCover } from './duz';
-import { analyzeMeld } from './melds';
+import { analyzeMeld, okeySwap } from './melds';
 import { findBestMelds } from './solver';
 import { type OkeyInfo, type Rng, type Tile, faceOf, isJoker } from './tiles';
 
@@ -69,6 +69,8 @@ export function botStep(view: PlayerView, opts: BotOptions = {}): Action {
       for (const tile of hand) {
         if (isJoker(tile, okey) || !leavesDiscard([tile])) continue;
         for (const m of view.table) {
+          // Taking an okey off the table beats everything; it never needs a spare tile.
+          if (okeySwap(m, [tile], okey)) return { type: 'addToMeld', meldId: m.id, tileIds: [tile.id] };
           const a = analyzeMeld([...m.tiles, tile], okey);
           if (a && a.type === m.type) return { type: 'addToMeld', meldId: m.id, tileIds: [tile.id] };
         }

@@ -102,6 +102,45 @@ export function meldPoints(groups: Tile[][], okey: OkeyInfo): number | null {
   return sum;
 }
 
+/** A meld on the table, as far as taking its okey goes. */
+export interface SwapMeld {
+  type: MeldType;
+  tiles: Tile[];
+  /** What each tile stands for; without it only sets can give up an okey. */
+  represents?: Record<number, OkeyInfo>;
+}
+
+/**
+ * Taking an okey off the table ("yerdeki okeyi almak"), the majority house rule:
+ * - run: the exact tile an okey stands for frees it, but only an okey in the
+ *   middle of the run; at an end it could stand for either side, so it stays.
+ * - set: the okeys come free once the set has all four real colours; with two
+ *   real tiles and an okey both missing colours are needed (one at a time is fine).
+ * Returns the meld's new tiles and the freed okeys, or null when `added` frees none.
+ */
+export function okeySwap(meld: SwapMeld, added: Tile[], okey: OkeyInfo): { tiles: Tile[]; freed: Tile[] } | null {
+  const jokers = meld.tiles.filter((t) => isJoker(t, okey));
+  if (jokers.length === 0 || added.length === 0 || added.some((t) => isJoker(t, okey))) return null;
+  const reals = meld.tiles.filter((t) => !isJoker(t, okey));
+  if (meld.type === 'set') {
+    const tiles = [...reals, ...added];
+    if (tiles.length !== 4) return null;
+    const a = analyzeMeld(tiles, okey);
+    return a?.type === 'set' ? { tiles, freed: jokers } : null;
+  }
+  if (added.length !== 1) return null;
+  const face = faceOf(added[0], okey)!;
+  const realValues = reals.map((t) => faceOf(t, okey)!.value);
+  const j = jokers.find((t) => {
+    const r = meld.represents?.[t.id];
+    return !!r && r.color === face.color && r.value === face.value;
+  });
+  if (!j || !realValues.some((v) => v < face.value) || !realValues.some((v) => v > face.value)) return null;
+  const tiles = [...meld.tiles.filter((t) => t.id !== j.id), added[0]];
+  const a = analyzeMeld(tiles, okey);
+  return a?.type === 'run' ? { tiles, freed: [j] } : null;
+}
+
 /**
  * Tiles in a hand that can be added to melds on the table ("işlek" tiles):
  * tile id -> ids of the melds that accept it. Jokers are left out; they fit
@@ -109,13 +148,15 @@ export function meldPoints(groups: Tile[][], okey: OkeyInfo): number | null {
  */
 export function addableTiles(
   hand: Tile[],
-  table: { id: number; type: MeldType; tiles: Tile[] }[],
+  table: (SwapMeld & { id: number })[],
   okey: OkeyInfo,
 ): Map<number, number[]> {
   const out = new Map<number, number[]>();
   for (const tile of hand) {
     if (isJoker(tile, okey)) continue;
-    const fits = table.filter((m) => analyzeMeld([...m.tiles, tile], okey)?.type === m.type).map((m) => m.id);
+    const fits = table
+      .filter((m) => okeySwap(m, [tile], okey) || analyzeMeld([...m.tiles, tile], okey)?.type === m.type)
+      .map((m) => m.id);
     if (fits.length) out.set(tile.id, fits);
   }
   return out;

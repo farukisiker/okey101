@@ -1,6 +1,6 @@
 import type { TurnClock } from './clock';
 import { type FinishShape, finishShape } from './duz';
-import { type MeldAnalysis, type MeldType, analyzeMeld } from './melds';
+import { type MeldAnalysis, type MeldType, analyzeMeld, okeySwap } from './melds';
 import {
   type NormalTile,
   type OkeyInfo,
@@ -22,6 +22,11 @@ export const FINISH_BONUS = -101;
 export const UNUSED_DISCARD_PENALTY = 101;
 /** 101: throwing the okey other than as the finishing tile. */
 export const OKEY_DISCARD_PENALTY = 101;
+/**
+ * House rule asked for by the user: whoever's okey is taken off the table
+ * pays 101 (per okey). Taking back your own okey costs nothing.
+ */
+export const OKEY_TAKEN_PENALTY = 101;
 /** How many times the discards may be reshuffled into a new middle stack. */
 export const DEFAULT_RESHUFFLES = 3;
 
@@ -82,7 +87,7 @@ export type LastAction =
   | { seat: number; type: 'discard'; tile: Tile }
   | { seat: number; type: 'open'; meldIds: number[]; points: number }
   | { seat: number; type: 'meld'; meldId: number }
-  | { seat: number; type: 'addToMeld'; meldId: number; tileIds: number[] }
+  | { seat: number; type: 'addToMeld'; meldId: number; tileIds: number[]; tookOkeys?: number; from?: number }
   | { seat: number; type: 'finish'; tile: Tile; shape: FinishShape }
   | { seat: number; type: 'showIndicator' };
 
@@ -275,11 +280,28 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
       if (!meld) return fail('Per bulunamadı');
       const groups = takeGroups(player.hand, [action.tileIds]);
       if (typeof groups === 'string') return fail(groups);
-      const keep = keepsDiscard(state, player, new Set(action.tileIds));
+      const ids = new Set(action.tileIds);
+      // The exact tile an okey stands for (or the last colour of a set) takes the okey off the table.
+      const swap = okeySwap(meld, groups[0], state.okey);
+      if (swap) {
+        const sa = analyzeMeld(swap.tiles, state.okey)!;
+        player.hand = [...player.hand.filter((t) => !ids.has(t.id)), ...swap.freed];
+        Object.assign(meld, { tiles: swap.tiles, points: sa.points, ordered: sa.ordered, represents: sa.represents });
+        if (meld.owner !== seat) state.players[meld.owner].penalties += OKEY_TAKEN_PENALTY * swap.freed.length;
+        state.lastAction = {
+          seat,
+          type: 'addToMeld',
+          meldId: meld.id,
+          tileIds: action.tileIds,
+          tookOkeys: swap.freed.length,
+          from: meld.owner,
+        };
+        return { ok: true, state };
+      }
+      const keep = keepsDiscard(state, player, ids);
       if (keep) return fail(keep);
       const a = analyzeMeld([...meld.tiles, ...groups[0]], state.okey);
       if (!a || a.type !== meld.type) return fail('Bu taş bu pere işlenemez');
-      const ids = new Set(action.tileIds);
       player.hand = player.hand.filter((t) => !ids.has(t.id));
       Object.assign(meld, {
         tiles: [...meld.tiles, ...groups[0]],
