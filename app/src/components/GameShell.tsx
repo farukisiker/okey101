@@ -1,0 +1,154 @@
+import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { GameId } from '@kahve/core';
+import { adGate } from '../ads/interstitial';
+import { shouldShowAtBreak } from '../ads/policy';
+import { t } from '../i18n';
+import { colors, font } from '../theme';
+import { Button } from './Button';
+import { SummaryTable } from './SummaryTable';
+import { type RoundSummary, summaryHeadline } from './roundSummary';
+
+export type { RoundSummary, RoundSummaryRow } from './roundSummary';
+export { summaryHeadline } from './roundSummary';
+
+export interface GameShellProps {
+  gameId: GameId;
+  /** Already translated game name. */
+  title: string;
+  /** Turn clock of the person to move; null/undefined hides it. */
+  secondsLeft?: number | null;
+  muted: boolean;
+  onToggleSound(): void;
+  onExit(): void;
+  /** Opponent panels strip. */
+  opponents?: ReactNode;
+  /** One line under the strip, e.g. "Sıra sende". */
+  status?: string;
+  /** Set when a hand has just ended; shows the big summary. */
+  summary?: RoundSummary | null;
+  /** Seat of the local player, to name the winner. */
+  mySeat?: number;
+  /** People (not bots) at the table; one person alone may see an ad after any hand. Default 1. */
+  humanCount?: number;
+  onNextHand?(): void | Promise<void>;
+  onNewMatch?(): void | Promise<void>;
+  onLeaveTable(): void;
+  /** NoticePanel goes here; it is drawn above the summary overlay and never blocks touches. */
+  notice?: ReactNode;
+  /** The game area. */
+  children: ReactNode;
+}
+
+/**
+ * Common frame for card and board screens: top bar, opponents, status line, game area,
+ * round summary and notices. It counts every finished hand once with adGate and shows an
+ * interstitial only at natural breaks (see shouldShowAtBreak). Okey's own GameScreen is not on it.
+ */
+export function GameShell(p: GameShellProps) {
+  const { summary } = p;
+  const counted = useRef<RoundSummary | null>(null);
+  const waiting = useRef(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (summary && counted.current !== summary) {
+      counted.current = summary;
+      adGate.onHandCompleted(p.gameId);
+    }
+    if (!summary) counted.current = null;
+  }, [summary, p.gameId]);
+
+  const proceed = async (kind: 'next' | 'leave') => {
+    if (waiting.current || !summary) return;
+    waiting.current = true;
+    setBusy(true);
+    try {
+      if (shouldShowAtBreak(kind === 'leave', summary.matchOver, p.humanCount ?? 1)) await adGate.showIfEligible();
+      if (kind === 'leave') p.onLeaveTable();
+      else if (summary.matchOver) await p.onNewMatch?.();
+      else await p.onNextHand?.();
+    } finally {
+      waiting.current = false;
+      setBusy(false);
+    }
+  };
+
+  let headline = '';
+  if (summary) {
+    const head = summaryHeadline(summary, p.mySeat ?? -1);
+    if (head.kind === 'youWin') headline = t(summary.matchOver ? 'youWon' : 'youFinished');
+    else if (head.kind === 'winner') {
+      headline = t(summary.matchOver ? 'winnerIs' : 'actFinished', { name: head.names.join(', ') });
+    } else headline = t('tilesRanOut');
+  }
+
+  return (
+    <View style={styles.root}>
+      <View style={styles.bar}>
+        <Button title={t('leave')} variant="secondary" onPress={p.onExit} style={styles.barBtn} />
+        <Text style={styles.title} numberOfLines={1}>{p.title}</Text>
+        {p.secondsLeft != null && (
+          <Text
+            style={[styles.clock, p.secondsLeft <= 5 && { color: colors.danger }]}
+            accessibilityLabel={t('timeLeftA11y', { n: p.secondsLeft })}
+          >
+            {`⏱ ${p.secondsLeft}`}
+          </Text>
+        )}
+        <Button title={p.muted ? '🔇' : '🔊'} variant="secondary" onPress={p.onToggleSound} style={styles.barBtn} />
+      </View>
+      {p.opponents ? <View style={styles.opponents}>{p.opponents}</View> : null}
+      {p.status ? <Text style={styles.status} accessibilityLiveRegion="polite">{p.status}</Text> : null}
+      <View style={styles.area}>{p.children}</View>
+
+      {summary && (
+        <View style={styles.overlay}>
+          <ScrollView contentContainerStyle={styles.scroll}>
+            <View style={styles.card}>
+              <Text style={styles.headline}>{headline}</Text>
+              <SummaryTable
+                cellSize={font.status}
+                headers={[t('player'), t('thisHand'), t('total')]}
+                rows={summary.rows.map((r) => ({
+                  key: r.seat,
+                  name: r.seat === p.mySeat ? t('you') : r.name,
+                  isMe: r.seat === p.mySeat,
+                  isWinner: summary.winnerSeats.includes(r.seat),
+                  cells: [r.points, r.total],
+                }))}
+              />
+              <View style={styles.buttons}>
+                <Button
+                  title={summary.matchOver ? t('newMatch') : t('nextHand')}
+                  disabled={busy}
+                  onPress={() => void proceed('next')}
+                  style={{ minWidth: 240, minHeight: 64 }}
+                />
+                <Button title={t('leaveTable')} disabled={busy} variant="secondary" onPress={() => void proceed('leave')} />
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      )}
+      {p.notice ? <View style={styles.notice} pointerEvents="box-none">{p.notice}</View> : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.felt },
+  bar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12, paddingVertical: 6 },
+  barBtn: { minHeight: 56, minWidth: 56 },
+  title: { flex: 1, color: colors.accent, fontSize: font.status, fontWeight: '900' },
+  clock: { color: colors.text, fontSize: font.status, fontWeight: '800' },
+  opponents: { flexDirection: 'row', justifyContent: 'center', gap: 8, paddingHorizontal: 8 },
+  status: { color: colors.text, fontSize: font.status, fontWeight: '700', textAlign: 'center', paddingVertical: 4 },
+  area: { flex: 1 },
+  overlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 500 },
+  scroll: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 12 },
+  card: { backgroundColor: colors.feltLight, borderRadius: 16, padding: 16, width: '85%', maxWidth: 720, gap: 10, alignItems: 'center' },
+  headline: { color: colors.accent, fontSize: 30, fontWeight: '900', textAlign: 'center' },
+  buttons: { flexDirection: 'row', gap: 20, alignItems: 'center', marginTop: 8, flexWrap: 'wrap', justifyContent: 'center' },
+  notice: { ...StyleSheet.absoluteFill, zIndex: 600 },
+});

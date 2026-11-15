@@ -10,8 +10,10 @@ import {
 } from '@okey/shared';
 import { colors, font } from '../theme';
 import { Button } from './Button';
+import { SummaryTable } from './SummaryTable';
 import { useRef, useState } from 'react';
 import { adGate } from '../ads/interstitial';
+import { shouldShowAtBreak } from '../ads/policy';
 import { t } from '../i18n';
 
 interface Props {
@@ -50,7 +52,7 @@ export function RoundResult({ view, room, matchOver: matchEnded = false, onNext,
     try {
       // Bot flags live on RoomInfo.seats; PlayerView.players has no isBot field.
       const humans = room.seats.filter((p) => p && !p.isBot).length;
-      if (leave || over || humans <= 1) await adGate.showIfEligible();
+      if (shouldShowAtBreak(leave, over, humans)) await adGate.showIfEligible();
       if (leave) onLeave();
       else await onNext();
     } finally {
@@ -93,26 +95,17 @@ export function RoundResult({ view, room, matchOver: matchEnded = false, onNext,
             </Text>
           )}
           {notes ? <Text style={styles.note}>{t('multiplied', { notes, n: r.multiplier })}</Text> : null}
-          <View style={styles.table}>
-            <View style={styles.row}>
-              <Text style={[styles.cell, styles.head, { flex: 2.4 }]}>{t('player')}</Text>
-              <Text style={[styles.cell, styles.head]}>{t('thisHand')}</Text>
-              <Text style={[styles.cell, styles.head]}>{duz ? t('pointsLeft') : t('total')}</Text>
-            </View>
-            {view.players.map((p) => {
-              const me = p.seat === view.seat;
-              return (
-                <View key={p.seat} style={[styles.row, p.seat === r.winner && styles.winnerRow]}>
-                  <Text style={[styles.cell, { flex: 2.4 }]} numberOfLines={1}>
-                    <Text style={me ? { color: colors.accent } : undefined}>{me ? t('you') : p.name}</Text>
-                    <Text style={styles.why}>{`  ${explain(p.seat)}`}</Text>
-                  </Text>
-                  <Text style={styles.cell}>{duz ? (r.scores[p.seat] ? `−${r.scores[p.seat]}` : '0') : r.scores[p.seat]}</Text>
-                  <Text style={styles.cell}>{duz ? left[p.seat] : room.totals[p.seat]}</Text>
-                </View>
-              );
-            })}
-          </View>
+          <SummaryTable
+            headers={[t('player'), t('thisHand'), duz ? t('pointsLeft') : t('total')]}
+            rows={view.players.map((p) => ({
+              key: p.seat,
+              name: p.seat === view.seat ? t('you') : p.name,
+              why: explain(p.seat),
+              isMe: p.seat === view.seat,
+              isWinner: p.seat === r.winner,
+              cells: [duz ? (r.scores[p.seat] ? `−${r.scores[p.seat]}` : '0') : r.scores[p.seat], duz ? left[p.seat] : room.totals[p.seat]],
+            }))}
+          />
           {over && !duz && (
             <View style={styles.standings}>
               <Text style={styles.head}>{t('standings')}</Text>
@@ -148,12 +141,7 @@ const styles = StyleSheet.create({
   title: { color: colors.accent, fontSize: 26, fontWeight: '900', textAlign: 'center' },
   note: { color: colors.muted, fontSize: font.small },
   over: { color: colors.text, fontSize: 22, fontWeight: '900', textAlign: 'center' },
-  table: { alignSelf: 'stretch' },
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 3, paddingHorizontal: 8, borderRadius: 8 },
   standings: { alignItems: 'center', gap: 2 },
   standRow: { color: colors.text, fontSize: 22, fontWeight: '700' },
-  winnerRow: { backgroundColor: 'rgba(95,208,125,0.25)' },
-  cell: { flex: 1, color: colors.text, fontSize: 20, fontWeight: '600' },
-  why: { color: colors.muted, fontSize: 15, fontWeight: '400' },
   head: { color: colors.muted, fontWeight: '700', fontSize: font.small },
 });

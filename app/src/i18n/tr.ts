@@ -273,6 +273,10 @@ export const tr = {
   'matchOver': 'Maç bitti!',
   'standings': 'Sıralama',
   'newMatch': 'Yeni maç',
+  'soundOn': 'Ses açık',
+  'soundOff': 'Ses kapalı',
+  'timeLeftA11y': 'Kalan süre {n} saniye',
+  'winnersA11y': 'Kazanan: {names}',
 };
 
 export type Key = keyof typeof tr;
