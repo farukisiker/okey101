@@ -86,3 +86,13 @@ Sunucuyu Raspberry Pi'ye kurmak: [docs/raspberry-pi-kurulum.md](docs/raspberry-p
 
 Kapsam dışı (şimdilik): çift açma, okeyi masadan geri alma, işlenebilir taşı
 atma cezası.
+
+### Pişti
+
+Kart masaları: 2 veya 4 kişi, pişti yaparak 151 puana ulaşma.
+Kurallar ve ayarlar: [docs/oyunlar/pisti.md](docs/oyunlar/pisti.md)
+
+### Batak
+
+Kart masaları: 4 kişi, ihaleli tekli; ihale, koz ve 13 löve.
+Kurallar ve ayarlar: [docs/oyunlar/batak.md](docs/oyunlar/batak.md)
