@@ -115,6 +115,20 @@ export function isAction(raw: unknown): raw is BatakAction {
   }
 }
 
+/** Only the known fields of an action, so stray network keys never reach the state. */
+function canonical(a: BatakAction): BatakAction {
+  switch (a.type) {
+    case 'bid':
+      return { type: 'bid', amount: a.amount };
+    case 'selectTrump':
+      return { type: 'selectTrump', suit: a.suit };
+    case 'play':
+      return { type: 'play', cardId: a.cardId };
+    default:
+      return { type: 'pass' };
+  }
+}
+
 const fail = (error: string): ApplyResult<BatakState> => ({ ok: false, error });
 
 /** Next seat after `seat` that has not passed. */
@@ -215,7 +229,7 @@ export function apply(state: BatakState, seat: number, action: BatakAction): App
       error = action.type === 'play' ? applyPlay(s, seat, action.cardId) : ERR.wrongPhase;
     }
     if (error !== null) return fail(error);
-    s.lastAction = { turnNumber: s.turnNumber, seat, action: clone(action) };
+    s.lastAction = { turnNumber: s.turnNumber, seat, action: canonical(action) };
     s.turnNumber += 1;
     return { ok: true, state: s };
   } catch {
