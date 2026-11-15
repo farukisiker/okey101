@@ -2,20 +2,25 @@ import {
   type Action,
   type GameMode,
   type GameState,
+  type PlayerView,
   type RoomInfo,
   type Rng,
   type TableSummary,
-  SEATS,
-  applyAction,
-  createGame,
-  matchOver,
+  gameOfMode,
+  isOkeyGame,
+  modeOfGame,
   pickBotNames,
-  viewFor,
-  type TurnClock,
-  TURN_MS,
-  nextClock,
 } from '@okey/shared';
-import { botStep, quickMove } from './bot';
+import {
+  type AnyGameDefinition,
+  type GameDefinition,
+  type GameId,
+  type TurnClock,
+  newSeed,
+  nextTurnClock,
+  seededRng,
+} from '@kahve/core';
+import { getDefinition } from '@kahve/catalog';
 
 export interface Seat {
   name: string;
@@ -25,54 +30,145 @@ export interface Seat {
 }
 
 export interface RoomOptions {
+  /** Legacy (v1) okey mode; ignored when `game` is given. */
   mode?: GameMode;
+  /** Which game this table plays. Wins over `mode`; missing = gameOfMode(mode). */
+  game?: GameId;
+  /** House rules from the client, normalized by the game's `normalizeOptions`. */
+  options?: unknown;
   /** Listed in the salon. */
   isPublic?: boolean;
   /** Sitting down needs this 6-digit password (the table is still listed). */
   password?: string | null;
   botDelayMs?: number;
   /**
-   * A human who doesn't move in time gets a quick move instead (draw from the
-   * deck, throw a tile outside their melds). The first turn of a hand gets
-   * double; the first open/meld of a turn refills it. 0 disables.
+   * A human who doesn't move in time gets the game's quick move instead (okey:
+   * draw from the deck, throw a tile outside their melds). The first turn of a
+   * round gets `firstTurnFactor` x; the game's `refillsClock` actions refill it
+   * once per turn. Missing = the game's `clock.baseMs`; 0 disables.
    */
   turnTimeoutMs?: number;
+  /**
+   * Legacy single random source: deals, bot moves and bot names all draw from it,
+   * exactly as before A4. Tables created this way can't be replayed from a seed.
+   */
   rng?: Rng;
+  /**
+   * Seeds the table (used when `rng` is not given; missing = a random seed). Deals come from
+   * seededRng(seed), bot moves from their own seeded rng, bot names from Math.random, so
+   * `replay(def, options, seed, log)` rebuilds the state from the action log.
+   */
+  seed?: number;
+  /** Tests only: run this definition instead of the catalog's (stub games). */
+  definition?: AnyGameDefinition;
 }
 
-export type RoomListener = (room: Room) => void;
+/** What the table did, in order. Kept on the server only (never sent to clients). */
+export type RoomLogEntry<A = unknown> =
+  | { t: 'deal'; round: number; names: string[] }
+  | { t: 'act'; seat: number; action: A }
+  | { t: 'rename'; seat: number; name: string };
 
-/** One table: seats, the authoritative game state and the turn clock. */
-export class Room {
-  readonly seats: (Seat | null)[] = Array(SEATS).fill(null);
-  game: GameState | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyRoom = Room<any, any, any>;
+export type RoomListener = (room: AnyRoom) => void;
+
+const BOT_SALT = 0x9e3779b9;
+
+/**
+ * Okey keeps player names inside its state; a bot taking over (or a human taking a bot's seat)
+ * renames it there. The contract has no renameSeat yet (docs/kahve/requests/opus-renameSeat.md),
+ * so this is an okey-only branch for phase A.
+ */
+function renameInState(game: GameId, state: unknown, seat: number, name: string) {
+  if (isOkeyGame(game)) (state as GameState).players[seat].name = name;
+}
+
+/** Rebuilds a seeded table's state from its log (bug reports, bot sims). */
+export function replay<S, A>(
+  def: GameDefinition<S, A, unknown, unknown>,
+  options: unknown,
+  seed: number,
+  log: readonly RoomLogEntry<A>[],
+): S | null {
+  const rng = seededRng(seed);
+  let state: S | null = null;
+  for (const e of log) {
+    if (e.t === 'deal') state = def.create(options, e.names, rng, e.round);
+    else if (!state) throw new Error('replay: no deal before ' + e.t);
+    else if (e.t === 'rename') renameInState(def.id, state, e.seat, e.name);
+    else {
+      const res = def.apply(state, e.seat, e.action);
+      if (!res.ok) throw new Error(`replay: ${res.error}`);
+      state = res.state;
+    }
+  }
+  return state;
+}
+
+/**
+ * One table: seats, the authoritative game state and the turn clock, for any game in the
+ * catalog. Type parameters default to okey so `room.game` stays an okey GameState.
+ */
+export class Room<S = GameState, A = Action, V = PlayerView> {
+  readonly seats: (Seat | null)[];
+  game: S | null = null;
   round = 0;
-  totals = [0, 0, 0, 0];
+  totals: number[];
   hostSeat = 0;
+  readonly def: GameDefinition<S, A, V, unknown>;
+  readonly gameId: GameId;
+  readonly options: unknown;
+  readonly mode: GameMode;
+  readonly isPublic: boolean;
+  readonly password: string | null;
+  /** Null for legacy `rng` tables (not replayable). */
+  readonly seed: number | null;
+  private readonly log: RoomLogEntry<A>[] = [];
   private timer: ReturnType<typeof setTimeout> | null = null;
   private clock: TurnClock | null = null;
   private readonly botDelayMs: number;
   private readonly turnTimeoutMs: number;
-  private readonly rng?: Rng;
-  readonly mode: GameMode;
-  readonly isPublic: boolean;
-  readonly password: string | null;
+  private readonly dealRng: Rng;
+  private readonly botRng: Rng;
+  private readonly nameRng: Rng | undefined;
 
   constructor(
     readonly id: string,
     private readonly onChange: RoomListener,
     opts: RoomOptions = {},
   ) {
+    this.gameId = opts.definition?.id ?? opts.game ?? gameOfMode(opts.mode);
+    const def = opts.definition ?? getDefinition(this.gameId);
+    if (!def) throw new Error(`no playable definition for ${this.gameId}`);
+    this.def = def as GameDefinition<S, A, V, unknown>;
+    this.options = this.def.normalizeOptions(opts.options);
+    const n = this.def.seats(this.options);
+    this.seats = Array(n).fill(null);
+    this.totals = Array(n).fill(0);
+    this.mode = modeOfGame(this.gameId) ?? '101';
     this.botDelayMs = opts.botDelayMs ?? 1000;
-    this.turnTimeoutMs = opts.turnTimeoutMs ?? TURN_MS;
-    this.rng = opts.rng;
-    this.mode = opts.mode ?? '101';
+    this.turnTimeoutMs = opts.turnTimeoutMs ?? this.def.clock.baseMs;
+    if (opts.rng) {
+      this.seed = null;
+      this.dealRng = this.botRng = this.nameRng = opts.rng;
+    } else {
+      this.seed = (opts.seed ?? newSeed()) >>> 0;
+      this.dealRng = seededRng(this.seed);
+      this.botRng = seededRng(this.seed ^ BOT_SALT);
+      this.nameRng = undefined;
+    }
     this.isPublic = opts.isPublic ?? false;
     this.password = opts.password ?? null;
   }
 
   get started() {
     return this.game !== null;
+  }
+
+  /** The table's history so far (server-side only). */
+  actionLog(): readonly RoomLogEntry<A>[] {
+    return this.log;
   }
 
   join(name: string, socketId: string): number | string {
@@ -90,7 +186,7 @@ export class Room {
     if (seat < 0) return 'Oda dolu';
     if (this.seats.every((s) => s === null || s.isBot)) this.hostSeat = seat;
     this.seats[seat] = { name, isBot: false, socketId };
-    if (this.game) this.game.players[seat].name = name;
+    this.rename(seat, name);
     this.changed();
     this.schedule();
     return seat;
@@ -113,12 +209,18 @@ export class Room {
     if (!this.game) this.free(seat);
     else {
       const taken = this.seats.flatMap((s, i) => (s && i !== seat ? [s.name] : []));
-      const [name] = pickBotNames(1, taken, this.rng);
+      const [name] = pickBotNames(1, taken, this.nameRng);
       this.seats[seat] = { name, isBot: true, socketId: null };
-      this.game.players[seat].name = name;
+      this.rename(seat, name);
     }
     this.changed();
     this.schedule();
+  }
+
+  private rename(seat: number, name: string) {
+    if (!this.game) return;
+    renameInState(this.gameId, this.game, seat, name);
+    this.log.push({ t: 'rename', seat, name });
   }
 
   private free(seat: number) {
@@ -130,7 +232,7 @@ export class Room {
     }
   }
 
-  /** Four people at a table that hasn't started: deal. */
+  /** Every seat taken by a person at a table that hasn't started: deal. */
   startIfFull(): boolean {
     if (this.game || !this.seats.every((s) => s && !s.isBot)) return false;
     this.start();
@@ -143,6 +245,7 @@ export class Room {
     return {
       id: this.id,
       mode: this.mode,
+      game: this.gameId,
       seats,
       free: seats.filter((s) => s === null).length,
       started: this.started,
@@ -162,41 +265,39 @@ export class Room {
     if (this.game) return 'Oyun zaten başladı';
     const empty = this.seats.flatMap((s, i) => (s ? [] : [i]));
     const taken = this.seats.flatMap((s) => (s ? [s.name] : []));
-    const names = pickBotNames(empty.length, taken, this.rng);
+    const names = pickBotNames(empty.length, taken, this.nameRng);
     empty.forEach((seat, i) => (this.seats[seat] = { name: names[i], isBot: true, socketId: null }));
     this.newRound();
     return null;
   }
 
   nextRound(): string | null {
-    if (!this.game || this.game.phase !== 'finished') return 'Tur bitmedi';
-    // Düz okey: once someone is out of points a new game starts from scratch.
-    if (matchOver(this.mode, this.totals)) this.totals = [0, 0, 0, 0];
+    if (!this.game || !this.def.roundOver(this.game)) return 'Tur bitmedi';
+    // Match over (düz okey: someone is out of points): a new match starts from scratch.
+    if (this.def.matchOver(this.totals, this.round, this.options)) this.totals = this.totals.map(() => 0);
     this.newRound();
     return null;
   }
 
   private newRound() {
-    this.game = createGame({
-      mode: this.mode,
-      names: this.seats.map((s) => s!.name),
-      startingSeat: this.round % SEATS,
-      rng: this.rng,
-    });
+    const names = this.seats.map((s) => s!.name);
+    this.game = this.def.create(this.options, names, this.dealRng, this.round);
+    this.log.push({ t: 'deal', round: this.round, names });
     this.round++;
     this.tick(null);
     this.changed();
     this.schedule();
   }
 
-  act(seat: number, action: Action): string | null {
+  act(seat: number, action: A): string | null {
     if (!this.game) return 'Oyun başlamadı';
-    const res = applyAction(this.game, seat, action);
+    const res = this.def.apply(this.game, seat, action);
     if (!res.ok) return res.error;
     this.game = res.state;
+    this.log.push({ t: 'act', seat, action });
     this.tick(action);
-    if (this.game.phase === 'finished') {
-      this.game.result!.scores.forEach((s, i) => (this.totals[i] += s));
+    if (this.def.roundOver(this.game)) {
+      this.def.scoreRound(this.game).forEach((s, i) => (this.totals[i] += s));
     }
     this.changed();
     this.schedule();
@@ -207,6 +308,7 @@ export class Room {
     return {
       id: this.id,
       mode: this.mode,
+      game: this.gameId,
       isPublic: this.isPublic,
       ...(this.password !== null && { password: this.password }),
       seats: this.seats.map((s, seat) =>
@@ -219,8 +321,8 @@ export class Room {
     };
   }
 
-  viewFor(seat: number) {
-    return this.game ? viewFor(this.game, seat, this.clock) : null;
+  viewFor(seat: number): V | null {
+    return this.game ? this.def.viewFor(this.game, seat, { clock: this.clock, now: Date.now() }) : null;
   }
 
   dispose() {
@@ -228,9 +330,14 @@ export class Room {
     this.timer = null;
   }
 
-  private tick(action: Action | null) {
+  private tick(action: A | null) {
     this.clock =
-      this.game && this.turnTimeoutMs > 0 ? nextClock(this.clock, this.game, action, Date.now(), this.turnTimeoutMs) : null;
+      this.game && this.turnTimeoutMs > 0
+        ? nextTurnClock(this.clock, this.def.turn(this.game), action !== null && this.def.refillsClock(action), Date.now(), {
+            baseMs: this.turnTimeoutMs,
+            firstTurnFactor: this.def.clock.firstTurnFactor,
+          })
+        : null;
   }
 
   private changed() {
@@ -240,13 +347,13 @@ export class Room {
   /** Arms the clock for whoever is to move: bots/absent players quickly, humans on timeout. */
   private schedule() {
     this.dispose();
-    const g = this.game;
+    const turn = this.game ? this.def.turn(this.game) : null;
     // Nobody watching: pause until a human comes back.
-    if (!g || g.phase !== 'playing' || !this.hasHumans()) return;
-    const seat = this.seats[g.turn]!;
+    if (!turn || !this.hasHumans()) return;
+    const seat = this.seats[turn.seat]!;
     const auto = seat.isBot || seat.socketId === null;
     if (!auto && !this.clock) return;
-    // A timed-out human's draw leaves the clock run out, so the throw follows at once.
+    // A timed-out human's first quick move leaves the clock run out, so the rest follows at once.
     const delay = auto ? this.botDelayMs : Math.max(0, this.clock!.deadline - Date.now());
     this.timer = setTimeout(() => this.autoPlay(), delay);
   }
@@ -254,20 +361,16 @@ export class Room {
   /** Plays one bot action for the current seat (bot, absent human or timed-out human). */
   autoPlay() {
     const g = this.game;
-    if (!g || g.phase !== 'playing') return;
-    const seat = g.turn;
+    const turn = g ? this.def.turn(g) : null;
+    if (!g || !turn) return;
+    const seat = turn.seat;
     const seatInfo = this.seats[seat]!;
-    const view = viewFor(g, seat);
-    // A timed-out human only gets the minimum: draw, then throw.
+    // A timed-out human only gets the minimum (okey: draw, then throw).
     const timedOut = !seatInfo.isBot && seatInfo.socketId !== null;
-    const action = timedOut ? quickMove(view) : botStep(view, { rng: this.rng });
+    const action = timedOut ? this.def.quickMove(g, seat) : this.def.botMove(g, seat, 'medium', this.botRng);
     if (this.act(seat, action) !== null) {
-      // Should not happen; fall back to the simplest legal move.
-      const fallback: Action =
-        g.turnPhase === 'draw'
-          ? { type: 'draw', source: 'deck' }
-          : { type: 'discard', tileId: view.hand.find((t) => t.id !== view.mustUseTileId)!.id };
-      const err = this.act(seat, fallback);
+      // Should not happen; fall back to the game's minimal legal move.
+      const err = this.act(seat, this.def.quickMove(g, seat));
       if (err) throw new Error(`bot stuck at seat ${seat}: ${err}`);
     }
   }

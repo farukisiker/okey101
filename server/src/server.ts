@@ -2,14 +2,14 @@ import { createServer as createHttpServer } from 'node:http';
 import express from 'express';
 import { Server, type Socket } from 'socket.io';
 import { type ClientToServerEvents, type GameMode, isTablePassword, type ServerToClientEvents, type TableSummary } from '@okey/shared';
-import { Room, type RoomOptions } from './room';
+import { type AnyRoom, Room, type RoomOptions } from './room';
 
 type IO = Server<ClientToServerEvents, ServerToClientEvents>;
 type ClientSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 
 export interface OkeyServer {
   io: IO;
-  rooms: Map<string, Room>;
+  rooms: Map<string, AnyRoom>;
   listen(port: number): Promise<number>;
   close(): Promise<void>;
 }
@@ -18,7 +18,7 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
   const app = express();
   const http = createHttpServer(app);
   const io: IO = new Server(http, { cors: { origin: '*' } });
-  const rooms = new Map<string, Room>();
+  const rooms = new Map<string, AnyRoom>();
   /** socket id -> room id */
   const membership = new Map<string, string>();
   /** socket id -> wrong table passwords in a row, and until when it is locked out */
@@ -36,7 +36,10 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
   const salonList = (): TableSummary[] =>
     [...rooms.values()]
       .filter((r) => r.isPublic && r.hasHumans())
-      .map((r) => r.summary())
+      .map((r) => {
+        const { game: _game, ...v1 } = r.summary(); // v1 payload until the v2 wiring lands
+        return v1;
+      })
       .filter((t) => t.free > 0)
       .sort((a, b) => Number(a.started) - Number(b.started) || a.free - b.free)
       .slice(0, 50);
@@ -48,9 +51,10 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
     }, 200);
   };
 
-  const broadcast = (room: Room) => {
+  const broadcast = (room: AnyRoom) => {
     if (room.isPublic) salonChanged();
-    io.to(room.id).emit('room:state', room.info());
+    const { game: _game, ...info } = room.info();
+    io.to(room.id).emit('room:state', info);
     room.seats.forEach((s, seat) => {
       if (s?.socketId) {
         const view = room.viewFor(seat);
@@ -88,7 +92,7 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
     }
   };
 
-  const enter = (socket: ClientSocket, room: Room, name: string) => {
+  const enter = (socket: ClientSocket, room: AnyRoom, name: string) => {
     leave(socket);
     const seat = room.join(name.trim().slice(0, 20) || 'Oyuncu', socket.id);
     if (typeof seat === 'string') return seat;
