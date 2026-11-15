@@ -25,6 +25,7 @@ import {
 } from '@okey/shared';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { NoticePanel } from '../components/NoticePanel';
 import { DragSource } from '../components/DragSource';
 import { OpponentPanel } from '../components/OpponentPanel';
 import { Rack } from '../components/Rack';
@@ -95,15 +96,19 @@ function Pulse({ on, green, children, style }: { on: boolean; green?: boolean; c
  */
 function useSecondsLeft(view: PlayerView): number | null {
   const ms = view.turnMsLeft ?? null;
+  // While a penalty notice is on screen the host freezes the clock: hold the shown value
+  // for that long, then count down from it (even if no new view arrives at the end).
+  const frozenMs = view.noticeMsLeft ?? 0;
   const [deadline, setDeadline] = useState<number | null>(null);
   const [, setNow] = useState(0);
-  useEffect(() => setDeadline(ms === null ? null : Date.now() + ms), [view, ms]);
+  useEffect(() => setDeadline(ms === null ? null : Date.now() + frozenMs + ms), [view, ms, frozenMs]);
   useEffect(() => {
     if (deadline === null) return;
     const id = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(id);
   }, [deadline]);
-  return deadline === null ? null : Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+  if (deadline === null || ms === null) return null;
+  return Math.max(0, Math.ceil(Math.min(ms, deadline - Date.now()) / 1000));
 }
 
 /** "0:24"; red in the last five seconds. */
@@ -135,6 +140,8 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   const [fresh, setFresh] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  /** A 101 player who has not opened asked to take the left discard: waiting for "are you sure". */
+  const [confirmSide, setConfirmSide] = useState<number | null | undefined>(undefined);
   /** Which pile's top tile the player is holding. */
   const [dragging, setDragging] = useState<'deck' | 'discard' | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -361,6 +368,8 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
 
   const draw = (source: 'deck' | 'discard', slot: number | null = null) => {
     if (!canDraw) return showToast(myTurn ? t('alreadyDrew') : t('notYourTurn'));
+    // 101, not opened yet: the side tile costs +101 if it cannot be used to open. Ask first (tap and drag both land here).
+    if (!duz && source === 'discard' && !me.opened) return setConfirmSide(slot);
     pendingSlot.current = slot;
     void send({ type: 'draw', source });
   };
@@ -390,13 +399,14 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
       // Result-screen navigation goes through its guarded ad gate buttons.
       if (view.phase === 'finished') return true;
       if (zoomed) setZoomed(false);
+      else if (confirmSide !== undefined) setConfirmSide(undefined);
       else if (confirmIslek !== null) setConfirmIslek(null);
       else if (confirmOkey !== null) setConfirmOkey(null);
       else setConfirmLeave((open) => !open);
       return true;
     });
     return () => sub.remove();
-  }, [zoomed, confirmIslek, confirmOkey, view.phase]);
+  }, [zoomed, confirmSide, confirmIslek, confirmOkey, view.phase]);
 
   // The discard zone is a drop target for tiles dragged off the rack.
   const discardRef = useRef<HostInstance>(null);
@@ -696,6 +706,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
         <RoundResult
           view={view}
           room={room}
+          matchOver={client.matchOver}
           onNext={async () => {
             const r = await client.nextRound();
             if (!r.ok) showToast(tErr(r.error));
@@ -703,6 +714,8 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
           onLeave={client.leave}
         />
       )}
+
+      <NoticePanel view={view} round={room.round} />
 
       {zoomed && (
         <TableOverlay
@@ -719,6 +732,20 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
             }
           }}
           onClose={() => setZoomed(false)}
+        />
+      )}
+
+      {confirmSide !== undefined && (
+        <ConfirmDialog
+          message={t('sideTakeConfirm')}
+          confirm={t('sideTakeYes')}
+          cancel={t('sideTakeNo')}
+          onConfirm={() => {
+            pendingSlot.current = confirmSide;
+            setConfirmSide(undefined);
+            void send({ type: 'draw', source: 'discard' });
+          }}
+          onCancel={() => setConfirmSide(undefined)}
         />
       )}
 

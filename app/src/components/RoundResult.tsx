@@ -17,11 +17,13 @@ import { t } from '../i18n';
 interface Props {
   view: PlayerView;
   room: RoomInfo;
+  /** 101 only: the host says this round ended the match. */
+  matchOver?: boolean;
   onNext(): void | Promise<void>;
   onLeave(): void;
 }
 
-export function RoundResult({ view, room, onNext, onLeave }: Props) {
+export function RoundResult({ view, room, matchOver: matchEnded = false, onNext, onLeave }: Props) {
   const waiting = useRef(false);
   const [busy, setBusy] = useState(false);
   const r = view.result!;
@@ -40,7 +42,7 @@ export function RoundResult({ view, room, onNext, onLeave }: Props) {
     .filter(Boolean)
     .join(', ');
   // Düz okey counts down from 20; whoever has the most left when someone hits zero wins the game.
-  const over = matchOver(view.mode, room.totals);
+  const over = duz ? matchOver(view.mode, room.totals) : matchEnded;
   const proceed = async (leave: boolean) => {
     if (waiting.current) return;
     waiting.current = true;
@@ -57,7 +59,9 @@ export function RoundResult({ view, room, onNext, onLeave }: Props) {
     }
   };
   const left = room.totals.map((t) => DUZ_START_POINTS - t);
-  const champion = left.indexOf(Math.max(...left));
+  const champion = duz ? left.indexOf(Math.max(...left)) : room.totals.indexOf(Math.min(...room.totals));
+  // 101 match over: lowest total first.
+  const standings = [...view.players].sort((a, b) => room.totals[a.seat] - room.totals[b.seat]);
 
   const explain = (seat: number) => {
     const p = view.players[seat];
@@ -85,7 +89,7 @@ export function RoundResult({ view, room, onNext, onLeave }: Props) {
           <Text style={styles.title}>{title}</Text>
           {over && (
             <Text style={styles.over}>
-              {t('gameOver')} {champion === view.seat ? t('youWon') : t('winnerIs', { name: nameOf(champion) })}
+              {t(duz ? 'gameOver' : 'matchOver')} {champion === view.seat ? t('youWon') : t('winnerIs', { name: nameOf(champion) })}
             </Text>
           )}
           {notes ? <Text style={styles.note}>{t('multiplied', { notes, n: r.multiplier })}</Text> : null}
@@ -109,11 +113,21 @@ export function RoundResult({ view, room, onNext, onLeave }: Props) {
               );
             })}
           </View>
+          {over && !duz && (
+            <View style={styles.standings}>
+              <Text style={styles.head}>{t('standings')}</Text>
+              {standings.map((p, i) => (
+                <Text key={p.seat} style={[styles.standRow, p.seat === view.seat && { color: colors.accent }]}>
+                  {`${i + 1}. ${nameOf(p.seat)} · ${room.totals[p.seat]}`}
+                </Text>
+              ))}
+            </View>
+          )}
           <Text style={styles.note}>
             {duz ? t('duzRule', { n: DUZ_START_POINTS }) : t('lowIsGood')}
           </Text>
           <View style={styles.buttons}>
-            <Button title={over ? t('newGame') : t('nextHand')} disabled={busy} onPress={() => void proceed(false)} style={{ minWidth: 240, minHeight: 64 }} />
+            <Button title={over ? (duz ? t('newGame') : t('newMatch')) : t('nextHand')} disabled={busy} onPress={() => void proceed(false)} style={{ minWidth: 240, minHeight: 64 }} />
             <Button title={t('leaveTable')} disabled={busy} variant="secondary" onPress={() => void proceed(true)} />
           </View>
         </View>
@@ -136,6 +150,8 @@ const styles = StyleSheet.create({
   over: { color: colors.text, fontSize: 22, fontWeight: '900', textAlign: 'center' },
   table: { alignSelf: 'stretch' },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 3, paddingHorizontal: 8, borderRadius: 8 },
+  standings: { alignItems: 'center', gap: 2 },
+  standRow: { color: colors.text, fontSize: 22, fontWeight: '700' },
   winnerRow: { backgroundColor: 'rgba(95,208,125,0.25)' },
   cell: { flex: 1, color: colors.text, fontSize: 20, fontWeight: '600' },
   why: { color: colors.muted, fontSize: 15, fontWeight: '400' },

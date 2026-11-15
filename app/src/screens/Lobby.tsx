@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { BackHandler, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '../components/Button';
 import { MonetizationSettings } from '../components/MonetizationSettings';
+import { MatchEndPicker, useMatchEnd } from '../components/MatchEndPicker';
 import { loadName, saveName } from '../feedback';
 import { Salon } from './Salon';
 import type { OkeyClient } from '../net/useOkey';
@@ -33,6 +34,7 @@ export function Lobby({ client, serverUrl, onServerUrlChange, onNameReady, onExi
   const [friends, setFriends] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [matchEnd, setMatchEnd] = useMatchEnd();
 
   useEffect(() => {
     loadName().then((n) => {
@@ -107,6 +109,7 @@ export function Lobby({ client, serverUrl, onServerUrlChange, onNameReady, onExi
         serverUrl={serverUrl}
         onServerUrlChange={onServerUrlChange}
         onBack={() => setFriends(false)}
+        matchEnd={matchEnd}
       />
     );
   }
@@ -130,7 +133,7 @@ export function Lobby({ client, serverUrl, onServerUrlChange, onNameReady, onExi
           size="large"
           onPress={() => {
             onPicked?.('101');
-            void run(() => client.quickPlay(name, '101'));
+            void run(() => client.quickPlay(name, '101', { matchEnd }));
           }}
           disabled={busy}
         />
@@ -145,6 +148,7 @@ export function Lobby({ client, serverUrl, onServerUrlChange, onNameReady, onExi
           disabled={busy}
         />
       </View>
+      <MatchEndPicker value={matchEnd} onChange={setMatchEnd} />
       <Button
         title={t('salon')}
         subtitle={t('salonSub')}
