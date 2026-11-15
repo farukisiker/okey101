@@ -258,4 +258,8 @@ export const ru: Dict = {
   'matchOver': 'Match over!',
   'standings': 'Standings',
   'newMatch': 'New match',
+  'soundOn': 'Sound on',
+  'soundOff': 'Sound off',
+  'timeLeftA11y': '{n} seconds left',
+  'winnersA11y': 'Winner: {names}',
 };

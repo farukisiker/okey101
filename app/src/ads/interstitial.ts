@@ -122,7 +122,8 @@ let present: () => Promise<void> = () => Promise.resolve();
 
 export const adGate = {
   preload,
-  onHandCompleted() {
+  /** One shared counter for every game; the id is accepted so callers say which game ended. */
+  onHandCompleted(_gameId?: string) {
     if (!hydrated) { pendingHands++; void hydrate(); return; }
     history.totalHands++;
     history.handsSinceAd++;

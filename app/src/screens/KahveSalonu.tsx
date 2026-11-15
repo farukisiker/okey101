@@ -47,7 +47,8 @@ export function KahveSalonu({ last, onOpenGroup, onResume }: Props) {
       )}
       <View style={styles.grid}>
         {CARDS.map((c) => {
-          const soon = c.group !== 'okey';
+          // "Soon" until the catalog has at least one active game in the group.
+          const soon = !KAHVE_GAMES.some((g) => g.group === c.group && g.status === 'active');
           return (
             <Pressable
               key={c.group}

@@ -16,3 +16,11 @@ export function eligibleForAd(history: AdHistory, now: number): boolean {
   return history.totalHands > 2 && history.handsSinceAd >= 2 &&
     now - history.lastAdAtMs >= 180_000 && recentShows(history.shownAtMs, now).length < 8;
 }
+
+/**
+ * An ad may only appear at a natural break: leaving the table, the end of a match, or when no
+ * other person is playing. Same rule RoundResult always used; every game shares it.
+ */
+export function shouldShowAtBreak(leave: boolean, matchOver: boolean, humans: number): boolean {
+  return leave || matchOver || humans <= 1;
+}
