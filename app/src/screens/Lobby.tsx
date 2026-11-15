@@ -12,6 +12,10 @@ interface Props {
   client: OkeyClient;
   serverUrl: string;
   onServerUrlChange(url: string): void;
+  /** Kahve shell hooks; all optional, Lobby behaves as before without them. */
+  onNameReady?(): void;
+  onExit?(): void;
+  onPicked?(mode: '101' | 'duz'): void;
 }
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -21,7 +25,7 @@ type Result = { ok: true } | { ok: false; error: string };
  * big buttons, 101 or düz okey, each starts a table with bots right away.
  * Playing with friends (which needs a server) is tucked behind a third button.
  */
-export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
+export function Lobby({ client, serverUrl, onServerUrlChange, onNameReady, onExit, onPicked }: Props) {
   const [name, setName] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [draft, setDraft] = useState('');
@@ -49,9 +53,11 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
   const confirmName = () => {
     const n = draft.trim();
     if (!n) return;
+    const first = name === null;
     saveName(n);
     setName(n);
     setEditingName(false);
+    if (first) onNameReady?.();
   };
 
   // Android back steps back inside the lobby; on the main screen it leaves the app as usual.
@@ -59,11 +65,12 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (friends) setFriends(false);
       else if (editingName && name !== null) setEditingName(false);
+      else if (onExit && name !== null) onExit();
       else return false;
       return true;
     });
     return () => sub.remove();
-  }, [friends, editingName, name]);
+  }, [friends, editingName, name, onExit]);
 
   const welcome = split('welcome', 'name');
   if (!loaded) return <View style={styles.root} />;
@@ -122,6 +129,7 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
           subtitle={t('game101Sub')}
           size="large"
           onPress={() => {
+            onPicked?.('101');
             void run(() => client.quickPlay(name, '101'));
           }}
           disabled={busy}
@@ -131,6 +139,7 @@ export function Lobby({ client, serverUrl, onServerUrlChange }: Props) {
           subtitle={t('gameDuzSub')}
           size="large"
           onPress={() => {
+            onPicked?.('duz');
             void run(() => client.quickPlay(name, 'duz'));
           }}
           disabled={busy}

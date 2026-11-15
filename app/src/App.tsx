@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { BackHandler, StyleSheet } from 'react-native';
 import { useKeepAwake } from 'expo-keep-awake';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -10,7 +10,12 @@ import { useLocalGame } from './net/useLocalGame';
 import { type OkeyClient, useOkey } from './net/useOkey';
 import { GameScreen } from './screens/GameScreen';
 import { Intro } from './screens/Intro';
+import { KahveSalonu } from './screens/KahveSalonu';
 import { Lobby } from './screens/Lobby';
+import { OyunSecimi } from './screens/OyunSecimi';
+import { loadLastGame, saveLastGame } from './screens/kahveGames';
+import type { GameId, TableGroup } from '@kahve/core';
+import { loadName } from './feedback';
 import { WaitingRoom } from './screens/WaitingRoom';
 import { colors } from './theme';
 import { initAds } from './ads/consent';
@@ -27,8 +32,24 @@ export default function App() {
   useEffect(() => {
     void initFeedback();
   }, []);
-  const [intro, setIntro] = useState(true);
-  const endIntro = useCallback(() => setIntro(false), []);
+  // intro -> salon -> (secim | okeyLobi). A first-time player has no name yet: the
+  // Lobby asks for it (and calls onNameReady), so they go there before the salon.
+  const [nav, setNav] = useState<'intro' | 'salon' | 'secim' | 'okeyLobi'>('intro');
+  const [group, setGroup] = useState<TableGroup>('kagit');
+  const [last, setLast] = useState<GameId | null>(null);
+  const intro = nav === 'intro';
+  const endIntro = useCallback(() => {
+    void Promise.all([loadName(), loadLastGame()]).then(([n, g]) => {
+      setLast(g);
+      setNav((cur) => (cur !== 'intro' ? cur : n ? 'salon' : 'okeyLobi'));
+    });
+  }, []);
+  const toSalon = useCallback(() => setNav('salon'), []);
+  const onPicked = useCallback((mode: '101' | 'duz') => {
+    const id: GameId = mode === '101' ? 'okey101' : 'okeyDuz';
+    saveLastGame(id);
+    setLast(id);
+  }, []);
   useEffect(() => {
     if (intro) return;
     void initPurchases().then(syncOnce);
@@ -65,11 +86,48 @@ export default function App() {
     adGate.onHandCompleted();
   }, [client.session, client.room?.round, client.view?.phase, client.view?.result]);
 
+  // Android back: secim -> salon. The Lobby steps back by itself (onExit -> salon);
+  // on the salon the default applies. Games and the waiting room keep their own behaviour.
+  const inSecim = nav === 'secim' && !client.session;
+  useEffect(() => {
+    if (!inSecim) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setNav('salon');
+      return true;
+    });
+    return () => sub.remove();
+  }, [inSecim]);
+
   let screen;
   if (intro) {
     screen = <Intro onDone={endIntro} />;
+  } else if (!client.session && nav === 'salon') {
+    screen = (
+      <KahveSalonu
+        last={last}
+        onOpenGroup={(g) => {
+          if (g === 'okey') setNav('okeyLobi');
+          else {
+            setGroup(g);
+            setNav('secim');
+          }
+        }}
+        onResume={() => setNav('okeyLobi')}
+      />
+    );
+  } else if (!client.session && nav === 'secim') {
+    screen = <OyunSecimi group={group} onBack={toSalon} />;
   } else if (!client.session) {
-    screen = <Lobby client={client} serverUrl={serverUrl} onServerUrlChange={setServerUrl} />;
+    screen = (
+      <Lobby
+        client={client}
+        serverUrl={serverUrl}
+        onServerUrlChange={setServerUrl}
+        onNameReady={toSalon}
+        onExit={toSalon}
+        onPicked={onPicked}
+      />
+    );
   } else if (client.room && !client.room.started) {
     screen = <WaitingRoom client={client} />;
   } else {

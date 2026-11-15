@@ -1,4 +1,4 @@
-DURUM: FABLE ONAYI BEKLİYOR
+DURUM: ONAYLANDI 2026-11-15
 PLAN A5-SONNET (Sonnet)
 1. Ekranlar (App.tsx, yeni state `nav`): 'intro' → 'salon' → ('secim' | 'okeyLobi') ; oyun başlayınca mevcut client.session dalları (WaitingRoom/GameScreen) aynen. Geçişler: intro bitince 'salon'; Okey kartı → 'okeyLobi' (bugünkü Lobby, tek ek adım); Kağıt/Tavla kartı → 'secim' (grup); Dama&Domino kartı tıklanmaz ("Yakında"); "Son oynadığın · Devam" → 'okeyLobi'. Oturum bitip session null olunca nav kaldığı yerde (okeyLobi) kalır.
 2. Geri tuşu: App'te tek BackHandler, yalnız session yokken: 'secim' → 'salon'; 'okeyLobi' → Lobby kendi iç geri adımını (arkadaşlar/isim düzenleme) önce yer, yoksa 'salon'; 'salon' → false (varsayılan, uygulamadan çıkar). Oyun/bekleme ekranlarına dokunulmaz.
