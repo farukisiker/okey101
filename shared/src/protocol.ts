@@ -38,7 +38,7 @@ export const isOkeyGame = (game: GameId): boolean => game === 'okey101' || game 
 /**
  * Error text a v2 server returns when a v1 client tries a non-okey table.
  * A v2 client that asked for `game` and gets back a RoomInfo without `game` (or with a
- * different one) is talking to an old server: it leaves the room and shows i18n 'net.serverUpdating'.
+ * different one) is talking to an old server: it leaves the room and shows i18n 'serverUpdating'.
  */
 export const ERR_UPDATE_APP = 'Bu masa için uygulamayı güncelleyin';
 

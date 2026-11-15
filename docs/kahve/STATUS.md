@@ -6,6 +6,7 @@
 | Tarih | Commit | shared | server | diğer | Toplam | typecheck |
 |---|---|---|---|---|---|---|
 | 15.11.2026 | `1254b41` (Faz 0 merge) | 70 (5 dosya) | 23 (3 dosya) | – | **93** | shared, server, app yeşil |
+| 15.11.2026 | `fb5afcf` (A1+A2+A3+A5) | 70 | 30 + 5 beklenen hata | core 35, catalog 47 | **187** | 5 paket yeşil |
 
 Komutlar: `pnpm test`, `pnpm typecheck`. Bu makinede `pnpm` PATH'te yok; `corepack pnpm` kullan
 (kök script'ler içeriden `pnpm` çağırdığı için PATH'e `pnpm.cmd` = `@corepack pnpm %*` sarmalayıcısı koy).
@@ -15,10 +16,10 @@ Komutlar: `pnpm test`, `pnpm typecheck`. Bu makinede `pnpm` PATH'te yok; `corepa
 |---|---|---|---|---|
 | F0 çift açma merge | Claude Opus (alt ajan) → Fable review | **birleşti** | `1254b41` | Çift açma `feat/okey101-app`'te yok; canlıya alınması kullanıcı kararı |
 | A0 sözleşmeler | Fable | **birleşti** | `2d1c37b`, `c14725b` | `@kahve/core` types + protocol v2 ekleri |
-| A1 game-core | Codex (Astra → Sol) | yapılıyor (plan onaylı) | – | – |
-| A2 okey adaptörü + catalog | Claude Opus | yapılıyor (plan onaylı) | – | – |
-| A3 uyumluluk fikstürleri | OpenCode (yedek: Claude Haiku) | yapılıyor (plan onaylı) | – | – |
-| A4 Room / useLocalGame / protokol | Claude Opus | bekliyor | – | A1, A2'ye bağlı |
+| A1 game-core | Codex (Astra → Sol) | **birleşti** (Astra ONAY) | `8fa84d4` | Codex sandbox `.git`'e yazamıyor: commit'i Fable atıyor |
+| A2 okey adaptörü + catalog | Claude Opus | **birleşti** | `5e631d8` | Düz eşdeğerlik varsayılan 20 seed; tam tarama `KAHVE_EQ_SEEDS=200` (geçti, ~150 sn) |
+| A3 uyumluluk fikstürleri | OpenCode (deepseek işçi, glm lider) | **birleşti** (lider ONAY) | `fb5afcf` | v2 testleri `it.fails`, A4 yeşile çevirir |
+| A4 Room / useLocalGame / protokol | Claude Opus | plan bekleniyor | – | worktree kahve-a4 |
 | A5 Kahve kabuğu UI | Claude Sonnet | **birleşti** (1 DÜZELT turu: iOS'ta salona dönüş düğmesi) | `cd64395` | Cihazda denenmedi (A6) |
 | A6 elle deneme | Fable + kullanıcı | bekliyor | – | En son |
 
