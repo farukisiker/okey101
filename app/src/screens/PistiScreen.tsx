@@ -6,23 +6,54 @@ import { isSoundOn, setSoundOn } from '../feedback';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { GameShell, type RoundSummary } from '../components/GameShell';
+import type { RoomInfo } from '@okey/shared';
+import type { PistiAction, PistiView } from '@kahve/catalog';
+import { cardSummary } from '../net/cardSummary';
+import { type HostTimes, msLeftNow } from '../net/localHost';
 import {
   type Card,
   CardOpponentPanel,
   Hand,
   PistiCenterPile,
-  type PistiScreenProps,
   cardPlayFeedback,
   cardTakeFeedback,
   sortCards,
   useCardLayout,
 } from '../components/cards';
 
+export interface PistiScreenProps {
+  /** The engine's PistiView plus the host's times (turnMsLeft, noticeMsLeft). */
+  view: PistiView & HostTimes;
+  /** Epoch ms when `view` arrived (the countdown runs from here). Missing: now. */
+  viewAt?: number;
+  /** The table: totals, bots, connections. Missing (preview): totals are this hand's scores. */
+  room?: RoomInfo | null;
+  seat: number;
+  /** End-of-hand summary from useKahveGame (one object per hand). Missing: built from the view. */
+  summary?: RoundSummary | null;
+  /** People at the table, for the ad break rule. */
+  humanCount?: number;
+  onAction(action: PistiAction): void | Promise<unknown>;
+  /** Next hand, or a new match after the last one. */
+  onNextRound?(): void | Promise<unknown>;
+  onLeave?(): void;
+}
+
+/** A player as the panels draw them: the engine's public data plus the table's totals and connection. */
+function playersOf(view: PistiView, room: RoomInfo | null | undefined) {
+  return view.players.map((p) => ({
+    ...p,
+    totalScore: room?.totals[p.seat] ?? 0,
+    connected: room?.seats[p.seat]?.connected ?? true,
+    isBot: room?.seats[p.seat]?.isBot ?? false,
+  }));
+}
+
 /**
  * Pişti game screen embedded in GameShell.
  * 2 or 4 players, central pile, opponent panels, action bar, and two-tap hand.
  */
-export function PistiScreen({ view, seat, onAction, onNextRound, onLeave }: PistiScreenProps) {
+export function PistiScreen({ view, viewAt, room, seat, summary: summaryProp, humanCount, onAction, onNextRound, onLeave }: PistiScreenProps) {
   const [sound, setSound] = useState(isSoundOn());
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
@@ -39,19 +70,38 @@ export function PistiScreen({ view, seat, onAction, onNextRound, onLeave }: Pist
     });
   }, [view.hand]);
 
-  // Audio feedback on card captures and Pişti events
-  const lastCaptureRef = useRef(view.lastCapture);
-  useEffect(() => {
-    if (view.lastCapture && view.lastCapture !== lastCaptureRef.current) {
-      lastCaptureRef.current = view.lastCapture;
-      cardTakeFeedback(view.lastCapture.isPisti);
-    }
-  }, [view.lastCapture]);
+  // A capture that happened with the last card played (views arrive as new objects, so compare by move).
+  const freshCapture =
+    view.lastCapture && view.lastAction && view.lastAction.card.id === view.lastCapture.cardId ? view.lastCapture : null;
+  const captureKey = freshCapture ? `${view.round}:${view.lastAction!.turnNumber}` : null;
 
+  // Audio feedback on card captures and Pişti events (cardSfx stays silent until sound files are registered)
+  const lastCaptureRef = useRef(captureKey);
+  useEffect(() => {
+    if (captureKey && captureKey !== lastCaptureRef.current && freshCapture) cardTakeFeedback(freshCapture.isPisti);
+    lastCaptureRef.current = captureKey;
+    // freshCapture belongs to captureKey.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [captureKey]);
+
+  // The turn clock, counted down here once a second from the host's turnMsLeft.
+  const arrived = viewAt ?? 0;
+  const [now, setNow] = useState(() => Date.now());
+  const clockOn = view.phase === 'playing' && view.turnMsLeft != null;
+  useEffect(() => {
+    setNow(Date.now());
+    if (!clockOn) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [clockOn, view]);
+  const msLeft = msLeftNow(view, arrived || now, now);
+  const turnSeconds = msLeft == null ? null : Math.max(0, Math.ceil(msLeft / 1000));
+
+  const players = useMemo(() => playersOf(view, room), [view, room]);
   const isMyTurn = view.turn === seat && view.phase === 'playing';
-  const myPlayer = useMemo(() => view.players.find((p) => p.seat === seat), [view.players, seat]);
-  const opponents = useMemo(() => view.players.filter((p) => p.seat !== seat), [view.players, seat]);
-  const activePlayer = useMemo(() => view.players.find((p) => p.seat === view.turn), [view.players, view.turn]);
+  const myPlayer = useMemo(() => players.find((p) => p.seat === seat), [players, seat]);
+  const opponents = useMemo(() => players.filter((p) => p.seat !== seat), [players, seat]);
+  const activePlayer = useMemo(() => players.find((p) => p.seat === view.turn), [players, view.turn]);
   const layout = useCardLayout(handOrder.length);
 
   // Cards that capture the middle pile (same rank as top card or Jack)
@@ -91,10 +141,10 @@ export function PistiScreen({ view, seat, onAction, onNextRound, onLeave }: Pist
 
   // Status line displayed in GameShell header
   let statusText = '';
-  if (view.lastCapture?.isPisti) {
-    statusText = view.lastCapture.isJackPisti
-      ? `${t('pistiPistiDouble')} (+${view.lastCapture.pointsEarned})`
-      : `${t('pistiPisti')} (+${view.lastCapture.pointsEarned})`;
+  if (freshCapture?.isPisti) {
+    statusText = freshCapture.isJackPisti
+      ? `${t('pistiPistiDouble')} (+${freshCapture.points})`
+      : `${t('pistiPisti')} (+${freshCapture.points})`;
   } else if (isMyTurn) {
     statusText = t('cardsYourTurn');
   } else if (activePlayer) {
@@ -103,21 +153,25 @@ export function PistiScreen({ view, seat, onAction, onNextRound, onLeave }: Pist
     statusText = t('cardsWaitingOpponent');
   }
 
-  // Round summary mapping for GameShell overlay
-  const summary: RoundSummary | null = view.result
-    ? {
-        matchOver: view.result.matchOver,
-        winnerSeats: view.result.winnerSeats,
-        rows: view.players.map((p, idx) => ({
-          seat: p.seat,
-          name: p.seat === seat ? t('you') : p.name,
-          points: view.result!.scores[idx] ?? 0,
-          total: view.result!.totals[idx] ?? p.totalScore,
-        })),
-      }
-    : null;
+  // Round summary for GameShell: the hook's (one object per hand); the preview builds one from the view.
+  const fallbackSummary = useMemo<RoundSummary | null>(() => {
+    if (summaryProp !== undefined || !view.result) return null;
+    return cardSummary({
+      names: players.map((p) => p.name),
+      points: view.result.scores,
+      totals: room?.totals ?? view.result.scores,
+      matchOver: room?.matchOver ?? false,
+      teams: players.map((p) => p.team),
+      mySeat: seat,
+      you: t('you'),
+    });
+  }, [summaryProp, view.result, players, room, seat]);
+  const summary = summaryProp !== undefined ? summaryProp : fallbackSummary;
 
-  const secondsLeft = isMyTurn && view.turnMsLeft != null ? Math.max(0, Math.ceil(view.turnMsLeft / 1000)) : null;
+  const secondsLeft = isMyTurn ? turnSeconds : null;
+  const next = async () => {
+    await onNextRound?.();
+  };
 
   return (
     <View style={styles.root}>
@@ -131,17 +185,14 @@ export function PistiScreen({ view, seat, onAction, onNextRound, onLeave }: Pist
         status={statusText}
         summary={summary}
         mySeat={seat}
-        humanCount={view.players.filter((p) => !p.isBot).length || 1}
-        onNextHand={onNextRound}
-        onNewMatch={onNextRound}
+        humanCount={humanCount ?? (players.filter((p) => !p.isBot).length || 1)}
+        onNextHand={next}
+        onNewMatch={next}
         onLeaveTable={() => onLeave?.()}
         opponents={
           <View style={styles.opponentsRow}>
             {opponents.map((opp) => {
-              const oppSeconds =
-                view.turn === opp.seat && view.turnMsLeft != null
-                  ? Math.max(0, Math.ceil(view.turnMsLeft / 1000))
-                  : null;
+              const oppSeconds = view.turn === opp.seat ? turnSeconds : null;
 
               return (
                 <CardOpponentPanel

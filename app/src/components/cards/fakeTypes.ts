@@ -1,29 +1,11 @@
 import type { GameNotice } from '@kahve/core';
 import type { ViewStyle } from 'react-native';
 
-/**
- * Standard card suits matching @kahve/cards (B1-CODEX contract):
- * S: Spades (Maça)
- * H: Hearts (Kupa)
- * D: Diamonds (Karo)
- * C: Clubs (Sinek)
- */
-export type Suit = 'S' | 'H' | 'D' | 'C';
+// Card, Suit and Rank are the engine's (@kahve/cards, B1). Pişti's view and action types come from
+// @kahve/catalog (B5). Only Batak's types below are still stand-ins until @kahve/batak (B3) is merged.
+import type { Card, Rank, Suit } from '@kahve/cards';
 
-/**
- * Ranks 2..14:
- * 11 = Jack (Vale)
- * 12 = Queen (Kız)
- * 13 = King (Papaz)
- * 14 = Ace (As)
- */
-export type Rank = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
-
-export interface Card {
-  id: number; // 0..51 unique identifier
-  suit: Suit;
-  rank: Rank;
-}
+export type { Card, Rank, Suit };
 
 // ---- Helper utilities ----
 
@@ -128,72 +110,6 @@ export interface HandProps {
   bleedLeft?: number;
   bleedRight?: number;
   bleedBottom?: number;
-}
-
-// ---- 3. PistiScreen Types and Props ----
-
-export interface PistiPlayerPublic {
-  seat: number;
-  name: string;
-  handCount: number;
-  capturedCount: number;
-  pistiCount: number;
-  totalScore: number;
-  connected?: boolean;
-  isBot?: boolean;
-}
-
-export interface PistiLastCapture {
-  seat: number;
-  card: Card;
-  isPisti: boolean;
-  isJackPisti: boolean;
-  pointsEarned: number; // 10 normal, 20 Jack
-  capturedCount: number;
-}
-
-export interface PistiRoundResult {
-  scores: number[];
-  totals: number[];
-  winnerSeats: number[];
-  matchOver: boolean;
-  breakdown?: {
-    seat: number;
-    cardsCount: number;
-    pistiPoints: number;
-    cardPoints: number;
-    majorityBonus: number;
-  }[];
-}
-
-export interface PistiView {
-  phase: 'playing' | 'finished';
-  seat: number;
-  turn: number;
-  seats: 2 | 4;
-  partnerMode: boolean;
-  targetScore: number;
-  hand: Card[];
-  deckCount: number;
-  centerCount: number;
-  topCard: Card | null;
-  playableCardIds: number[];
-  players: PistiPlayerPublic[];
-  lastCapture: PistiLastCapture | null;
-  turnMsLeft?: number | null;
-  noticeMsLeft?: number;
-  notices?: GameNotice[];
-  result: PistiRoundResult | null;
-}
-
-export type PistiAction = { type: 'play'; cardId: number };
-
-export interface PistiScreenProps {
-  view: PistiView;
-  seat: number;
-  onAction(action: PistiAction): void | Promise<void>;
-  onNextRound?(): void | Promise<void>;
-  onLeave?(): void;
 }
 
 // ---- 4. BatakScreen and Dialog Types & Props ----

@@ -7,10 +7,9 @@ import {
   type BatakView,
   CardBack,
   CardView,
-  type PistiAction,
-  type PistiView,
   createDeck,
 } from '../../components/cards';
+import type { PistiAction, PistiView } from '@kahve/catalog';
 import { PistiScreen } from '../PistiScreen';
 import { BatakScreen } from '../BatakScreen';
 import {
