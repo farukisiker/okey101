@@ -1,6 +1,6 @@
 import type { TurnClock } from './clock';
 import { type FinishShape, finishShape } from './duz';
-import { type MeldAnalysis, type MeldType, PAIRS_TO_OPEN, analyzeMeld, analyzePair, okeySwap } from './melds';
+import { type MeldAnalysis, type MeldType, PAIRS_TO_OPEN, addableTiles, analyzeMeld, analyzePair, okeySwap } from './melds';
 import {
   type NormalTile,
   type OkeyInfo,
@@ -29,6 +29,30 @@ export const OKEY_DISCARD_PENALTY = 101;
 export const OKEY_TAKEN_PENALTY = 101;
 /** How many times the discards may be reshuffled into a new middle stack. */
 export const DEFAULT_RESHUFFLES = 3;
+/** 101: throwing a tile that could be added to a meld on the table ("işlek"). */
+export const ISLEK_PENALTY = 101;
+
+/**
+ * 101 işlek rule (user decision, 15.11.2026): who pays ISLEK_PENALTY for throwing a tile
+ * that fits an open meld. 'opened': only players who opened (only they could add it).
+ */
+export type IslekMode = 'off' | 'opened' | 'all';
+export const ISLEK_MODES: readonly IslekMode[] = ['off', 'opened', 'all'];
+export const DEFAULT_ISLEK: IslekMode = 'opened';
+
+/** Live penalty reasons; each is also the i18n key suffix `notice.<reason>`. */
+export type NoticeReason = 'islek' | 'okeyDiscard' | 'sideTileUnused' | 'okeyTaken';
+
+/**
+ * A live penalty everyone sees right away. Structurally identical to `GameNotice` in
+ * @kahve/core; `id` counts up from 1 within a round.
+ */
+export interface GameNotice {
+  id: number;
+  seat: number;
+  reason: NoticeReason;
+  amount: number;
+}
 
 /**
  * '101': open with 101 in melds on the table, lowest total wins.
@@ -121,6 +145,10 @@ export interface GameState {
   seed: number;
   /** Düz okey: seat holding the indicator's twin, shown automatically at the deal. */
   gosterge: number | null;
+  /** 101: who pays for throwing an işlek tile. */
+  islek: IslekMode;
+  /** The latest live penalty of the round, or null. */
+  notice: GameNotice | null;
 }
 
 export type Action =
@@ -146,6 +174,8 @@ export interface NewGameOptions {
    * into a new middle stack up to this many times; 0 ends the round instead.
    */
   reshuffles?: number;
+  /** 101 işlek rule; missing = DEFAULT_ISLEK. */
+  islek?: IslekMode;
 }
 
 export const leftOf = (seat: number) => (seat + SEATS - 1) % SEATS;
@@ -198,11 +228,31 @@ export function createGame(opts: NewGameOptions = {}): GameState {
     seed: Math.floor(rng() * 2 ** 31),
     // Set when the holder of the indicator's twin shows it (düz okey, first turn only).
     gosterge: null,
+    islek: opts.islek ?? DEFAULT_ISLEK,
+    notice: null,
   };
 }
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 const fail = (error: string): ActionResult => ({ ok: false, error });
+
+/** Writes a live penalty: adds it to the seat's penalties and records the notice everyone sees. */
+function penalize(state: GameState, seat: number, reason: NoticeReason, amount: number) {
+  state.players[seat].penalties += amount;
+  state.notice = { id: (state.notice?.id ?? 0) + 1, seat, reason, amount };
+}
+
+/** 101: does throwing `tile` cost the işlek penalty for this player under the table's rule? */
+export function isIslek(
+  state: Pick<GameState, 'mode' | 'islek' | 'table' | 'okey'>,
+  opened: boolean,
+  tile: Tile,
+): boolean {
+  if (state.mode !== '101' || isJoker(tile, state.okey)) return false;
+  const mode = state.islek ?? DEFAULT_ISLEK;
+  if (mode === 'off' || (mode === 'opened' && !opened)) return false;
+  return addableTiles([tile], state.table, state.okey).size > 0;
+}
 
 /** Pure reducer: returns a new state, never mutates the input. */
 export function applyAction(prev: GameState, seat: number, action: Action): ActionResult {
@@ -307,7 +357,7 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
         const sa = analyzeMeld(swap.tiles, state.okey)!;
         player.hand = [...player.hand.filter((t) => !ids.has(t.id)), ...swap.freed];
         Object.assign(meld, { tiles: swap.tiles, points: sa.points, ordered: sa.ordered, represents: sa.represents });
-        if (meld.owner !== seat) state.players[meld.owner].penalties += OKEY_TAKEN_PENALTY * swap.freed.length;
+        if (meld.owner !== seat) penalize(state, meld.owner, 'okeyTaken', OKEY_TAKEN_PENALTY * swap.freed.length);
         state.lastAction = {
           seat,
           type: 'addToMeld',
@@ -348,7 +398,7 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
     }
 
     case 'showIndicator': {
-      if (!canShowIndicator(viewFor(prev, seat))) return fail('Göstergeyi yalnızca elinde olan, ilk turunda ve taş çekmeden gösterebilir');
+      if (!canShowIndicator(viewFor(prev, seat))) return fail('Göstergeyi yalnızca elinde olan, ilk turunda taş atmadan gösterebilir');
       state.gosterge = seat;
       state.lastAction = { seat, type: 'showIndicator' };
       return { ok: true, state };
@@ -362,12 +412,14 @@ export function applyAction(prev: GameState, seat: number, action: Action): Acti
         return fail('Yerden aldığınız taşı geri atamazsınız');
       if (state.mustUseTileId !== null && player.hand.some((t) => t.id === state.mustUseTileId)) {
         // Took the left player's discard but did not play it.
-        player.penalties += UNUSED_DISCARD_PENALTY;
+        penalize(state, seat, 'sideTileUnused', UNUSED_DISCARD_PENALTY);
       }
       const [tile] = player.hand.splice(idx, 1);
       // 101: the okey may only be thrown as the finishing tile.
       if (state.mode === '101' && player.hand.length > 0 && isJoker(tile, state.okey))
-        player.penalties += OKEY_DISCARD_PENALTY;
+        penalize(state, seat, 'okeyDiscard', OKEY_DISCARD_PENALTY);
+      // 101: a tile that fits a meld on the table (not the finishing tile, not the okey).
+      else if (player.hand.length > 0 && isIslek(state, player.opened, tile)) penalize(state, seat, 'islek', ISLEK_PENALTY);
       player.discards.push(tile);
       player.topTaken = false;
       state.lastAction = { seat, type: 'discard', tile };
@@ -446,8 +498,9 @@ function addTableMeld(state: GameState, owner: number, tiles: Tile[], a: MeldAna
 /**
  * Scoring (lower is better):
  * - winner: -101
- * - opened players: face values of the tiles left in hand (the okey counts its
- *   number), times the round multiplier, plus a flat 101 per okey still held;
+ * - opened players: face values of the non-okey tiles left in hand, times the
+ *   round multiplier, plus a flat 101 per okey still held (the okey's own number
+ *   is not added);
  *   a player who opened with pairs pays the tile sum twice over
  * - not opened: 202, times the round multiplier
  * Finishing with the okey doubles the round, and so does finishing after
@@ -550,16 +603,21 @@ export interface PlayerView {
   gosterge: number | null;
   /** Time the player to move has left when this view was made; null = no clock. */
   turnMsLeft?: number | null;
+  /** The latest live penalty of the round (everyone sees it); null when none yet. */
+  notice?: GameNotice | null;
+  /** The host froze the clock for the notice panel: ms left on the panel. */
+  noticeMsLeft?: number;
+  /** 101 işlek rule of this table. */
+  islek?: IslekMode;
 }
 
 /**
- * Düz okey: the holder of the indicator's twin may show it on their first turn
- * only, before drawing (the starting player, who does not draw, before throwing).
+ * Düz okey: the holder of the indicator's twin may show it any time during their
+ * first turn until they throw, before or after drawing (user decision, 15.11.2026).
  */
 export function canShowIndicator(view: PlayerView): boolean {
   if (view.mode !== 'duz' || view.phase !== 'playing' || view.gosterge !== null) return false;
   if (view.turn !== view.seat || view.turnNumber >= SEATS) return false;
-  if (view.turnPhase !== 'draw' && view.turnNumber !== 0) return false;
   const ind = view.indicator;
   return view.hand.some((t) => t.kind === 'normal' && t.color === ind.color && t.value === ind.value);
 }
@@ -599,5 +657,7 @@ export function viewFor(state: GameState, seat: number, clock: TurnClock | null 
     revealedHands: state.phase === 'finished' ? state.players.map((p) => p.hand) : null,
     gosterge: state.gosterge,
     turnMsLeft: clock ? Math.max(0, clock.deadline - now) : null,
+    notice: state.notice ?? null,
+    islek: state.islek ?? DEFAULT_ISLEK,
   };
 }

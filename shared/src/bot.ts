@@ -1,4 +1,4 @@
-import { type Action, type PlayerView, OPEN_THRESHOLD, canShowIndicator, leftOf } from './game';
+import { type Action, type PlayerView, OPEN_THRESHOLD, canShowIndicator, isIslek, leftOf } from './game';
 import { findFinish, meldCover } from './duz';
 import { PAIRS_TO_OPEN, analyzeMeld, findPairs, okeySwap } from './melds';
 import { findBestMelds } from './solver';
@@ -94,7 +94,14 @@ export function botStep(view: PlayerView, opts: BotOptions = {}): Action {
   const slip = rng() < cfg.slip;
   // Going for pairs (opened with them, or holding enough to): keep the pairs, throw a single.
   const keep = me.pairs || (!me.opened && best.points < OPEN_THRESHOLD && pairs.length >= PAIRS_TO_OPEN - 1) ? pairs : best.melds;
-  return { type: 'discard', tileId: chooseDiscard(hand, okey, keep, view.mustUseTileId, slip) };
+  return { type: 'discard', tileId: chooseDiscard(hand, okey, keep, view.mustUseTileId, slip, islekOf(view)) };
+}
+
+/** Tiles whose throw would cost this player the işlek penalty (101, per the table's rule). */
+function islekOf(view: PlayerView): (t: Tile) => boolean {
+  const opened = view.players[view.seat].opened;
+  const rules = { mode: view.mode, islek: view.islek ?? 'opened', table: view.table, okey: view.okey };
+  return (t) => isIslek(rules, opened, t);
 }
 
 function waitedEnough(view: PlayerView, cfg: { openAfterLaps: number; openByDeck: number }) {
@@ -109,7 +116,7 @@ export function quickMove(view: PlayerView): Action {
   const finish = view.mode === 'duz' ? findFinish(view.hand, view.okey) : null;
   if (finish) return { type: 'finish', tileId: finish.tileId };
   const best = findBestMelds(view.hand, view.okey, { maxTiles: view.hand.length - 1 });
-  return { type: 'discard', tileId: chooseDiscard(view.hand, view.okey, best.melds, view.mustUseTileId) };
+  return { type: 'discard', tileId: chooseDiscard(view.hand, view.okey, best.melds, view.mustUseTileId, false, islekOf(view)) };
 }
 
 const ids = (tiles: Tile[]) => tiles.map((t) => t.id);
@@ -155,9 +162,13 @@ function chooseDiscard(
   melds: Tile[][],
   mustUse: number | null,
   slip = false,
+  islek: (t: Tile) => boolean = () => false,
 ): number {
   const inMeld = new Set(melds.flat().map((t) => t.id));
-  const legal = hand.filter((t) => t.id !== mustUse);
+  let legal = hand.filter((t) => t.id !== mustUse);
+  // Never throw an işlek tile (+101) while anything else can go.
+  const safe = legal.filter((t) => !islek(t));
+  if (safe.length) legal = safe;
   let pool = legal.filter((t) => !inMeld.has(t.id));
   if (pool.length === 0) pool = legal;
   const value = (t: Tile) => faceOf(t, okey)?.value ?? 0;

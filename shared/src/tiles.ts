@@ -83,18 +83,17 @@ export function faceOf(tile: Tile, okey: OkeyInfo): OkeyInfo | null {
 export const OKEY_IN_HAND_PENALTY = 101;
 
 /**
- * What an opened player's leftover hand costs: every tile counts its face
- * (a fake okey and the okey itself both count the okey's number), and each okey
- * still in hand adds a flat 101 on top. Only `sum` is multiplied by the round.
+ * What an opened player's leftover hand costs: every non-okey tile counts its face
+ * (a fake okey counts the okey's number); each real okey still in hand costs a flat
+ * 101 instead and adds nothing to `sum` (user decision, 15.11.2026). Only `sum` is
+ * multiplied by the round.
  */
 export function handPenalty(hand: Tile[], okey: OkeyInfo): { sum: number; okeys: number } {
   let sum = 0;
   let okeys = 0;
   for (const t of hand) {
-    if (isJoker(t, okey)) {
-      okeys++;
-      sum += okey.value;
-    } else sum += faceOf(t, okey)!.value;
+    if (isJoker(t, okey)) okeys++;
+    else sum += faceOf(t, okey)!.value;
   }
   return { sum, okeys };
 }

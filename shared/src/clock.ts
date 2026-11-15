@@ -34,3 +34,11 @@ export function nextClock(
   if (lays && !prev.refilled) return { ...prev, deadline: now + budget, refilled: true };
   return prev;
 }
+
+/**
+ * A notice panel froze the clock for `ms`: the player keeps the time they had, so the
+ * deadline moves out by the freeze. Returns a new clock (null stays null).
+ */
+export function freezeClock<C extends { deadline: number }>(clock: C | null, ms: number): C | null {
+  return clock && ms > 0 ? { ...clock, deadline: clock.deadline + ms } : clock;
+}
