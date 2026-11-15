@@ -10,7 +10,9 @@ SAHİP OLDUĞUN YOLLAR: shared/src/** ve shared/test/** (kullanıcı onayıyla b
 DOKUNMA: types.ts, protocol.ts, app ekranları/bileşenleri (Sonnet: A7-SONNET), i18n dosyaları, package.json, lockfile
 
 KARARLAR (kullanıcı):
-1. Elde kalan gerçek okey (açmış oyuncu, el sonu): okey sayısı × 101. Okeyin sayı değeri artık el toplamına EKLENMEZ. Sahte okey değişmez (okeyin sayısını yazar).
+1. Elde kalan gerçek okey (açmış oyuncu, el sonu), kullanıcının sözü: "Elinde kalan sayı + okey cezası olacak".
+   Ceza = (okey dışındaki taşların toplamı) × bugünkü çarpanlar + her okey için 101. Okeyin kendi sayı değeri toplama EKLENMEZ.
+   Örnek: el 3 + 5 + okey → (3+5) × çarpan + 101. İki okey → toplam + 202. Sahte okey değişmez (okeyin sayısını yazar).
 2. Elden: değişmez (masada başka kimse açmamışken).
 3. Yandan alınan taşla açamamak: kural değişmez (alır, açamazsa +101). Onay diyaloğu Sonnet'te (istemci). Sende: bot bu kararı bugünkü gibi verir.
 4. Eşli 101: ortağın perine işlemek için kendisi açmış olmalı. Eşli mod henüz yok: sadece MASTER_PLAN'a not, kod yok.
