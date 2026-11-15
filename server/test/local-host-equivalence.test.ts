@@ -2,7 +2,7 @@
 // same seed, same names, same human moves -> same states, clocks, notice freezes, bot timing, totals and log.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnyGameDefinition, GameDefinition } from '@kahve/core';
-import { okey101Def, okeyDuzDef } from '@kahve/catalog';
+import { okey101Def, okeyDuzDef, pistiDef } from '@kahve/catalog';
 import { Room, replay } from '../src/room';
 import { LocalHost } from '../../app/src/net/localHost';
 import { type StubAction, type StubOptions, type StubState, type StubView, stubDef } from './stub-game';
@@ -164,6 +164,29 @@ describe('LocalHost = Room', () => {
     // Okey's own turnMsLeft (first turn: 2 x 30 s) is not replaced.
     expect(okey.viewFor(0)!.turnMsLeft).toBe(60_000);
     okey.dispose();
+  });
+
+  it('pişti (2 seats, 4 solo, 4 partners) through the real definition, up to a match end', () => {
+    for (const [options, seed] of [
+      [{ seats: 2, targetScore: 51 }, 31],
+      [{ seats: 4, targetScore: 51 }, 32],
+      [{ seats: 4, partnerMode: true, targetScore: 51 }, 33],
+    ] as const) {
+      const p = pair(pistiDef, { seed, options, botDelayMs: 20, turnTimeoutMs: 100 });
+      let rounds = 0;
+      while (!p.host.matchOver() && rounds < 20) {
+        run(p, 30_000, 500);
+        expect(p.host.roundOver()).toBe(true);
+        rounds++;
+        if (p.host.matchOver()) break;
+        expect(p.room.nextRound()).toBeNull();
+        expect(p.host.nextRound(Date.now())).toEqual({ ok: true });
+        same(p);
+      }
+      expect(p.host.matchOver()).toBe(true);
+      if ('partnerMode' in options) expect([p.host.totals[2], p.host.totals[3]]).toEqual([p.host.totals[0], p.host.totals[1]]);
+      p.stop();
+    }
   });
 
   it('the host log replays to the same state (bug reports work offline too)', () => {
