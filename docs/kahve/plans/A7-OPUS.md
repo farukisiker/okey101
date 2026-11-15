@@ -1,4 +1,4 @@
-DURUM: FABLE ONAYI BEKLİYOR
+DURUM: ONAYLANDI 2026-11-15 (Fable)
 A7-OPUS planı (Opus 5.5, feat/kahve-a7 @ 614f2bf). types.ts/protocol.ts değişmez; shared `GameNotice` = core ile yapısal aynı (TurnClock gibi).
 K1 `tiles.ts handPenalty`: gerçek okey `sum`'a girmez, sadece `okeys` sayılır; skor `sum×çarpan(×2 çift) + okeys×101` aynen. Test: el 3+5+okey → (3+5)×m+101; iki okey → sum+202; sahte okey okeyin sayısını yazar.
 K5 `game.ts canShowIndicator`: `turnPhase` şartı kalkar → kendi ilk turu (turnNumber<4, sıra onda) bitene, yani taş atana kadar her an. Bot `duzStep` zaten önce `canShowIndicator` bakıyor: çekişten sonra da gösterir.
