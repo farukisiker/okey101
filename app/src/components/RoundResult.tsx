@@ -17,7 +17,7 @@ import { t } from '../i18n';
 interface Props {
   view: PlayerView;
   room: RoomInfo;
-  /** 101 only: the host says this round ended the match (see a7adapter). */
+  /** 101 only: the host says this round ended the match. */
   matchOver?: boolean;
   onNext(): void | Promise<void>;
   onLeave(): void;

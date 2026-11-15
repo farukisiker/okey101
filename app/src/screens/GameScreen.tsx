@@ -26,7 +26,6 @@ import {
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { NoticePanel } from '../components/NoticePanel';
-import { matchOverOf, noticeFrozenMs } from '../components/a7adapter';
 import { DragSource } from '../components/DragSource';
 import { OpponentPanel } from '../components/OpponentPanel';
 import { Rack } from '../components/Rack';
@@ -99,7 +98,7 @@ function useSecondsLeft(view: PlayerView): number | null {
   const ms = view.turnMsLeft ?? null;
   // While a penalty notice is on screen the host freezes the clock: hold the shown value
   // for that long, then count down from it (even if no new view arrives at the end).
-  const frozenMs = noticeFrozenMs(view);
+  const frozenMs = view.noticeMsLeft ?? 0;
   const [deadline, setDeadline] = useState<number | null>(null);
   const [, setNow] = useState(0);
   useEffect(() => setDeadline(ms === null ? null : Date.now() + frozenMs + ms), [view, ms, frozenMs]);
@@ -707,7 +706,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
         <RoundResult
           view={view}
           room={room}
-          matchOver={matchOverOf(client)}
+          matchOver={client.matchOver}
           onNext={async () => {
             const r = await client.nextRound();
             if (!r.ok) showToast(tErr(r.error));
@@ -716,7 +715,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
         />
       )}
 
-      <NoticePanel view={view} />
+      <NoticePanel view={view} round={room.round} />
 
       {zoomed && (
         <TableOverlay

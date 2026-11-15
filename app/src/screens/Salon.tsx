@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { type GameMode, isTablePassword, type TableSummary } from '@okey/shared';
 import { Button } from '../components/Button';
-import { DEFAULT_MATCH_END, createRoomWith, type MatchEnd } from '../components/a7adapter';
+import { DEFAULT_MATCH_END, type MatchEnd } from '@kahve/catalog';
 import type { OkeyClient } from '../net/useOkey';
 import { colors, font } from '../theme';
 import { t, tErr } from '../i18n';
@@ -56,7 +56,7 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack, matc
     if (!pinFor) return { ok: false as const, error: '' };
     const res =
       pinFor.kind === 'create'
-        ? await run(() => createRoomWith(client, name, mode, true, pin, matchEnd))
+        ? await run(() => client.createRoom(name, mode, true, pin, mode === '101' ? { matchEnd } : undefined))
         : await run(() => client.joinRoom(name, pinFor.table.id, pin));
     if (res.ok) setPinFor(null);
     return res;
@@ -113,7 +113,7 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack, matc
             title={t('openTable')}
             subtitle={t('openTableSub')}
             variant="success"
-            onPress={() => run(() => createRoomWith(client, name, mode, true, undefined, matchEnd))}
+            onPress={() => run(() => client.createRoom(name, mode, true, undefined, mode === '101' ? { matchEnd } : undefined))}
             disabled={busy || offline}
           />
           <Button

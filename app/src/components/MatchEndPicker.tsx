@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DEFAULT_MATCH_END, type MatchEnd } from './a7adapter';
+import { DEFAULT_MATCH_END, type MatchEnd } from '@kahve/catalog';
 import { colors } from '../theme';
 import { t } from '../i18n';
 

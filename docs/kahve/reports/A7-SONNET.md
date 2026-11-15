@@ -14,3 +14,6 @@ Dal feat/kahve-a7s. Tüm A7-OPUS alan erişimleri `app/src/components/a7adapter.
 2. 101 masasında açmadan soldan taş al (dokunma ve sürükle): diyalog çıkar; Vazgeç → hiçbir şey; Evet → taş alınır. Düz okeyde ve açtıktan sonra diyalog yok.
 3. Bir bot işlek atınca (Opus dalı birleşince) herkeste panel 5 sn, sayaç bu sürede sabit.
 4. Maç bitince (Opus `matchOver`) sıralama + Yeni maç / Masadan kalk.
+
+## Birleşme (feat/kahve b157ac0)
+Uyarlayıcı silindi, gerçek tipler/çağrılar kullanılıyor (PlayerView.notices/noticeMsLeft, client.matchOver, quickPlay/createRoom `options`); NoticePanel tüm bildirimleri sırayla 5 sn'er gösterir, en yüksek gösterilen id'yi tutar (el değişince sıfırlanır). Kök test 271, typecheck yeşil.

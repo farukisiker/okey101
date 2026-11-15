@@ -1,46 +1,84 @@
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
-import type { PlayerView } from '@okey/shared';
-import { noticeOf, type Notice } from './a7adapter';
+import type { GameNotice, PlayerView } from '@okey/shared';
 import { t, type Key } from '../i18n';
 
 /** Same as game-core NOTICE_MS (user decision 15.11.2026). */
 const NOTICE_MS = 5000;
 const FADE_MS = 250;
 
+interface Queued {
+  notice: GameNotice;
+  ms: number;
+}
+
 /**
- * Big penalty banner every player sees for 5 s ("Ahmet işlek taş attı: +101 ceza").
- * Never blocks touches. A notice that was already on screen when this table
- * mounted (reconnect) is not shown again unless the host says it is still live.
+ * Big penalty banner every player sees for 5 s each ("Ahmet işlek taş attı: +101 ceza").
+ * One action can write several notices (view.notices, id order): they show one after another.
+ * The highest id shown is remembered (reset every round, ids restart at 1), so a re-render or
+ * reconnect never replays old ones. Never blocks touches.
  */
-export function NoticePanel({ view }: { view: PlayerView }) {
-  const current = noticeOf(view);
-  const seen = useRef<number | null>(null);
-  const first = useRef(true);
-  const [shown, setShown] = useState<Notice | null>(null);
+export function NoticePanel({ view, round }: { view: PlayerView; round: number }) {
+  const [shown, setShown] = useState<GameNotice | null>(null);
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.9);
+  const maxId = useRef(0);
+  const lastRound = useRef(round);
+  const first = useRef(true);
+  const queue = useRef<Queued[]>([]);
+  const busy = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const id = current?.notice.id ?? null;
-  const live = current?.msLeft ?? null;
-  useEffect(() => {
-    const isFirst = first.current;
-    first.current = false;
-    if (!current || id === seen.current) return;
-    seen.current = id;
-    if (isFirst && (live === null || live <= 0)) return; // old notice, not live
-    const total = live !== null && live > 0 ? Math.min(live, NOTICE_MS) : NOTICE_MS;
-    setShown(current.notice);
+  const next = () => {
+    const item = queue.current.shift();
+    if (!item) {
+      busy.current = false;
+      setShown(null);
+      return;
+    }
+    busy.current = true;
+    setShown(item.notice);
+    scale.value = 0.9;
     scale.value = withTiming(1, { duration: 200 });
+    opacity.value = 0;
     opacity.value = withSequence(
       withTiming(1, { duration: 200 }),
-      withDelay(Math.max(0, total - FADE_MS - 200), withTiming(0, { duration: FADE_MS })),
+      withDelay(Math.max(0, item.ms - FADE_MS - 200), withTiming(0, { duration: FADE_MS })),
     );
-    const timer = setTimeout(() => setShown(null), total + 50);
-    return () => clearTimeout(timer);
+    timer.current = setTimeout(next, item.ms);
+  };
+
+  useEffect(() => {
+    if (lastRound.current !== round) {
+      lastRound.current = round;
+      maxId.current = 0;
+      queue.current = [];
+    }
+    const list = view.notices?.length ? view.notices : view.notice ? [view.notice] : [];
+    const fresh = list.filter((n) => n.id > maxId.current);
+    if (fresh.length === 0) return;
+    maxId.current = Math.max(...fresh.map((n) => n.id));
+    const isFirst = first.current;
+    first.current = false;
+    const live = view.noticeMsLeft ?? 0;
+    // First view of this table with nothing live: those are old notices (reconnect), not news.
+    if (isFirst && live <= 0) return;
+    fresh.forEach((notice, i) => {
+      // On a late join the host reports the total left; the first one gets what remains of it.
+      const ms = isFirst ? Math.max(500, Math.min(NOTICE_MS, live - (fresh.length - 1 - i) * NOTICE_MS)) : NOTICE_MS;
+      queue.current.push({ notice, ms });
+    });
+    if (!busy.current) next();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [view, round]);
+
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
 
   const style = useAnimatedStyle(() => ({ opacity: opacity.value, transform: [{ scale: scale.value }] }));
   if (!shown) return null;

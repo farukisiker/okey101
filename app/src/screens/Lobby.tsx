@@ -3,7 +3,6 @@ import { BackHandler, Pressable, ScrollView, StyleSheet, Text, TextInput, View }
 import { Button } from '../components/Button';
 import { MonetizationSettings } from '../components/MonetizationSettings';
 import { MatchEndPicker, useMatchEnd } from '../components/MatchEndPicker';
-import { quickPlayWith } from '../components/a7adapter';
 import { loadName, saveName } from '../feedback';
 import { Salon } from './Salon';
 import type { OkeyClient } from '../net/useOkey';
@@ -134,7 +133,7 @@ export function Lobby({ client, serverUrl, onServerUrlChange, onNameReady, onExi
           size="large"
           onPress={() => {
             onPicked?.('101');
-            void run(() => quickPlayWith(client, name, '101', matchEnd));
+            void run(() => client.quickPlay(name, '101', { matchEnd }));
           }}
           disabled={busy}
         />
@@ -144,7 +143,7 @@ export function Lobby({ client, serverUrl, onServerUrlChange, onNameReady, onExi
           size="large"
           onPress={() => {
             onPicked?.('duz');
-            void run(() => quickPlayWith(client, name, 'duz', matchEnd));
+            void run(() => client.quickPlay(name, 'duz'));
           }}
           disabled={busy}
         />
