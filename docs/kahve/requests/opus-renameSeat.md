@@ -1,6 +1,6 @@
 # İstek (A4-OPUS): GameDefinition'a isteğe bağlı `renameSeat`
 
-DURUM: AÇIK (Fable kararı, faz B öncesi)
+DURUM: KABUL, types.ts'e eklendi (15.11.2026, Fable). Uygulama A7-OPUS görevinde.
 
 ## Sorun
 Masada koltuk el değiştirince (oyun ortasında ayrılan oyuncunun yerine bot geçer, ya da biri botun koltuğuna oturur) oyuncu adı değişir.

@@ -71,6 +71,23 @@ export interface ViewContext {
   now: number;
 }
 
+/**
+ * A penalty (or other table event) everyone should see right away, e.g. "Ahmet işlek taş attı: +101".
+ * The host shows it for NOTICE_MS and freezes the turn clock (and bots) meanwhile, so nobody loses time reading it.
+ * `id` increases by one per notice within a round, so the host can tell a new notice from the same one.
+ */
+export interface GameNotice {
+  id: number;
+  seat: number;
+  /** Game-specific reason code, also the i18n key suffix: `notice.<reason>`. */
+  reason: string;
+  /** Penalty points written (positive = bad). */
+  amount: number;
+}
+
+/** How long a GameNotice is shown and the clock frozen (user decision, 15.11.2026). */
+export const NOTICE_MS = 5000;
+
 export interface ClockRules {
   /** Base time per turn in ms (okey: 30 000). 0 disables the clock. */
   baseMs: number;
@@ -120,6 +137,19 @@ export interface GameDefinition<S, A, V, Opts = unknown> extends GameMeta {
   turn(state: S): TurnInfo | null;
   /** True if this action refills the running turn clock once per turn (okey: open/meld/addToMeld). */
   refillsClock(action: A): boolean;
+
+  /**
+   * Optional: the latest notice of the round (or null). When its id changes after an action, the host freezes
+   * the turn clock and bot moves for NOTICE_MS (the remaining time is kept and resumes afterwards).
+   * The notice must also be visible in `viewFor` so every client can show the panel.
+   */
+  noticeOf?(state: S): GameNotice | null;
+
+  /**
+   * Optional: the seat's player changed (a bot took over, or a person took a bot's seat). Returns a new state with
+   * only the name updated (no rng, no turn change). Games that don't keep names in their state omit it.
+   */
+  renameSeat?(state: S, seat: number, name: string): S;
 
   /** A legal action for `seat` (only called when `turn(state)?.seat === seat`). Must never return an illegal move. */
   botMove(state: S, seat: number, level: BotLevel, rng: Rng): A;
