@@ -38,10 +38,11 @@ Komutlar: `pnpm test`, `pnpm typecheck`. Bu makinede `pnpm` PATH'te yok; `corepa
 ## Faz B (16.11.2026 başladı, kullanıcı onayı)
 | Görev | Sahip | Durum | Son commit | Engel / not |
 |---|---|---|---|---|
-| B1 @kahve/cards | Codex (Astra → Sol) | görev kâğıdı | – | – |
-| B2 @kahve/pisti | Codex | bekliyor | – | B1'e bağlı; bölgesel kural cevapları (MASTER_PLAN §4e) |
-| B3 @kahve/batak | Codex | bekliyor | – | B1'e bağlı; bölgesel kural cevapları |
-| B4 CardView + Pişti/Batak ekranları | Antigravity (Argon → Flash) | görev kâğıdı | – | SVG yok: RN View/Text ile (yeni native modül gerekmedi) |
-| B5 catalog/sunucu/çevrimdışı entegrasyon | Claude Opus | bekliyor | – | B2'ye bağlı |
-| B6 GameShell + reklam kapısı | Claude Sonnet | görev kâğıdı | – | – |
-| B7 docs/oyunlar + sim + sızıntı testleri | OpenCode | görev kâğıdı (docs önce) | – | sim B2/B3'e bağlı |
+| B1 @kahve/cards | Codex (Astra → Sol) | **birleşti** (Astra ONAY) | `307dcdb` | 36 test |
+| B2 @kahve/pisti | Codex (Sol) → Claude Opus review | review | – | Astra 1 GERİ GÖNDER (bot hafızası); 02:40'ta **Codex kotası bitti (04:23'e kadar)** → structuredClone + yeniden review Claude Opus'a (ORKESTRA §1.6) |
+| B3 @kahve/batak | **Claude Opus** (Codex kotası yok, bu gece) | plan | – | worktree kahve-b3 |
+| B4 CardView + Pişti/Batak ekranları | Antigravity (Argon → Flash) | **birleşti** (Argon 1 GERİ GÖNDER) | `bae492b` | SVG yok. agy headless komut çalıştıramıyor: Flash sadece dosya yazar, typecheck/commit Fable. Sesler (.wav) henüz yok. Açık: köşe takım simgesi 12 pt |
+| B5 catalog/sunucu/çevrimdışı entegrasyon | Claude Opus | yapılıyor (b,c,e bitti) | – | a,d,f,g,h B2 birleşince |
+| B6 GameShell + reklam kapısı | Claude Sonnet | **birleşti** | `7e71dd4` | okey reklam davranışı testle sabit |
+| B7 docs/oyunlar | OpenCode | **birleşti** | `5c959df` | ayar adları motorla son eşitleme bekliyor |
+| B8 sim + sızıntı testleri | Cline | **ADIM 1 birleşti** | `4e19853` | okey 2×1000 seed: 0 geçersiz, 0 bitmeyen. Cline son adımda yarıda kaldı; doğrulama Fable |
