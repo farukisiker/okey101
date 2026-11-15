@@ -36,3 +36,6 @@ Son oynanan: AsyncStorage anahtarı `okey101.lastGame` ('okey101' | 'okeyDuz'), 
 
 ## Düzeltme (Fable incelemesi)
 iOS'ta donanım geri tuşu yok: Lobby ana ekranında (isim varken, `onExit` verilmişse) ikincil "Salona dön" düğmesi eklendi (minWidth 120, Button 56 dp). Arkadaşlar alt ekranı ve isim düzenleyicide görünmez; `onExit` yoksa hiçbir şey çizilmez.
+
+## A2 birleşti
+feat/kahve birleştirildi; geçici liste kaldırıldı, kahveGames.ts artık @kahve/catalog (CATALOG, gamesInGroup) kullanıyor; ekran davranışı aynı.
