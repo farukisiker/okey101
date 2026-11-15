@@ -8,6 +8,11 @@ import { initFeedback } from './feedback';
 import { DropZoneProvider } from './game/dropZones';
 import { useLocalGame } from './net/useLocalGame';
 import { type OkeyClient, useOkey } from './net/useOkey';
+import { type HostTimes, useKahveGame } from './net/useKahveGame';
+import { GameLobby } from './screens/GameLobby';
+import { PistiScreen } from './screens/PistiScreen';
+import type { PistiAction, PistiView } from '@kahve/catalog';
+import { isOkeyGame } from '@okey/shared';
 import { GameScreen } from './screens/GameScreen';
 import { Intro } from './screens/Intro';
 import { KahveSalonu } from './screens/KahveSalonu';
@@ -32,9 +37,11 @@ export default function App() {
   useEffect(() => {
     void initFeedback();
   }, []);
-  // intro -> salon -> (secim | okeyLobi). A first-time player has no name yet: the
+  // intro -> salon -> (secim -> cardLobi | okeyLobi). A first-time player has no name yet: the
   // Lobby asks for it (and calls onNameReady), so they go there before the salon.
-  const [nav, setNav] = useState<'intro' | 'salon' | 'secim' | 'okeyLobi'>('intro');
+  const [nav, setNav] = useState<'intro' | 'salon' | 'secim' | 'okeyLobi' | 'cardLobi'>('intro');
+  /** The card game whose lobby (and table) is open; its socket lives only while this is set. */
+  const [cardGame, setCardGame] = useState<GameId | null>(null);
   const [group, setGroup] = useState<TableGroup>('kagit');
   const [last, setLast] = useState<GameId | null>(null);
   const intro = nav === 'intro';
@@ -45,6 +52,22 @@ export default function App() {
     });
   }, []);
   const toSalon = useCallback(() => setNav('salon'), []);
+  const openGame = useCallback((id: GameId) => {
+    if (isOkeyGame(id)) {
+      setNav('okeyLobi');
+      return;
+    }
+    setCardGame(id);
+    setNav('cardLobi');
+  }, []);
+  const toSecim = useCallback(() => {
+    setCardGame(null);
+    setNav('secim');
+  }, []);
+  const onCardStart = useCallback((id: GameId) => {
+    saveLastGame(id);
+    setLast(id);
+  }, []);
   const onPicked = useCallback((mode: '101' | 'duz') => {
     const id: GameId = mode === '101' ? 'okey101' : 'okeyDuz';
     saveLastGame(id);
@@ -58,6 +81,7 @@ export default function App() {
   const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER);
   const online = useOkey(serverUrl);
   const local = useLocalGame();
+  const kahve = useKahveGame(cardGame, serverUrl);
   // Quick play runs offline on the device; rooms go through the server.
   const client: OkeyClient = local.active
     ? { ...online, ...local, start: online.start, connected: true }
@@ -101,6 +125,37 @@ export default function App() {
   let screen;
   if (intro) {
     screen = <Intro onDone={endIntro} />;
+  } else if (kahve.mode && kahve.room && !kahve.room.started) {
+    screen = <WaitingRoom client={kahve} />;
+  } else if (kahve.mode && kahve.view && kahve.gameId === 'pisti') {
+    screen = (
+      <PistiScreen
+        key={kahve.room?.id}
+        view={kahve.view as PistiView & HostTimes}
+        viewAt={kahve.viewAt}
+        room={kahve.room}
+        seat={kahve.seat}
+        summary={kahve.summary}
+        humanCount={kahve.humanCount}
+        onAction={(a: PistiAction) => kahve.act(a)}
+        onNextRound={kahve.nextRound}
+        onLeave={kahve.leave}
+      />
+    );
+  } else if (kahve.mode) {
+    // At a card table whose first view is still on its way.
+    screen = null;
+  } else if (!client.session && nav === 'cardLobi' && cardGame) {
+    screen = (
+      <GameLobby
+        gameId={cardGame}
+        client={kahve}
+        serverUrl={serverUrl}
+        onServerUrlChange={setServerUrl}
+        onBack={toSecim}
+        onStart={onCardStart}
+      />
+    );
   } else if (!client.session && nav === 'salon') {
     screen = (
       <KahveSalonu
@@ -112,11 +167,11 @@ export default function App() {
             setNav('secim');
           }
         }}
-        onResume={() => setNav('okeyLobi')}
+        onResume={() => (last ? openGame(last) : setNav('okeyLobi'))}
       />
     );
   } else if (!client.session && nav === 'secim') {
-    screen = <OyunSecimi group={group} onBack={toSalon} />;
+    screen = <OyunSecimi group={group} onBack={toSalon} onPick={openGame} />;
   } else if (!client.session) {
     screen = (
       <Lobby

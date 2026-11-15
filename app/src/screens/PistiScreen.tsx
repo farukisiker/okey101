@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { BackHandler, StyleSheet, Text, View } from 'react-native';
 import { colors, font } from '../theme';
 import { t } from '../i18n';
 import { isSoundOn, setSoundOn } from '../feedback';
@@ -69,6 +69,15 @@ export function PistiScreen({ view, viewAt, room, seat, summary: summaryProp, hu
       return [...kept, ...added];
     });
   }, [view.hand]);
+
+  // Android back asks before leaving the table (a second press closes the question).
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setShowExitConfirm((open) => !open);
+      return true;
+    });
+    return () => sub.remove();
+  }, []);
 
   // A capture that happened with the last card played (views arrive as new objects, so compare by move).
   const freshCapture =
