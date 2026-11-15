@@ -165,14 +165,22 @@ function chooseDiscard(
   islek: (t: Tile) => boolean = () => false,
 ): number {
   const inMeld = new Set(melds.flat().map((t) => t.id));
-  let legal = hand.filter((t) => t.id !== mustUse);
-  // Never throw an işlek tile (+101) while anything else can go.
-  const safe = legal.filter((t) => !islek(t));
-  if (safe.length) legal = safe;
-  let pool = legal.filter((t) => !inMeld.has(t.id));
-  if (pool.length === 0) pool = legal;
+  const legal = hand.filter((t) => t.id !== mustUse);
   const value = (t: Tile) => faceOf(t, okey)?.value ?? 0;
-  pool.sort((a, b) => usefulness(a, hand, okey) - usefulness(b, hand, okey) || value(b) - value(a));
+  const rank = (list: Tile[]) =>
+    list.sort((a, b) => usefulness(a, hand, okey) - usefulness(b, hand, okey) || value(b) - value(a));
+  const outside = rank(legal.filter((t) => !inMeld.has(t.id)));
+  const inside = rank(legal.filter((t) => inMeld.has(t.id)));
+  // Never throw an işlek tile (+101) while anything else can go: the best two safe tiles,
+  // outside the melds first (checked lazily, the işlek test is the costly part).
+  const safest = (list: Tile[]) => {
+    const out: Tile[] = [];
+    for (const t of list) if (!islek(t) && out.push(t) === 2) break;
+    return out;
+  };
+  let pool = safest(outside);
+  if (pool.length === 0) pool = safest(inside);
+  if (pool.length === 0) pool = outside.length ? outside : inside;
   // A slip throws the runner-up instead, but never the okey.
   if (slip && pool.length > 1 && !isJoker(pool[1], okey)) return pool[1].id;
   return pool[0].id;
