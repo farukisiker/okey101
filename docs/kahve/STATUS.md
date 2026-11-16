@@ -47,6 +47,7 @@ Komutlar: `pnpm test`, `pnpm typecheck`. Bu makinede `pnpm` PATH'te yok; `corepa
 | B6 GameShell + reklam kapısı | Claude Sonnet | **birleşti** | `7e71dd4` | okey reklam davranışı testle sabit |
 | B7 docs/oyunlar | OpenCode | **birleşti** | `5c959df` | ayar adları motorla son eşitleme bekliyor |
 | B8 sim + sızıntı testleri | Cline (+ Fable doğrulama) | **birleşti** | `4e19853`, `1b62665`, `96ac843`, `6b4a54f` | 1000 seed: okey 2000 el, Pişti 2000 el, Batak 1000 maç eli → 0 geçersiz, 0 bitmeyen |
+| B10 Pişti tablet testi düzeltmeleri + test reklam bayrağı | Claude Sonnet | **birleşti** | `33b66ae` | Tablet duman testi (80537c6) GEÇTİ, 4 UI hatası düzeltildi; `EXPO_PUBLIC_TEST_ADS=1` test APK'larında Google test reklamı (gerçek kimlikler değişmedi). Ara sıra zaman aşımına düşen 2 sunucu testi tekrar görüldü (yük altında) |
 | B9 kart sesleri + köşe simgesi | Claude Sonnet | **birleşti** | `e9c3050` | card-play.wav 4 KB, card-take.wav 7.5 KB |
 
 ## Faz B özeti (16.11.2026 03:15, kullanıcı sabaha kadar yoktu; koordinatörün "bitirebildiğin adımları uygula" talimatıyla)
@@ -59,7 +60,7 @@ Komutlar: `pnpm test`, `pnpm typecheck`. Bu makinede `pnpm` PATH'te yok; `corepa
 - Belgeler: `docs/oyunlar/pisti.md`, `batak.md` (ayar tabloları motorla eşit), README "Kurallar" linkleri.
 
 **Nasıl denenir (tablet)**
-- APK: feat/kahve @ `e9c3050` (sesler dahil; oyunlar `ca6e4fc`'den beri oynanır). Yol: Kahve Salonu → Kağıt Masaları → Pişti (2 / 4 tekli / 4 eşli) veya Batak (4) → Hemen Oyna.
+- APK: feat/kahve @ `33b66ae` (B10 düzeltmeleri + sesler), **`EXPO_PUBLIC_TEST_ADS=1` ile derle** (kendi cihazımızda gerçek reklam gösterilmesin). Yol: Kahve Salonu → Kağıt Masaları → Pişti (2 / 4 tekli / 4 eşli) veya Batak (4) → Hemen Oyna.
 - Çevrimiçi: yerel sunucu (`pnpm server`, adb reverse :3001). **Pi güncellenmedi** (kullanıcı kararı); güncellenene kadar kart masalarında "sunucu güncelleniyor" mesajı.
 - Ayrıntılı adımlar: `docs/kahve/reports/B5-OPUS.md`.
 
