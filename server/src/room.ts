@@ -87,15 +87,15 @@ function renameInState<S>(def: GameDefinition<S, unknown, unknown, unknown>, sta
 }
 
 /**
- * The host's additions to a view: `noticeMsLeft` during a notice panel and, for games whose view carries the raw
- * `clock` but no `turnMsLeft` (card games), `turnMsLeft` read on the host's clock, so a device whose clock is off
- * still counts down right. Okey views already have `turnMsLeft` and stay as they were.
+ * The host's additions to a view: `noticeMsLeft` during a notice panel and, for games whose view has no
+ * `turnMsLeft` of its own (card games; batak's view has no clock at all), `turnMsLeft` read on the host's clock,
+ * so a device whose clock is off still counts down right. Okey views already have `turnMsLeft` and stay as they were.
  * Copied in app/src/net/localHost.ts (proved equal in server/test/local-host-equivalence.test.ts).
  */
 export function withHostTimes<V>(view: V, clock: TurnClock | null, now: number, frozenUntil: number): V {
   if (typeof view !== 'object' || view === null) return view;
   let out: V = view;
-  if ('clock' in view && !('turnMsLeft' in view)) {
+  if (!('turnMsLeft' in view)) {
     out = { ...out, turnMsLeft: clock ? Math.max(0, clock.deadline - Math.max(now, frozenUntil)) : null };
   }
   const left = frozenUntil - now;
