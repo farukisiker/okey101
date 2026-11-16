@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { BackHandler, StyleSheet, Text, View } from 'react-native';
 import { colors, font } from '../theme';
 import { t } from '../i18n';
 import { isSoundOn, setSoundOn } from '../feedback';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { GameShell, type RoundSummary } from '../components/GameShell';
+import type { RoomInfo } from '@okey/shared';
+import type { BatakAction, BatakView } from '@kahve/catalog';
+import { cardSummary } from '../net/cardSummary';
+import { type HostTimes, msLeftNow } from '../net/localHost';
 import {
-  type BatakScreenProps,
   BidDialog,
   type Card,
   CardOpponentPanel,
@@ -21,11 +24,39 @@ import {
   useCardLayout,
 } from '../components/cards';
 
+export interface BatakScreenProps {
+  /** The engine's BatakView plus the host's times (turnMsLeft, noticeMsLeft). */
+  view: BatakView & HostTimes;
+  /** Epoch ms when `view` arrived (the countdown runs from here). Missing: now. */
+  viewAt?: number;
+  /** The table: totals, bots, connections. Missing (preview): totals are this hand's scores. */
+  room?: RoomInfo | null;
+  seat: number;
+  /** End-of-hand summary from useKahveGame (one object per hand). Missing: built from the view. */
+  summary?: RoundSummary | null;
+  /** People at the table, for the ad break rule. */
+  humanCount?: number;
+  onAction(action: BatakAction): void | Promise<unknown>;
+  /** Next hand, or a new match after the last one. */
+  onNextRound?(): void | Promise<unknown>;
+  onLeave?(): void;
+}
+
+/** A player as the panels draw them: the engine's public data plus the table's totals and connection. */
+function playersOf(view: BatakView, room: RoomInfo | null | undefined) {
+  return view.players.map((p) => ({
+    ...p,
+    totalScore: room?.totals[p.seat] ?? 0,
+    connected: room?.seats[p.seat]?.connected ?? true,
+    isBot: room?.seats[p.seat]?.isBot ?? false,
+  }));
+}
+
 /**
  * Batak (single-player bidding) game screen embedded in GameShell.
  * 4 seats, compass trick area, bidding dialog, trump dialog, and action bar.
  */
-export function BatakScreen({ view, seat, onAction, onNextRound, onLeave }: BatakScreenProps) {
+export function BatakScreen({ view, viewAt, room, seat, summary: summaryProp, humanCount, onAction, onNextRound, onLeave }: BatakScreenProps) {
   const [sound, setSound] = useState(isSoundOn());
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
@@ -42,23 +73,51 @@ export function BatakScreen({ view, seat, onAction, onNextRound, onLeave }: Bata
     });
   }, [view.hand]);
 
-  // Audio feedback when a trick is won
-  const lastTrickWinnerRef = useRef(view.lastTrickWinner);
+  // Android back asks before leaving the table (a second press closes the question).
   useEffect(() => {
-    if (view.lastTrickWinner != null && view.lastTrickWinner !== lastTrickWinnerRef.current) {
-      lastTrickWinnerRef.current = view.lastTrickWinner;
-      cardTakeFeedback(false);
-    }
-  }, [view.lastTrickWinner]);
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setShowExitConfirm((open) => !open);
+      return true;
+    });
+    return () => sub.remove();
+  }, []);
 
+  // Audio feedback once per finished trick (views arrive as new objects, so count tricks; silent without sound files)
+  const trickKey = `${view.round}:${view.tricks.length}`;
+  const trickKeyRef = useRef(trickKey);
+  useEffect(() => {
+    if (trickKey !== trickKeyRef.current && view.tricks.length > 0) cardTakeFeedback(false);
+    trickKeyRef.current = trickKey;
+    // view.tricks belongs to trickKey.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trickKey]);
+
+  // The turn clock, counted down here once a second from the host's turnMsLeft.
+  const arrived = viewAt ?? 0;
+  const [now, setNow] = useState(() => Date.now());
+  const clockOn = view.phase !== 'finished' && view.turnMsLeft != null;
+  useEffect(() => {
+    setNow(Date.now());
+    if (!clockOn) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [clockOn, view]);
+  const msLeft = msLeftNow(view, arrived || now, now);
+  const turnSeconds = msLeft == null ? null : Math.max(0, Math.ceil(msLeft / 1000));
+
+  // The trick on the table; between tricks the finished one stays in view until the next card is led.
+  const shownTrick =
+    view.currentTrick.length || view.phase !== 'playing' || !view.lastTrick ? view.currentTrick : view.lastTrick.cards;
+
+  const players = useMemo(() => playersOf(view, room), [view, room]);
   const isMyTurn = view.turn === seat;
   const isPlayingTurn = isMyTurn && view.phase === 'playing';
-  const myPlayer = useMemo(() => view.players.find((p) => p.seat === seat), [view.players, seat]);
-  const opponents = useMemo(() => view.players.filter((p) => p.seat !== seat), [view.players, seat]);
-  const activePlayer = useMemo(() => view.players.find((p) => p.seat === view.turn), [view.players, view.turn]);
+  const myPlayer = useMemo(() => players.find((p) => p.seat === seat), [players, seat]);
+  const opponents = useMemo(() => players.filter((p) => p.seat !== seat), [players, seat]);
+  const activePlayer = useMemo(() => players.find((p) => p.seat === view.turn), [players, view.turn]);
   const highestBidder = useMemo(
-    () => (view.highestBidder != null ? view.players.find((p) => p.seat === view.highestBidder) : null),
-    [view.players, view.highestBidder],
+    () => (view.highestBidder != null ? players.find((p) => p.seat === view.highestBidder) : null),
+    [players, view.highestBidder],
   );
   const layout = useCardLayout(handOrder.length);
 
@@ -107,21 +166,24 @@ export function BatakScreen({ view, seat, onAction, onNextRound, onLeave }: Bata
     statusText = t('cardsWaitingOpponent');
   }
 
-  // Round summary mapping for GameShell overlay
-  const summary: RoundSummary | null = view.result
-    ? {
-        matchOver: view.result.matchOver,
-        winnerSeats: view.result.winnerSeats,
-        rows: view.players.map((p, idx) => ({
-          seat: p.seat,
-          name: p.seat === seat ? t('you') : p.name,
-          points: view.result!.scores[idx] ?? 0,
-          total: view.result!.totals[idx] ?? p.totalScore,
-        })),
-      }
-    : null;
+  // Round summary for GameShell: the hook's (one object per hand); the preview builds one from the view.
+  const fallbackSummary = useMemo<RoundSummary | null>(() => {
+    if (summaryProp !== undefined || !view.result) return null;
+    return cardSummary({
+      names: players.map((p) => p.name),
+      points: view.result.scores,
+      totals: room?.totals ?? view.result.scores,
+      matchOver: room?.matchOver ?? false,
+      mySeat: seat,
+      you: t('you'),
+    });
+  }, [summaryProp, view.result, players, room, seat]);
+  const summary = summaryProp !== undefined ? summaryProp : fallbackSummary;
 
-  const secondsLeft = isMyTurn && view.turnMsLeft != null ? Math.max(0, Math.ceil(view.turnMsLeft / 1000)) : null;
+  const secondsLeft = isMyTurn ? turnSeconds : null;
+  const next = async () => {
+    await onNextRound?.();
+  };
 
   const trumpName = view.trump
     ? `${suitSymbol(view.trump)} ${
@@ -147,17 +209,14 @@ export function BatakScreen({ view, seat, onAction, onNextRound, onLeave }: Bata
         status={statusText}
         summary={summary}
         mySeat={seat}
-        humanCount={view.players.filter((p) => !p.isBot).length || 1}
-        onNextHand={onNextRound}
-        onNewMatch={onNextRound}
+        humanCount={humanCount ?? (players.filter((p) => !p.isBot).length || 1)}
+        onNextHand={next}
+        onNewMatch={next}
         onLeaveTable={() => onLeave?.()}
         opponents={
           <View style={styles.opponentsRow}>
             {opponents.map((opp) => {
-              const oppSeconds =
-                view.turn === opp.seat && view.turnMsLeft != null
-                  ? Math.max(0, Math.ceil(view.turnMsLeft / 1000))
-                  : null;
+              const oppSeconds = view.turn === opp.seat ? turnSeconds : null;
 
               return (
                 <CardOpponentPanel
@@ -168,7 +227,7 @@ export function BatakScreen({ view, seat, onAction, onNextRound, onLeave }: Bata
                   tricksWon={opp.tricksWon}
                   bid={opp.bid}
                   passed={opp.passed}
-                  isDeclarer={view.highestBidder === opp.seat}
+                  isDeclarer={(view.declarer ?? view.highestBidder) === opp.seat}
                   totalScore={opp.totalScore}
                   secondsLeft={oppSeconds}
                   connected={opp.connected}
@@ -199,8 +258,8 @@ export function BatakScreen({ view, seat, onAction, onNextRound, onLeave }: Bata
           {/* Central trick area */}
           <View style={styles.centerSection}>
             <TrickArea
-              currentTrick={view.currentTrick}
-              players={view.players}
+              currentTrick={shownTrick}
+              players={players}
               mySeat={seat}
               cardWidth={layout.trickCardWidth}
             />

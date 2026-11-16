@@ -1,8 +1,7 @@
-import type { GameNotice } from '@kahve/core';
 import type { ViewStyle } from 'react-native';
 
-// Card, Suit and Rank are the engine's (@kahve/cards, B1). Pişti's view and action types come from
-// @kahve/catalog (B5). Only Batak's types below are still stand-ins until @kahve/batak (B3) is merged.
+// Card, Suit and Rank are the engine's (@kahve/cards, B1). Pişti's and Batak's view and action types come
+// from @kahve/catalog (B5). What is left here is UI-only: card helpers and component props.
 import type { Card, Rank, Suit } from '@kahve/cards';
 
 export type { Card, Rank, Suit };
@@ -112,72 +111,7 @@ export interface HandProps {
   bleedBottom?: number;
 }
 
-// ---- 4. BatakScreen and Dialog Types & Props ----
-
-export interface BatakPlayerPublic {
-  seat: number;
-  name: string;
-  handCount: number;
-  tricksWon: number;
-  bid: number | null; // null = hasn't spoken, 0 = pass, 4..13 = bid
-  passed: boolean;
-  totalScore: number;
-  connected?: boolean;
-  isBot?: boolean;
-}
-
-export interface TrickCard {
-  seat: number;
-  card: Card;
-}
-
-export interface BatakRoundResult {
-  scores: number[];
-  totals: number[];
-  winnerSeats: number[];
-  matchOver: boolean;
-  declarerSeat: number | null;
-  contractBid: number;
-  declarerSucceeded: boolean;
-}
-
-export interface BatakView {
-  phase: 'bidding' | 'selectingTrump' | 'playing' | 'finished';
-  variant: 'ihaleli' | 'kozMaca' | 'esli';
-  seat: number;
-  turn: number;
-  hand: Card[];
-  legalCardIds: number[];
-  players: BatakPlayerPublic[];
-  minBid: number;
-  highestBid: number;
-  highestBidder: number | null;
-  canPass: boolean;
-  trump: Suit | null;
-  trumpBroken: boolean;
-  currentTrick: TrickCard[];
-  lastTrickWinner: number | null;
-  round: number;
-  targetRounds: number;
-  turnMsLeft?: number | null;
-  noticeMsLeft?: number;
-  notices?: GameNotice[];
-  result: BatakRoundResult | null;
-}
-
-export type BatakAction =
-  | { type: 'bid'; amount: number }
-  | { type: 'pass' }
-  | { type: 'selectTrump'; suit: Suit }
-  | { type: 'play'; cardId: number };
-
-export interface BatakScreenProps {
-  view: BatakView;
-  seat: number;
-  onAction(action: BatakAction): void | Promise<void>;
-  onNextRound?(): void | Promise<void>;
-  onLeave?(): void;
-}
+// ---- 4. Batak dialogs (the view and action types come from @kahve/catalog) ----
 
 export interface BidDialogProps {
   visible: boolean;

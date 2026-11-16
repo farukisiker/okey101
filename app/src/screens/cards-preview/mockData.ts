@@ -1,5 +1,5 @@
-import type { PistiView } from '@kahve/catalog';
-import { type BatakView, type Card, createDeck, makeCard } from '../../components/cards';
+import type { BatakView, PistiView } from '@kahve/catalog';
+import { type Card, createDeck, makeCard } from '../../components/cards';
 
 // Pre-generated deck
 const DECK = createDeck();
@@ -115,52 +115,76 @@ const batakHand: Card[] = [
   makeCard('C', 5, 42),
 ];
 
-export const mockBatakBiddingMyTurn: BatakView = {
-  phase: 'bidding',
+const batakOptions: BatakView['options'] = {
   variant: 'ihaleli',
+  targetRounds: 5,
+  minBid: 5,
+  forcedDealerBid: 4,
+  voidTrump: 'always',
+  mustRaise: true,
+  trumpLeadNeedsBreak: true,
+  zeroTrickPenalty: 'bid',
+  kozMacaOvertrickLimit: 0,
+  partnerDummy: false,
+};
+
+type PreviewBatakView = BatakView & { turnMsLeft?: number | null };
+
+const batakPlayer = (seat: number, name: string, bid: number | null, passed: boolean, isDeclarer = false, tricksWon = 0) => ({
+  seat,
+  name,
+  handCount: 13,
+  tricksWon,
+  bid,
+  passed,
+  isDeclarer,
+});
+
+export const mockBatakBiddingMyTurn: PreviewBatakView = {
+  options: batakOptions,
+  variant: 'ihaleli',
+  round: 1,
+  targetRounds: 5,
+  dealer: 3,
   seat: 0,
   turn: 0,
+  turnNumber: 3,
+  phase: 'bidding',
   hand: batakHand,
-  legalCardIds: batakHand.map((c) => c.id),
-  players: [
-    { seat: 0, name: 'Sen', handCount: 13, tricksWon: 0, bid: null, passed: false, totalScore: 0, connected: true },
-    { seat: 1, name: 'Kemal', handCount: 13, tricksWon: 0, bid: 5, passed: false, totalScore: 0, connected: true },
-    { seat: 2, name: 'Ayşe', handCount: 13, tricksWon: 0, bid: 0, passed: true, totalScore: 0, connected: true },
-    { seat: 3, name: 'Fatma', handCount: 13, tricksWon: 0, bid: 0, passed: true, totalScore: 0, connected: true },
-  ],
+  legalCardIds: [],
+  players: [batakPlayer(0, 'Sen', null, false), batakPlayer(1, 'Kemal', 5, false), batakPlayer(2, 'Ayşe', 0, true), batakPlayer(3, 'Fatma', 0, true)],
   minBid: 5,
   highestBid: 5,
   highestBidder: 1,
   canPass: true,
+  declarer: null,
+  contract: 0,
+  forcedBid: false,
   trump: null,
   trumpBroken: false,
   currentTrick: [],
+  lastTrick: null,
   lastTrickWinner: null,
-  round: 1,
-  targetRounds: 5,
-  turnMsLeft: 28000,
+  tricks: [],
+  lastAction: null,
   result: null,
+  turnMsLeft: 28000,
 };
 
-export const mockBatakTrumpSelection: BatakView = {
+export const mockBatakTrumpSelection: PreviewBatakView = {
   ...mockBatakBiddingMyTurn,
   phase: 'selectingTrump',
   highestBid: 7,
   highestBidder: 0,
-  players: [
-    { seat: 0, name: 'Sen', handCount: 13, tricksWon: 0, bid: 7, passed: false, totalScore: 0, connected: true },
-    { seat: 1, name: 'Kemal', handCount: 13, tricksWon: 0, bid: 5, passed: true, totalScore: 0, connected: true },
-    { seat: 2, name: 'Ayşe', handCount: 13, tricksWon: 0, bid: 0, passed: true, totalScore: 0, connected: true },
-    { seat: 3, name: 'Fatma', handCount: 13, tricksWon: 0, bid: 0, passed: true, totalScore: 0, connected: true },
-  ],
+  declarer: 0,
+  contract: 7,
+  players: [batakPlayer(0, 'Sen', 7, false, true), batakPlayer(1, 'Kemal', 5, true), batakPlayer(2, 'Ayşe', 0, true), batakPlayer(3, 'Fatma', 0, true)],
 };
 
-export const mockBatakPlayingMyTurn: BatakView = {
-  ...mockBatakBiddingMyTurn,
+export const mockBatakPlayingMyTurn: PreviewBatakView = {
+  ...mockBatakTrumpSelection,
   phase: 'playing',
   trump: 'S',
-  highestBid: 7,
-  highestBidder: 0,
   trumpBroken: true,
   // Lead card was Hearts Queen played by Kemal (seat 1)
   currentTrick: [
@@ -173,22 +197,20 @@ export const mockBatakPlayingMyTurn: BatakView = {
   turnMsLeft: 22000,
 };
 
-export const mockBatakFinished: BatakView = {
-  ...mockBatakBiddingMyTurn,
+export const mockBatakFinished: PreviewBatakView = {
+  ...mockBatakTrumpSelection,
   phase: 'finished',
+  turn: null,
   trump: 'S',
-  highestBid: 7,
-  highestBidder: 0,
   hand: [],
   legalCardIds: [],
   currentTrick: [],
-  result: {
-    matchOver: false,
-    winnerSeats: [0],
-    declarerSeat: 0,
-    contractBid: 7,
-    declarerSucceeded: true,
-    scores: [7, 2, 1, 3],
-    totals: [7, 2, 1, 3],
-  },
+  players: [
+    batakPlayer(0, 'Sen', 7, false, true, 7),
+    batakPlayer(1, 'Kemal', 5, true, false, 2),
+    batakPlayer(2, 'Ayşe', 0, true, false, 1),
+    batakPlayer(3, 'Fatma', 0, true, false, 3),
+  ],
+  turnMsLeft: null,
+  result: { scores: [7, 2, 1, 3] },
 };

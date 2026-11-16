@@ -2,11 +2,11 @@ import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { colors, font } from '../../theme';
 import { t } from '../../i18n';
 import { CardView, cardHeight } from './CardView';
-import type { BatakPlayerPublic, TrickCard } from './fakeTypes';
+import type { BatakPlayerPublic, TrickCard } from '@kahve/catalog';
 
 export interface TrickAreaProps {
   currentTrick: TrickCard[];
-  players: BatakPlayerPublic[];
+  players: Pick<BatakPlayerPublic, 'seat' | 'name'>[];
   mySeat: number;
   cardWidth: number;
   style?: ViewStyle;
