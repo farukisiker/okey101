@@ -62,3 +62,46 @@ Test yapısı: memory'deki "Kahve Test" tarifi, bu dalın son commit'inden.
 - Kart sesleri: `registerCardAudioSource` ile .wav kaydı yapılınca çalar; şu an sessiz.
 - `cards-preview` ekranı uygulamaya bağlı değil (yalnız geliştirici önizlemesi), derleniyor.
 - Expo export boyutu önceki sürümle karşılaştırılmadı (yalnız bu dalın değeri).
+
+---
+
+# İkinci tur: Batak (2026-11-16)
+
+DURUM: TAMAM, tablet denemesi bekliyor. feat/kahve (80537c6: B5, ed2d3eb: B3) birleştirildi, çakışma yok.
+
+## Commit'ler
+- `a9e7973` host (Room + LocalHost), kendi `turnMsLeft`'i olmayan HER görünüme sunucu saatiyle `turnMsLeft` ekler (Batak görünümünde `clock` alanı hiç yok). Okey görünümleri aynen; mevcut testler yeşil.
+- `862da37` (a) catalog: `batakDef` aktif, `packages/catalog/src/batak.ts` tip ihracı (`BatakView/BatakAction/BatakOptions/BatakPhase/BatakPlayerPublic/TrickCard/CompletedTrick`), `batak-catalog.test.ts`. "Yakında" örneği testleri `batak` → `tavla` (catalog.test, room-generic G3, server-generic).
+- `da05785` (d) `cards-e2e.test.ts`'e Batak: 1 kişi + 3 bot dört koltuğu doldurur, ihale (kişi pas geçer; zorla ihale ona kalırsa maça seçer), 13 löve, toplam = el puanı, `turnMsLeft` alanı, sonraki el `bidding` ile başlar. LocalHost = Room eşdeğerliği Batak için iki maç sonuna kadar + replay.
+- `093a08d` (f)(g) BatakScreen gerçek BatakView'a bağlandı, fakeTypes'tan Batak görünüm tipleri silindi (yalnız UI yardımcıları ve bileşen prop'ları kaldı; TrickArea tipleri catalog'dan). App Batak'ı aynı GameLobby'den geçirir.
+
+## Bağlama ayrıntıları (B3 raporundaki farklar)
+- `turn` null olabilir; toplam/bağlantı/bot RoomInfo'dan; `result` yalnız `{scores}` → özet hook'tan (`cardSummary`, koltuk başına satır).
+- İhaleci rozeti `view.declarer ?? view.highestBidder`.
+- Löve tamamlanınca `currentTrick` boşalıyor: sıradaki kart açılana kadar masada `lastTrick` gösteriliyor (aksi halde dördüncü kart hiç görünmezdi). Yalnız son löve görünür (KURALLAR §7).
+- Löve sesi/titreşimi löve sayısı artınca bir kez (`cardSfx`, ses dosyası yokken sessiz). Android geri → çıkış onayı. Geri sayım `turnMsLeft`'ten.
+- GameLobby: Batak `seatChoices [4]` → koltuk seçici ve eşli anahtarı görünmez; Hemen Oyna / Arkadaşlarla aynen.
+
+## Kabul
+```
+packages/game-core test:       Tests  41 passed (41)
+packages/cards test:       Tests  36 passed (36)
+shared test:       Tests  104 passed (104)
+packages/pisti test:       Tests  46 passed (46)
+packages/batak test:       Tests  60 passed (60)
+packages/catalog test:       Tests  75 passed (75)
+app test:       Tests  30 passed (30)
+server test:       Tests  77 passed (77)
+```
+Toplam 469; tüm paketlerde typecheck `Done`. `npx expo export --platform android`: hbc **5.5 MB**, 1493 modül.
+
+## Tablette Batak adımları
+1. Salon → Kağıt Masaları → Batak → lobi (koltuk seçici yok) → Hemen Oyna: 3 bot rakip. Sıra sende gelince ihale kutusu (en az 5, pas); ihaleyi alırsan koz kutusu. Oyun: yalnız yasal kartlar oynanabilir (renge uy, büyüt, koz kuralları); dördüncü kart atılınca löve masada kalır, kazanan açınca kalkar.
+2. El sonu özet 4 satır (bu el / toplam); 5 el sonunda (varsayılan hedef) "Yeni maç". Geri tuşu: oyunda onay → lobi → oyun listesi → salon; "Son oynadığın: Batak" lobiye götürür.
+3. İki cihaz yerel sunucuda: A Batak → Arkadaşlarla → Masa aç; B listede görür → Otur; A "Botlarla başlat" (dört koltuk iki botla dolar). Bir el oynayın. Pişti salonunda Batak masası görünmemeli.
+4. Pişti ve okey regresyonu (ilk turdaki adımlar).
+
+## Açık noktalar (ek)
+- Batak varyantları (Koz Maça, Eşli, Gömmeli) motor kapsamı dışında; lobide ayar yok, `ihaleli` sabit.
+- Ses dosyaları yokken kart sesleri sessiz.
+- Pi sunucusu güncellenmeden çevrimiçi Batak `serverUpdating` döner.
