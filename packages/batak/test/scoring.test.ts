@@ -19,8 +19,8 @@ describe('roundScores', () => {
     expect(roundScores([9, 4, 0, 0], 0, 6, { zeroTrickPenalty: 'fixed5' })).toEqual([9, 4, -5, -5]);
     expect(roundScores([9, 4, 0, 0], 0, 6, { zeroTrickPenalty: 'none' })).toEqual([9, 4, 0, 0]);
   });
-  it('declarer with zero tricks pays the contract only once', () => {
-    expect(roundScores([0, 5, 4, 4], 2, 6, defaultOptions)).toEqual([-6, 5, -6, 4]);
+  it.each(['bid', 'fixed5', 'none'] as const)('declarer with zero tricks pays the contract only once (%s)', zeroTrickPenalty => {
+    expect(roundScores([4, 5, 0, 4], 2, 6, { zeroTrickPenalty })).toEqual([4, 5, -6, 4]);
   });
 });
 
