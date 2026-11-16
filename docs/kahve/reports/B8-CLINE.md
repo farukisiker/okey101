@@ -200,3 +200,17 @@ id'si) — el sonunda gizli kalan kart yok.
   `shared/**`, `server/**`, `app/**`, `package.json`, lockfile: dokunulmadı. Push/merge yok.
   Commit mesajı: `B8 step 2: viewFor leak tests for batak (Cline)`.
 
+
+## 1000 seed: Pişti ve Batak (Fable koşturdu, feat/kahve @ ca6e4fc)
+`corepack pnpm exec tsx tools/sim/run.ts --seeds 1000 --games pisti,batak --quiet`
+```
+B8 sim | oyun=2 (pisti,batak) seed/oyun=1000/1000 seedStart=1 rounds/seed=1 stepCap=2000 seviyeler=easy,medium,hard sampleImmutable=100
+OZET
+oyun      seed   el     adim     ms       gecersiz  bitmeyen  jsonHata  seviye(e/m/h)
+pisti     2000   2000   96000    64202    0         0         0         32000/32000/32000
+  pisti: koltuk=2/4 saatTazeleme=0
+batak     1000   1000   57403    50197    0         0         0         19112/19139/19152
+  batak: koltuk=4 saatTazeleme=0
+TOPLAM: 2 oyun, 3000 seed, 3000 el, 153403 adim, 0 gecersiz hamle, 0 bitmeyen el, 0 json/sozlesme hatasi, 114399 ms
+TOPLAM seviye(e/m/h)=51112/51139/51152 saatTazeleme=0
+```
