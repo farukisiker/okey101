@@ -41,7 +41,7 @@ Komutlar: `pnpm test`, `pnpm typecheck`. Bu makinede `pnpm` PATH'te yok; `corepa
 |---|---|---|---|---|
 | B1 @kahve/cards | Codex (Astra → Sol) | **birleşti** (Astra ONAY) | `307dcdb` | 36 test |
 | B2 @kahve/pisti | Codex (Sol) + Claude Opus review | **birleşti** | `e372901` | Astra 1 GERİ GÖNDER (bot hafızası) → Sol düzeltti; Codex kotası bitince yeniden review + structuredClone→JSON clone Claude Opus. 46 test, 200 seed 0 geçersiz |
-| B3 @kahve/batak | Claude Opus (Codex kotası yedeği) | **birleşti** | `ed2d3eb` | 60 test, 200 maç 0 geçersiz; hard bot medium'dan az güçlü (savunma oyunu yok). Codex dönünce Astra ikinci göz review'u önerilir |
+| B3 @kahve/batak | Claude Opus (Codex kotası yedeği) | **birleşti** | `ed2d3eb` | 60 test, 200 maç 0 geçersiz; hard bot medium'dan az güçlü (savunma oyunu yok). **Astra ikinci göz review'u: ONAY** (04:26, engelleyici yok; 1 test kurulum hatası Sol düzeltti) |
 | B4 CardView + Pişti/Batak ekranları | Antigravity (Argon → Flash) | **birleşti** (Argon 1 GERİ GÖNDER) | `bae492b` | SVG yok. agy headless komut çalıştıramıyor: Flash sadece dosya yazar, typecheck/commit Fable. Sesler (.wav) henüz yok. Açık: köşe takım simgesi 12 pt |
 | B5 catalog/sunucu/çevrimdışı entegrasyon | Claude Opus | **birleşti** (Pişti + Batak) | `80537c6`, `ca6e4fc` | İki oyun da çevrimdışı ve çevrimiçi oynanır |
 | B6 GameShell + reklam kapısı | Claude Sonnet | **birleşti** | `7e71dd4` | okey reklam davranışı testle sabit |
@@ -76,7 +76,7 @@ Komutlar: `pnpm test`, `pnpm typecheck`. Bu makinede `pnpm` PATH'te yok; `corepa
 - Batak Usta bot Orta'dan biraz güçlü (savunma oyunu yok). Eşli Batak, Koz Maça, Gömmeli ilk sürümde yok.
 - Yeni metinler 11 dilde İngilizce yer tutucu (çeviri Faz D).
 - Olası çift reklam sayımı: el sonu ekranındayken uygulama arka plana atılıp dönülürse (tablette denenmeli).
-- Batak motoru Codex kotası bittiği için Claude Opus'ta yazıldı; Codex dönünce (04:23 sonrası) Astra'nın ikinci göz review'u önerilir.
+- Batak motoru Codex kotası bittiği için Claude Opus'ta yazıldı; Astra 04:26'da ikinci göz review'unda ONAY verdi.
 - Kapsam yüzdesi ölçülmedi (coverage paketi bilerek eklenmedi); yerine test–kural eşleme tabloları raporlarda.
 
 **Ortam notları**
