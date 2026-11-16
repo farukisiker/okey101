@@ -2,7 +2,7 @@
 // same seed, same names, same human moves -> same states, clocks, notice freezes, bot timing, totals and log.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnyGameDefinition, GameDefinition } from '@kahve/core';
-import { okey101Def, okeyDuzDef, pistiDef } from '@kahve/catalog';
+import { batakDef, okey101Def, okeyDuzDef, pistiDef } from '@kahve/catalog';
 import { Room, replay } from '../src/room';
 import { LocalHost } from '../../app/src/net/localHost';
 import { type StubAction, type StubOptions, type StubState, type StubView, stubDef } from './stub-game';
@@ -185,6 +185,27 @@ describe('LocalHost = Room', () => {
       }
       expect(p.host.matchOver()).toBe(true);
       if ('partnerMode' in options) expect([p.host.totals[2], p.host.totals[3]]).toEqual([p.host.totals[0], p.host.totals[1]]);
+      p.stop();
+    }
+  });
+
+  it('batak (bidding, trump, tricks) through the real definition, up to a match end', () => {
+    for (const seed of [41, 42]) {
+      const p = pair(batakDef, { seed, options: { targetRounds: 5 }, botDelayMs: 20, turnTimeoutMs: 100 });
+      let rounds = 0;
+      while (rounds < 12) {
+        run(p, 30_000, 500);
+        expect(p.host.roundOver()).toBe(true);
+        rounds++;
+        if (p.host.matchOver()) break;
+        expect(p.room.nextRound()).toBeNull();
+        expect(p.host.nextRound(Date.now())).toEqual({ ok: true });
+        same(p);
+      }
+      expect(p.host.matchOver()).toBe(true);
+      expect(rounds).toBeGreaterThanOrEqual(5);
+      expect(p.host.view(0, Date.now())).toHaveProperty('turnMsLeft');
+      expect(replay(batakDef, p.host.options, p.host.seed, p.host.log)).toEqual(p.host.state);
       p.stop();
     }
   });
