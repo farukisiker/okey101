@@ -87,10 +87,12 @@ El sonunda her oyuncunun topladığı kartlara bakılır:
 
 ## Süre ve Zaman Aşımı
 
-- Her hamle için **30 saniye** vardır. Oyunun ilk turunda süre iki katıdır (60 saniye).
+- Her hamle için **30 saniye** vardır. Oyunun ilk sırasında süre iki katıdır: **60 saniye**.
+- Bu süreler oyun ayarı değildir; her masada aynıdır.
 - Süre biterse uygulama oyuncu adına oynar: yerdeki kartı alacak bir kart varsa onu atar;
   yoksa pişti verme riski en düşük, en küçük kartı atar.
 - Bağlantısı kopan oyuncunun yerine bot oynar; oyuncu dönerse yerini geri alır.
+- Botun seviyesi (kolay, orta, zor) masada seçilir; oyun ayarlarında böyle bir ayar yoktur.
 
 ## Ayarlar
 
@@ -99,13 +101,15 @@ El sonunda her oyuncunun topladığı kartlara bakılır:
 | `seats` | `2`, `4` | `2` |
 | `partnerMode` | `false`, `true` (yalnız 4 kişide; karşılıklı oturanlar ortak) | `false` |
 | `targetScore` | `51`, `101`, `151` | `151` |
-| `pistiPoints` | `10` | `10` |
-| `jackPistiPoints` | `20` | `20` |
 | `hiddenCards` | `'reveal'`, `'secret'` | `'reveal'` |
 | `openingJack` | `'redraw'`, `'allow'` | `'redraw'` |
-| `turnTimeoutMs` | sayı (milisaniye) | `30000` |
-| `firstTurnFactor` | sayı (ilk tur süre çarpanı) | `2` |
-| `botLevel` | `'easy'`, `'medium'`, `'hard'` | `'medium'` |
+| `pistiPoints` | 0 veya daha büyük tam sayı | `10` |
+| `jackPistiPoints` | 0 veya daha büyük tam sayı | `20` |
+| `acePoints` | 0 veya daha büyük tam sayı | `1` |
+| `jackPoints` | 0 veya daha büyük tam sayı | `1` |
+| `clubTwoPoints` | 0 veya daha büyük tam sayı | `2` |
+| `diamondTenPoints` | 0 veya daha büyük tam sayı | `3` |
+| `mostCardsPoints` | 0 veya daha büyük tam sayı | `3` |
 
 Açıklamalar:
 
@@ -116,6 +120,10 @@ Açıklamalar:
   (`redraw`). `allow` seçilirse oyun Vale ile başlayabilir.
 - **`partnerMode`** — Yalnızca 4 kişilik oyunda çalışır. Açık olduğunda karşılıklı oturan iki
   oyuncu ortak olur; kasa ve puan ortaktır.
+- **Puan ayarları** — `pistiPoints`, `jackPistiPoints`, `acePoints`, `jackPoints`,
+  `clubTwoPoints`, `diamondTenPoints` ve `mostCardsPoints`, yukarıdaki "Puanlama" bölümündeki
+  puanları tek tek değiştirir. Her biri 0 veya daha büyük bir tam sayı olabilir; 0 yazılırsa o
+  kalemden puan verilmez.
 
 `hiddenCards` ve `openingJack` için yazılan değerler **genel kabul gören varsayılanlardır**;
 kahvehaneden kahvehaneye değiştiği için ayarla değiştirilebilir.

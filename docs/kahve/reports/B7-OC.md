@@ -60,3 +60,36 @@ Kapsam dışı bırakılanlar (plan §1): Gömmeli varyant, `kanliGommeli`, `sea
 - ADIM 2: `tools/sim/run.ts` (her aktif oyun için 1000 seed bot-bot, geçersiz hamle 0) ve
   `viewFor` sızıntı testleri — Fable "motor birleşti" dediğinde ayrı onayla.
 - Ayar adlarının motorla son eşitlemesi (B2/B3 birleşince).
+
+## B7b — Ayar tablolarının motorla eşitlenmesi (2026-11-16)
+
+Motorlar birleşti (`feat/kahve` ile senkron). Bu turda yalnız iki kural belgesi ve bu rapor
+düzenlendi; motor kodu, README ve diğer belgeler değiştirilmedi.
+
+Kaynaklar: `packages/pisti/src/options.ts`, `packages/pisti/src/types.ts`,
+`packages/batak/src/options.ts`, `packages/batak/src/types.ts`,
+`packages/{pisti,batak}/src/definition.ts`, `docs/kahve/reports/B2-CODEX.md`,
+`docs/kahve/reports/B3.md`.
+
+- **`docs/oyunlar/pisti.md`** — AYARLAR tablosu motorun 12 alanıyla birebir: `seats`,
+  `partnerMode`, `targetScore`, `hiddenCards`, `openingJack`, `pistiPoints`, `jackPistiPoints`,
+  `acePoints`, `jackPoints`, `clubTwoPoints`, `diamondTenPoints`, `mostCardsPoints`.
+  İzin verilen değerler ve varsayılanlar koddan alındı; puan ayarları "0 veya daha büyük tam
+  sayı" olarak yazıldı. `turnTimeoutMs`, `firstTurnFactor` ve `botLevel` satırları kaldırıldı;
+  yerine süre bölümünde her hamlenin 30 saniye, oyunun ilk sırasının 60 saniye olduğu ve bot
+  seviyesinin masada seçildiği sade Türkçeyle yazıldı.
+- **`docs/oyunlar/batak.md`** — Tablo motordaki 10 alanla birebir: `variant`, `targetRounds`,
+  `minBid`, `forcedDealerBid`, `voidTrump`, `mustRaise`, `trumpLeadNeedsBreak`,
+  `zeroTrickPenalty`, `kozMacaOvertrickLimit`, `partnerDummy`. `minBid` yalnız `4`/`5`,
+  `forcedDealerBid` yalnız `4`/`5` (eşli için yazılan `8` ve `7` kaldırıldı). `variant` yalnız
+  `'ihaleli'`; Eşli ve Koz Maça "hazırlanıyor, ilk sürümde oynanamaz" olarak işaretlendi.
+  `kozMacaOvertrickLimit` ve `partnerDummy` motor alanı olduğu için tabloda kaldı, ancak
+  "hazırlanıyor" notuyla. `turnTimeoutMs`, `firstTurnFactor`, `botLevel` satırları kaldırıldı;
+  süre ve bot seviyesi Pişti'deki gibi düz metinle anlatıldı. İhale metnindeki zorunlu dağıtan
+  ihalesi "4 (ayarla 5 de olabilir)" biçiminde düzeltildi.
+- UTF-8 denetimi (Node ile bayt okuma): iki dosyada da BOM yok, UTF-8 gidiş-dönüşü bayt-eşit,
+  Türkçe harfler korunuyor. `turnTimeoutMs` / `firstTurnFactor` / `botLevel` ve `8` / `7`
+  değerleri belgelerde kalmadı (grep ile doğrulandı).
+- Değişen dosyalar yalnız: `docs/oyunlar/pisti.md`, `docs/oyunlar/batak.md`,
+  `docs/kahve/reports/B7-OC.md`. Push yapılmadı. Yukarıdaki "Bekleyenler" listesinde yer alan
+  ayar adlarının motorla eşitlenmesi maddesi bu bölümle kapandı.
