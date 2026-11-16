@@ -6,7 +6,10 @@ export interface CardOpponentPanelProps {
   name: string;
   active: boolean;
   handCount: number;
+  /** Match total (not this hand's points). */
   totalScore?: number;
+  /** Pişti partners mode: this player is the viewer's partner. */
+  isPartner?: boolean;
   secondsLeft?: number | null;
   connected?: boolean;
   width?: number;
@@ -31,6 +34,7 @@ export function CardOpponentPanel({
   active,
   handCount,
   totalScore,
+  isPartner,
   secondsLeft,
   connected = true,
   width,
@@ -70,7 +74,7 @@ export function CardOpponentPanel({
     }
 
     if (totalScore != null) {
-      metaParts.push(t('cardsPoints', { n: totalScore }));
+      metaParts.push(t('cardsTotal', { n: totalScore }));
     }
   }
 
@@ -91,6 +95,11 @@ export function CardOpponentPanel({
           {active ? '▶ ' : ''}
           {name}
         </Text>
+        {isPartner && (
+          <View style={styles.partnerChip}>
+            <Text style={styles.partnerChipText}>{t('partnerTag')}</Text>
+          </View>
+        )}
         {isDeclarer && (
           <View style={styles.declarerChip}>
             <Text style={styles.declarerChipText}>★</Text>
@@ -150,6 +159,17 @@ const styles = StyleSheet.create({
   declarerChipText: {
     color: '#2b1d00',
     fontSize: font.small,
+    fontWeight: '900',
+  },
+  partnerChip: {
+    backgroundColor: colors.ok,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  partnerChipText: {
+    color: '#07301f',
+    fontSize: 15,
     fontWeight: '900',
   },
   meta: {

@@ -7,7 +7,7 @@ import { t } from '../i18n';
 import { colors, font } from '../theme';
 import { Button } from './Button';
 import { SummaryTable } from './SummaryTable';
-import { type RoundSummary, summaryHeadline } from './roundSummary';
+import { type RoundSummary, summaryHeadlineText } from './roundSummary';
 
 export type { RoundSummary, RoundSummaryRow } from './roundSummary';
 export { summaryHeadline } from './roundSummary';
@@ -76,11 +76,8 @@ export function GameShell(p: GameShellProps) {
 
   let headline = '';
   if (summary) {
-    const head = summaryHeadline(summary, p.mySeat ?? -1);
-    if (head.kind === 'youWin') headline = t(summary.matchOver ? 'youWon' : 'youFinished');
-    else if (head.kind === 'winner') {
-      headline = t(summary.matchOver ? 'winnerIs' : 'actFinished', { name: head.names.join(', ') });
-    } else headline = t('tilesRanOut');
+    const head = summaryHeadlineText(summary, p.mySeat ?? -1);
+    headline = t(head.key, head.vars);
   }
 
   return (
@@ -112,8 +109,8 @@ export function GameShell(p: GameShellProps) {
                 headers={[t('player'), t('thisHand'), t('total')]}
                 rows={summary.rows.map((r) => ({
                   key: r.seat,
-                  name: r.seat === p.mySeat ? t('you') : r.name,
-                  isMe: r.seat === p.mySeat,
+                  name: !r.seats && r.seat === p.mySeat ? t('you') : r.name,
+                  isMe: r.seats ? r.seats.includes(p.mySeat ?? -1) : r.seat === p.mySeat,
                   isWinner: summary.winnerSeats.includes(r.seat),
                   cells: [r.points, r.total],
                 }))}

@@ -8,6 +8,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { GameShell, type RoundSummary } from '../components/GameShell';
 import type { RoomInfo } from '@okey/shared';
 import type { PistiAction, PistiView } from '@kahve/catalog';
+import { hasPistiChance } from '../components/cards/pistiChance';
 import { cardSummary } from '../net/cardSummary';
 import { type HostTimes, msLeftNow } from '../net/localHost';
 import {
@@ -212,6 +213,7 @@ export function PistiScreen({ view, viewAt, room, seat, summary: summaryProp, hu
                   capturedCount={opp.capturedCount}
                   pistiCount={opp.pistiCount}
                   totalScore={opp.totalScore}
+                  isPartner={myPlayer?.team != null && opp.team === myPlayer.team}
                   secondsLeft={oppSeconds}
                   connected={opp.connected}
                   width={layout.oppPanelWidth}
@@ -233,6 +235,7 @@ export function PistiScreen({ view, viewAt, room, seat, summary: summaryProp, hu
             <PistiCenterPile
               topCard={view.topCard}
               centerCount={view.centerCount}
+              pistiChance={hasPistiChance(view.topCard, view.centerCount, handOrder)}
               cardWidth={layout.centerPileCardWidth}
               onPress={
                 isSelectedPlayable ? () => handlePlayCard(selectedCardId!) : undefined
