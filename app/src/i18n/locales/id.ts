@@ -327,6 +327,8 @@ export const id: Dict = {
   cardsSelectedA11y: ' (selected)',
   cardsSeatFallback: 'Seat {n}',
   batakContractBid: 'Bid: {n}',
+  batakNoteMade: 'Bid: {name} {n}, made it, {pts}',
+  batakNoteFailed: 'Bid: {name} {n}, failed, {pts}',
   cardsPreviewPistiInit: 'Pişti Initial',
   cardsPreviewPistiOpp: 'Pişti Opportunity',
   cardsPreviewPistiCeleb: 'Pişti Celebration',

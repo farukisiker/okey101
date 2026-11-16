@@ -1,31 +1,32 @@
 import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { colors, font } from '../../theme';
 import { t } from '../../i18n';
-import { CardView, cardHeight } from './CardView';
+import { CardView } from './CardView';
+import { type TrickPosition, fitTrickLayout } from './trickLayout';
 import type { BatakPlayerPublic, TrickCard } from '@kahve/catalog';
 
 export interface TrickAreaProps {
   currentTrick: TrickCard[];
   players: Pick<BatakPlayerPublic, 'seat' | 'name'>[];
   mySeat: number;
+  /** The card width the screen would like; the cross shrinks it when the box is too small. */
   cardWidth: number;
+  /** Room the cross has to fit in (layout.trickBoxWidth / trickBoxHeight). */
+  boxWidth: number;
+  boxHeight: number;
   style?: ViewStyle;
 }
 
-interface SeatSlot {
-  position: 'south' | 'west' | 'north' | 'east';
-  seat: number;
-}
-
 /**
- * Batak 4-seat trick area in the center of the table.
- * Arranges the 4 cards played in current trick into compass positions
- * relative to the local player (South = me, North = partner/opposite, West = left, East = right).
+ * Batak 4-seat trick area in the center of the table: a cross, north on top, me (south) at the bottom,
+ * west left and east right. The slot rectangles come from trickLayout and never overlap.
  */
-export function TrickArea({ currentTrick, players, mySeat, cardWidth, style }: TrickAreaProps) {
-  const height = cardHeight(cardWidth);
+export function TrickArea({ currentTrick, players, mySeat, cardWidth, boxWidth, boxHeight, style }: TrickAreaProps) {
+  const lay = fitTrickLayout(boxWidth, boxHeight, cardWidth);
+  const cw = lay.cardWidth;
+  const height = lay.cardHeight;
 
-  const slots: SeatSlot[] = [
+  const slots: { position: TrickPosition; seat: number }[] = [
     { position: 'south', seat: mySeat },
     { position: 'west', seat: (mySeat + 3) % 4 },
     { position: 'north', seat: (mySeat + 2) % 4 },
@@ -33,6 +34,7 @@ export function TrickArea({ currentTrick, players, mySeat, cardWidth, style }: T
   ];
 
   const getPlayerName = (seat: number) => {
+    if (seat === mySeat) return t('you');
     return players.find((p) => p.seat === seat)?.name ?? t('cardsSeatFallback', { n: seat + 1 });
   };
 
@@ -40,50 +42,40 @@ export function TrickArea({ currentTrick, players, mySeat, cardWidth, style }: T
     return currentTrick.find((tc) => tc.seat === seat)?.card ?? null;
   };
 
-  const areaWidth = Math.round(cardWidth * 3.2);
-  const areaHeight = Math.round(height * (cardWidth < 50 ? 1.4 : 1.75));
-
   return (
-    <View style={[styles.container, { width: areaWidth, height: areaHeight }, style]}>
+    <View style={[styles.container, { width: lay.width, height: lay.height }, style]}>
       {slots.map(({ position, seat }) => {
         const card = getTrickCard(seat);
         const name = getPlayerName(seat);
-
-        let posStyle: ViewStyle;
-        switch (position) {
-          case 'north':
-            posStyle = { top: 0, alignSelf: 'center' };
-            break;
-          case 'south':
-            posStyle = { bottom: 0, alignSelf: 'center' };
-            break;
-          case 'west':
-            posStyle = { left: 4, top: Math.round((areaHeight - height) / 2) };
-            break;
-          case 'east':
-            posStyle = { right: 4, top: Math.round((areaHeight - height) / 2) };
-            break;
-        }
+        const r = lay.slots[position];
 
         return (
-          <View key={position} style={[styles.cardSlot, posStyle, { width: cardWidth }]}>
+          <View
+            key={position}
+            style={[styles.cardSlot, { left: r.x, top: r.y, width: r.w, height: r.h }]}
+          >
             {card ? (
-              <CardView card={card} width={cardWidth} />
+              <CardView card={card} width={cw} />
             ) : (
               <View
                 style={[
                   styles.placeholder,
                   {
-                    width: cardWidth - 2,
+                    width: cw - 2,
                     height: height - 2,
-                    borderRadius: Math.round(cardWidth * 0.12),
+                    borderRadius: Math.round(cw * 0.12),
                   },
                 ]}
               >
                 <Text style={styles.placeholderDot}>·</Text>
               </View>
             )}
-            <View style={styles.nameTag}>
+            <View
+              style={[
+                styles.nameTag,
+                lay.tagMode === 'overlay' ? styles.nameTagOverlay : { height: lay.tagHeight - 2 },
+              ]}
+            >
               <Text style={styles.nameText} numberOfLines={1}>
                 {name}
               </Text>
@@ -104,7 +96,7 @@ const styles = StyleSheet.create({
   cardSlot: {
     position: 'absolute',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   placeholder: {
     borderWidth: 1.5,
@@ -112,7 +104,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.2)',
     backgroundColor: 'rgba(0, 0, 0, 0.12)',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   placeholderDot: {
     color: 'rgba(255, 255, 255, 0.25)',
@@ -121,11 +113,17 @@ const styles = StyleSheet.create({
   },
   nameTag: {
     marginTop: 2,
+    justifyContent: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 6,
     maxWidth: 90,
+  },
+  nameTagOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    marginTop: 0,
   },
   nameText: {
     color: colors.text,

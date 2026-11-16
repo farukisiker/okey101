@@ -5,8 +5,8 @@ import { Button } from '../Button';
 import type { BidDialogProps } from './fakeTypes';
 
 /**
- * Batak bidding dialog:
- * Large numbers (4..13) and Pass button adhering to 60+ touch ergonomics (>= 56 dp).
+ * Batak bidding dialog (B11): a compact strip above the hand, no dimming backdrop, so the player can read the
+ * cards while bidding. Numbers (4..13) and Pass in one row, buttons >= 56 dp, text >= 15 pt.
  */
 export function BidDialog({
   visible,
@@ -15,6 +15,7 @@ export function BidDialog({
   highestBidderName,
   canPass,
   scale,
+  reserveBottom = 0,
   onBid,
   onPass,
 }: BidDialogProps) {
@@ -28,23 +29,20 @@ export function BidDialog({
 
   const s = Math.max(1, scale);
   const btnSize = Math.max(56, Math.round(52 * s));
-  const cardWidth = Math.min(680, Math.round(540 * s));
+  const status =
+    highestBid > 0 && highestBidderName
+      ? t('batakCurrentBid', { name: highestBidderName, n: highestBid })
+      : t('batakNoBidYet', { n: minBid });
 
+  // box-none: touches outside the compact card go to the screen underneath (action bar, hand).
   return (
-    <View style={styles.overlay}>
-      <View style={[styles.card, { width: cardWidth }]}>
-        <Text style={[styles.title, { fontSize: Math.round(font.title * s * 0.9) }]}>
-          {t('batakBidTitle')}
+    <View style={[styles.overlay, { bottom: reserveBottom }]} pointerEvents="box-none">
+      <View style={styles.card}>
+        <Text style={[styles.status, { fontSize: Math.max(15, Math.round(font.body * Math.min(s, 1.2))) }]} numberOfLines={1}>
+          {`${t('batakBidTitle')} · ${status}`}
         </Text>
 
-        <Text style={[styles.status, { fontSize: Math.round(font.body * s) }]}>
-          {highestBid > 0 && highestBidderName
-            ? t('batakCurrentBid', { name: highestBidderName, n: highestBid })
-            : t('batakNoBidYet', { n: minBid })}
-        </Text>
-
-        {/* 2-row grid of numbers */}
-        <View style={styles.grid}>
+        <View style={styles.row}>
           {bids.map((b) => {
             const isLegal = b > highestBid && b >= minBid;
             return (
@@ -64,16 +62,12 @@ export function BidDialog({
               />
             );
           })}
-        </View>
-
-        {/* Pass action */}
-        <View style={styles.actionRow}>
           <Button
             title={t('batakPass')}
             onPress={onPass}
             disabled={!canPass}
             variant="secondary"
-            style={{ ...styles.passBtn, minWidth: Math.round(180 * s), minHeight: btnSize }}
+            style={{ ...styles.passBtn, minWidth: Math.round(96 * s), minHeight: btnSize }}
           />
         </View>
       </View>
@@ -83,50 +77,48 @@ export function BidDialog({
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 6,
     zIndex: 1000,
   },
   card: {
     backgroundColor: colors.feltLight,
     borderColor: colors.wood,
-    borderWidth: 3,
-    borderRadius: 20,
-    padding: 24,
+    borderWidth: 2,
+    borderRadius: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
     alignItems: 'center',
-    gap: 16,
+    gap: 4,
+    maxWidth: '98%',
     shadowColor: '#000',
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
     elevation: 10,
-  },
-  title: {
-    color: colors.text,
-    fontWeight: '900',
-    textAlign: 'center',
   },
   status: {
     color: colors.accent,
-    fontWeight: '700',
+    fontWeight: '800',
     textAlign: 'center',
   },
-  grid: {
+  row: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 10,
-    marginVertical: 4,
+    alignItems: 'center',
+    gap: 6,
   },
   bidBtn: {
     paddingHorizontal: 0,
     paddingVertical: 0,
   },
-  actionRow: {
-    marginTop: 8,
-  },
   passBtn: {
     borderColor: colors.muted,
+    paddingHorizontal: 10,
   },
 });

@@ -342,6 +342,8 @@ export const tr = {
   cardsSelectedA11y: ' (seçili)',
   cardsSeatFallback: 'Koltuk {n}',
   batakContractBid: 'İhale: {n}',
+  batakNoteMade: 'İhale: {name} {n}, tuttu, {pts}',
+  batakNoteFailed: 'İhale: {name} {n}, tutmadı, {pts}',
   cardsPreviewPistiInit: 'Pişti Başlangıç',
   cardsPreviewPistiOpp: 'Pişti Fırsatı',
   cardsPreviewPistiCeleb: 'Pişti Kutlama',

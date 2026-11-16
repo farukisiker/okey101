@@ -9,6 +9,7 @@ import { GameShell, type RoundSummary } from '../components/GameShell';
 import type { RoomInfo } from '@okey/shared';
 import type { BatakAction, BatakView } from '@kahve/catalog';
 import { cardSummary } from '../net/cardSummary';
+import { batakNoteFromView } from '../net/batakSummary';
 import { type HostTimes, msLeftNow } from '../net/localHost';
 import {
   BidDialog,
@@ -120,6 +121,8 @@ export function BatakScreen({ view, viewAt, room, seat, summary: summaryProp, hu
     [players, view.highestBidder],
   );
   const layout = useCardLayout(handOrder.length);
+  // Bottom strip (action bar + hand row) the bid and trump dialogs must leave uncovered.
+  const handReserve = layout.actionBarHeight + layout.cardHeight + 26 + layout.insets.bottom;
 
   // Clear selection if selected card becomes illegal
   useEffect(() => {
@@ -169,14 +172,18 @@ export function BatakScreen({ view, viewAt, room, seat, summary: summaryProp, hu
   // Round summary for GameShell: the hook's (one object per hand); the preview builds one from the view.
   const fallbackSummary = useMemo<RoundSummary | null>(() => {
     if (summaryProp !== undefined || !view.result) return null;
-    return cardSummary({
-      names: players.map((p) => p.name),
-      points: view.result.scores,
-      totals: room?.totals ?? view.result.scores,
-      matchOver: room?.matchOver ?? false,
-      mySeat: seat,
-      you: t('you'),
-    });
+    const names = players.map((p) => p.name);
+    return {
+      ...cardSummary({
+        names,
+        points: view.result.scores,
+        totals: room?.totals ?? view.result.scores,
+        matchOver: room?.matchOver ?? false,
+        mySeat: seat,
+        you: t('you'),
+      }),
+      note: batakNoteFromView(view, view.result.scores, names, seat, t('you'), t),
+    };
   }, [summaryProp, view.result, players, room, seat]);
   const summary = summaryProp !== undefined ? summaryProp : fallbackSummary;
 
@@ -262,6 +269,8 @@ export function BatakScreen({ view, viewAt, room, seat, summary: summaryProp, hu
               players={players}
               mySeat={seat}
               cardWidth={layout.trickCardWidth}
+              boxWidth={layout.trickBoxWidth}
+              boxHeight={layout.trickBoxHeight}
             />
           </View>
 
@@ -314,6 +323,7 @@ export function BatakScreen({ view, viewAt, room, seat, summary: summaryProp, hu
         highestBidderName={highestBidder?.name ?? null}
         canPass={view.canPass}
         scale={layout.s}
+        reserveBottom={handReserve}
         onBid={(amount) => onAction({ type: 'bid', amount })}
         onPass={() => onAction({ type: 'pass' })}
       />
@@ -323,6 +333,7 @@ export function BatakScreen({ view, viewAt, room, seat, summary: summaryProp, hu
         visible={view.phase === 'selectingTrump' && isMyTurn}
         winningBid={view.highestBid}
         scale={layout.s}
+        reserveBottom={handReserve}
         onSelectTrump={(suit) => onAction({ type: 'selectTrump', suit })}
       />
 

@@ -120,6 +120,8 @@ export interface BidDialogProps {
   highestBidderName: string | null;
   canPass: boolean;
   scale: number;
+  /** Space kept free at the bottom for the action bar and the hand, so the hand stays readable (B11). */
+  reserveBottom?: number;
   onBid(amount: number): void;
   onPass(): void;
 }
@@ -128,5 +130,7 @@ export interface TrumpDialogProps {
   visible: boolean;
   winningBid: number;
   scale: number;
+  /** Space kept free at the bottom for the action bar and the hand, so the hand stays readable (B11). */
+  reserveBottom?: number;
   onSelectTrump(suit: Suit): void;
 }

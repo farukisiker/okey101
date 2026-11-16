@@ -17,6 +17,8 @@ export interface RoundSummary {
   winnerSeats: number[];
   /** True for card games (pişti, batak): nobody "finishes" a hand there, so the headline words differ. */
   cardGame?: boolean;
+  /** One extra line under the headline (Batak: the contract and whether it was made). */
+  note?: string;
 }
 
 export type SummaryHeadline =

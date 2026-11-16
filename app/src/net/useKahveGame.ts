@@ -19,6 +19,7 @@ import { type AnyGameDefinition, type GameId, newSeed } from '@kahve/core';
 import { getDefinition } from '@kahve/catalog';
 import type { RoundSummary } from '../components/roundSummary';
 import { t } from '../i18n';
+import { batakNoteFromView } from './batakSummary';
 import { cardSummary, viewScores, viewTeams } from './cardSummary';
 import { type HostTimes, LocalHost } from './localHost';
 
@@ -217,15 +218,20 @@ export function useKahveGame<V = unknown, A = unknown>(gameId: GameId | null, se
     if (!points) return null;
     const key = `${room.id}:${roundKeyOf(view, room)}`;
     if (summaryRef.current?.key === key) return summaryRef.current.summary;
-    const s = cardSummary({
-      names: room.seats.map((x, i) => x?.name ?? String(i + 1)),
-      points,
-      totals: room.totals,
-      matchOver: room.matchOver ?? false,
-      teams: viewTeams(view),
-      mySeat: seat,
-      you: t('you'),
-    });
+    const names = room.seats.map((x, i) => x?.name ?? String(i + 1));
+    const note = batakNoteFromView(view, points, names, seat, t('you'), t);
+    const s: RoundSummary = {
+      ...cardSummary({
+        names,
+        points,
+        totals: room.totals,
+        matchOver: room.matchOver ?? false,
+        teams: viewTeams(view),
+        mySeat: seat,
+        you: t('you'),
+      }),
+      ...(note ? { note } : {}),
+    };
     summaryRef.current = { key, summary: s };
     return s;
   }, [room, view, offline, host, seat]);
