@@ -2,9 +2,11 @@
 import type { AnyGameDefinition, GameId, GameMeta, TableGroup } from '@kahve/core';
 import { okey101Def, okeyDuzDef } from './okey';
 import { pistiDef } from './pisti';
+import { batakDef } from './batak';
 
 export * from './okey';
 export * from './pisti';
+export * from './batak';
 
 const meta = (id: GameId, group: TableGroup, seatChoices: readonly number[]): GameMeta => ({
   id,
@@ -18,6 +20,7 @@ const DEFINITIONS: Partial<Record<GameId, AnyGameDefinition>> = {
   okey101: okey101Def,
   okeyDuz: okeyDuzDef,
   pisti: pistiDef,
+  batak: batakDef,
 };
 
 const toMeta = ({ id, group, status, seatChoices, titleKey }: GameMeta): GameMeta => ({ id, group, status, seatChoices, titleKey });
@@ -26,7 +29,7 @@ export const CATALOG: readonly GameMeta[] = [
   toMeta(okey101Def),
   toMeta(okeyDuzDef),
   toMeta(pistiDef),
-  meta('batak', 'kagit', [4]),
+  toMeta(batakDef),
   meta('tavla', 'tavla', [2]),
   meta('king', 'kagit', [4]),
   meta('konken', 'kagit', [4]),
