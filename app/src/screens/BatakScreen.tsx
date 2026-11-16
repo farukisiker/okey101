@@ -276,7 +276,7 @@ export function BatakScreen({ view, viewAt, room, seat, summary: summaryProp, hu
 
             <View style={styles.actionHint}>
               <Text style={styles.hintText} numberOfLines={1}>
-                {`${t('batakTricksWon', { n: myPlayer?.tricksWon ?? 0 })}${myPlayer?.bid != null && myPlayer.bid > 0 ? ` / ${myPlayer.bid}` : myPlayer?.passed ? ` (${t('batakPass')})` : ''} · ${t('cardsPoints', { n: myPlayer?.totalScore ?? 0 })}`}
+                {`${t('batakTricksWon', { n: myPlayer?.tricksWon ?? 0 })}${myPlayer?.bid != null && myPlayer.bid > 0 ? ` / ${myPlayer.bid}` : myPlayer?.passed ? ` (${t('batakPass')})` : ''} · ${t('cardsTotal', { n: myPlayer?.totalScore ?? 0 })}`}
               </Text>
             </View>
 

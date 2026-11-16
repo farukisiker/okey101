@@ -7,6 +7,8 @@ import type { Card } from './fakeTypes';
 export interface PistiCenterPileProps {
   topCard: Card | null;
   centerCount: number;
+  /** The player can make a pişti now (see hasPistiChance); the badge shows nothing for a lone card otherwise. */
+  pistiChance?: boolean;
   cardWidth: number;
   onPress?(): void;
   style?: ViewStyle;
@@ -18,9 +20,9 @@ export interface PistiCenterPileProps {
  * - Stack effect if more than 1 card
  * - High-visibility pill badge: "Pişti fırsatı!" or "Yerde: N kart"
  */
-export function PistiCenterPile({ topCard, centerCount, cardWidth, onPress, style }: PistiCenterPileProps) {
+export function PistiCenterPile({ topCard, centerCount, pistiChance = false, cardWidth, onPress, style }: PistiCenterPileProps) {
   const height = cardHeight(cardWidth);
-  const isPistiOpportunity = centerCount === 1;
+  const isPistiOpportunity = pistiChance && centerCount === 1;
 
   return (
     <Pressable
@@ -31,7 +33,7 @@ export function PistiCenterPile({ topCard, centerCount, cardWidth, onPress, styl
       accessibilityLabel={
         isPistiOpportunity
           ? `${t('pistiChance')}, ${topCard ? topCard.suit + ' ' + topCard.rank : ''}`
-          : t('pistiCenterCount', { n: centerCount })
+          : centerCount === 1 ? undefined : t('pistiCenterCount', { n: centerCount })
       }
     >
       <View style={[styles.pileArea, { width: cardWidth + 14, height: height + 10 }]}>
@@ -55,6 +57,8 @@ export function PistiCenterPile({ topCard, centerCount, cardWidth, onPress, styl
       </View>
 
       {/* Pill badge showing count or Pişti opportunity */}
+      {/* A lone card the player cannot pair shows no badge at all. */}
+      {(centerCount !== 1 || isPistiOpportunity) && (
       <View
         style={[
           styles.badge,
@@ -75,6 +79,7 @@ export function PistiCenterPile({ topCard, centerCount, cardWidth, onPress, styl
               : t('pistiCenterCount', { n: centerCount })}
         </Text>
       </View>
+      )}
     </Pressable>
   );
 }

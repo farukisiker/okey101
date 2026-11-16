@@ -37,8 +37,8 @@ describe('cardSummary', () => {
       you: 'Sen',
     });
     expect(s.rows).toEqual([
-      { seat: 0, name: 'Ali & Sen', points: 12, total: 60 },
-      { seat: 1, name: 'Veli & Can', points: 5, total: 30 },
+      { seat: 0, name: 'Ali & Sen', points: 12, total: 60, seats: [0, 2] },
+      { seat: 1, name: 'Veli & Can', points: 5, total: 30, seats: [1, 3] },
     ]);
     expect(s.winnerSeats).toEqual([0, 2]);
   });
@@ -74,5 +74,17 @@ describe('msLeftNow', () => {
     expect(msLeftNow({ turnMsLeft: 100 }, 0, 5000)).toBe(0);
     expect(msLeftNow({ turnMsLeft: null }, 0, 0)).toBeNull();
     expect(msLeftNow(null, 0, 0)).toBeNull();
+  });
+});
+
+describe('partner row names', () => {
+  it('my own team row names the partner ("Sen & Ayşe"), also when I am the first seat', () => {
+    const s = cardSummary({
+      names: ['Ali', 'Veli', 'Ayşe', 'Can'], points: [12, 5, 12, 5], totals: [60, 30, 60, 30],
+      matchOver: false, teams: [0, 1, 0, 1], mySeat: 0, you: 'Sen',
+    });
+    expect(s.rows[0].name).toBe('Sen & Ayşe');
+    expect(s.rows[0].seats).toEqual([0, 2]);
+    expect(s.rows[1].name).toBe('Veli & Can');
   });
 });

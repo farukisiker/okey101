@@ -6,6 +6,9 @@ import { isAdFree } from '../purchases';
 import { canRequestAds, consentRevision } from './consent';
 import { type AdHistory, eligibleForAd, recentShows } from './policy';
 
+/** Test ads in dev builds, or in any build made with EXPO_PUBLIC_TEST_ADS=1 (inlined by Expo at bundle time). */
+const useTestAds = () => __DEV__ || process.env.EXPO_PUBLIC_TEST_ADS === '1';
+
 let history: AdHistory = { totalHands: 0, handsSinceAd: 0, lastAdAtMs: 0, shownAtMs: [] };
 let hydrated = false;
 let storageHealthy = true;
@@ -67,7 +70,8 @@ async function preload(): Promise<void> {
     const { InterstitialAd, TestIds, AdEventType } = await import('react-native-google-mobile-ads');
     if (!canRequestAds() || isAdFree()) { loading = false; return; }
     const unit = Platform.OS === 'ios' ? ADMOB_INTERSTITIAL_IOS : ADMOB_INTERSTITIAL_ANDROID;
-    const candidate = InterstitialAd.createForAdRequest(__DEV__ || !unit ? TestIds.INTERSTITIAL : unit);
+    // EXPO_PUBLIC_TEST_ADS=1 at build time (own-tablet release builds) serves Google test ads, like __DEV__.
+    const candidate = InterstitialAd.createForAdRequest(useTestAds() || !unit ? TestIds.INTERSTITIAL : unit);
     ad = candidate;
     revision = consentRevision();
     let opened = false;

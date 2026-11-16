@@ -40,12 +40,13 @@ export function cardSummary(p: CardSummaryInput): RoundSummary {
     name: g.length === 1 ? p.names[g[0]] : g.map((s) => (s === p.mySeat ? p.you : p.names[s])).join(' & '),
     points: p.points[g[0]] ?? 0,
     total: p.totals[g[0]] ?? 0,
+    ...(g.length > 1 ? { seats: g } : {}),
   }));
   const score = (r: RoundSummaryRow) => (p.matchOver ? r.total : r.points);
   const best = Math.max(...rows.map(score));
   const top = groups.filter((_, i) => score(rows[i]) === best);
   const winnerSeats = top.length === groups.length ? [] : top.flat();
-  return { rows, matchOver: p.matchOver, winnerSeats };
+  return { rows, matchOver: p.matchOver, winnerSeats, cardGame: true };
 }
 
 const isRecord = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null;
