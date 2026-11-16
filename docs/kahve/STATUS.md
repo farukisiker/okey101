@@ -40,9 +40,9 @@ Komutlar: `pnpm test`, `pnpm typecheck`. Bu makinede `pnpm` PATH'te yok; `corepa
 |---|---|---|---|---|
 | B1 @kahve/cards | Codex (Astra → Sol) | **birleşti** (Astra ONAY) | `307dcdb` | 36 test |
 | B2 @kahve/pisti | Codex (Sol) + Claude Opus review | **birleşti** | `e372901` | Astra 1 GERİ GÖNDER (bot hafızası) → Sol düzeltti; Codex kotası bitince yeniden review + structuredClone→JSON clone Claude Opus. 46 test, 200 seed 0 geçersiz |
-| B3 @kahve/batak | **Claude Opus** (Codex kotası yok, bu gece) | plan | – | worktree kahve-b3 |
+| B3 @kahve/batak | Claude Opus (Codex kotası yedeği) | **birleşti** | `ed2d3eb` | 60 test, 200 maç 0 geçersiz; hard bot medium'dan az güçlü (savunma oyunu yok). Codex dönünce Astra ikinci göz review'u önerilir |
 | B4 CardView + Pişti/Batak ekranları | Antigravity (Argon → Flash) | **birleşti** (Argon 1 GERİ GÖNDER) | `bae492b` | SVG yok. agy headless komut çalıştıramıyor: Flash sadece dosya yazar, typecheck/commit Fable. Sesler (.wav) henüz yok. Açık: köşe takım simgesi 12 pt |
-| B5 catalog/sunucu/çevrimdışı entegrasyon | Claude Opus | yapılıyor (b,c,e bitti) | – | a,d,f,g,h B2 birleşince |
+| B5 catalog/sunucu/çevrimdışı entegrasyon | Claude Opus | **Pişti birleşti** | `80537c6` | **Pişti oynanır** (tablet için gönderildi). Batak turu yapılıyor. Çevrimiçi kart masası Pi güncellemesi bekler (kullanıcı) |
 | B6 GameShell + reklam kapısı | Claude Sonnet | **birleşti** | `7e71dd4` | okey reklam davranışı testle sabit |
 | B7 docs/oyunlar | OpenCode | **birleşti** | `5c959df` | ayar adları motorla son eşitleme bekliyor |
-| B8 sim + sızıntı testleri | Cline | **ADIM 1 birleşti** | `4e19853` | okey 2×1000 seed: 0 geçersiz, 0 bitmeyen. Cline son adımda yarıda kaldı; doğrulama Fable |
+| B8 sim + sızıntı testleri | Cline | ADIM 1 + Pişti sızıntı birleşti | `4e19853`, `1b62665` | Batak sızıntı yapılıyor; 1000 seed kart oyunu sim'i Batak catalog'a girince |
