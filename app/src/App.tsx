@@ -11,7 +11,8 @@ import { type OkeyClient, useOkey } from './net/useOkey';
 import { type HostTimes, useKahveGame } from './net/useKahveGame';
 import { GameLobby } from './screens/GameLobby';
 import { PistiScreen } from './screens/PistiScreen';
-import type { PistiAction, PistiView } from '@kahve/catalog';
+import { BatakScreen } from './screens/BatakScreen';
+import type { BatakAction, BatakView, PistiAction, PistiView } from '@kahve/catalog';
 import { isOkeyGame } from '@okey/shared';
 import { GameScreen } from './screens/GameScreen';
 import { Intro } from './screens/Intro';
@@ -138,6 +139,21 @@ export default function App() {
         summary={kahve.summary}
         humanCount={kahve.humanCount}
         onAction={(a: PistiAction) => kahve.act(a)}
+        onNextRound={kahve.nextRound}
+        onLeave={kahve.leave}
+      />
+    );
+  } else if (kahve.mode && kahve.view && kahve.gameId === 'batak') {
+    screen = (
+      <BatakScreen
+        key={kahve.room?.id}
+        view={kahve.view as BatakView & HostTimes}
+        viewAt={kahve.viewAt}
+        room={kahve.room}
+        seat={kahve.seat}
+        summary={kahve.summary}
+        humanCount={kahve.humanCount}
+        onAction={(a: BatakAction) => kahve.act(a)}
         onNextRound={kahve.nextRound}
         onLeave={kahve.leave}
       />

@@ -3,13 +3,11 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { colors, font } from '../../theme';
 import { type Key, t } from '../../i18n';
 import {
-  type BatakAction,
-  type BatakView,
   CardBack,
   CardView,
   createDeck,
 } from '../../components/cards';
-import type { PistiAction, PistiView } from '@kahve/catalog';
+import type { BatakAction, BatakView, PistiAction, PistiView } from '@kahve/catalog';
 import { PistiScreen } from '../PistiScreen';
 import { BatakScreen } from '../BatakScreen';
 import {

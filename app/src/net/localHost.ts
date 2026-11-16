@@ -11,13 +11,13 @@ type Rng = () => number;
 const BOT_SALT = 0x9e3779b9;
 
 /**
- * Same as withHostTimes in server/src/room.ts: `noticeMsLeft` during a notice panel, and `turnMsLeft` for views that
- * carry the raw `clock` but no `turnMsLeft` of their own (card games). Okey views are left as they are.
+ * Same as withHostTimes in server/src/room.ts: `noticeMsLeft` during a notice panel, and `turnMsLeft` for views
+ * without a `turnMsLeft` of their own (card games). Okey views are left as they are.
  */
 export function withHostTimes<V>(view: V, clock: TurnClock | null, now: number, frozenUntil: number): V {
   if (typeof view !== 'object' || view === null) return view;
   let out: V = view;
-  if ('clock' in view && !('turnMsLeft' in view)) {
+  if (!('turnMsLeft' in view)) {
     out = { ...out, turnMsLeft: clock ? Math.max(0, clock.deadline - Math.max(now, frozenUntil)) : null };
   }
   const left = frozenUntil - now;
