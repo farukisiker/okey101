@@ -104,6 +104,7 @@ export function GameShell(p: GameShellProps) {
           <ScrollView contentContainerStyle={styles.scroll}>
             <View style={styles.card}>
               <Text style={styles.headline}>{headline}</Text>
+              {summary.note ? <Text style={styles.note}>{summary.note}</Text> : null}
               <SummaryTable
                 cellSize={font.status}
                 headers={[t('player'), t('thisHand'), t('total')]}
@@ -146,6 +147,7 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 12 },
   card: { backgroundColor: colors.feltLight, borderRadius: 16, padding: 16, width: '85%', maxWidth: 720, gap: 10, alignItems: 'center' },
   headline: { color: colors.accent, fontSize: 30, fontWeight: '900', textAlign: 'center' },
+  note: { color: colors.text, fontSize: 20, fontWeight: '800', textAlign: 'center' },
   buttons: { flexDirection: 'row', gap: 20, alignItems: 'center', marginTop: 8, flexWrap: 'wrap', justifyContent: 'center' },
   notice: { ...StyleSheet.absoluteFill, zIndex: 600 },
 });

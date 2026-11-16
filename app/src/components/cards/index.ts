@@ -8,4 +8,5 @@ export * from './PistiCenterPile';
 export * from './BidDialog';
 export * from './TrumpDialog';
 export * from './TrickArea';
+export * from './trickLayout';
 export type { TrumpDialogProps } from './TrumpDialog';

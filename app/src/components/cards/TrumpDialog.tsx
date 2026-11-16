@@ -18,26 +18,22 @@ const SUITS: SuitOption[] = [
 ];
 
 /**
- * Batak trump selection dialog:
- * 4 giant suit buttons with high-contrast symbols and names.
+ * Batak trump selection dialog (B11): a compact strip above the hand, no dimming backdrop, so the player can see
+ * the cards while choosing. 4 suit buttons (>= 60 dp tall) with high-contrast symbol and name.
  */
-export function TrumpDialog({ visible, winningBid, scale, onSelectTrump }: TrumpDialogProps) {
+export function TrumpDialog({ visible, winningBid, scale, reserveBottom = 0, onSelectTrump }: TrumpDialogProps) {
   if (!visible) return null;
 
   const s = Math.max(1, scale);
-  const cardWidth = Math.min(620, Math.round(520 * s));
-  const btnWidth = Math.round(108 * s);
-  const btnHeight = Math.round(110 * s);
+  const btnWidth = Math.round(124 * s);
+  const btnHeight = Math.max(60, Math.round(60 * s));
+  const textSize = Math.max(15, Math.round(font.body * Math.min(s, 1.2)));
 
   return (
-    <View style={styles.overlay}>
-      <View style={[styles.card, { width: cardWidth }]}>
-        <Text style={[styles.title, { fontSize: Math.round(font.title * s * 0.9) }]}>
-          {t('batakSelectTrumpTitle')}
-        </Text>
-
-        <Text style={[styles.subtitle, { fontSize: Math.round(font.body * s) }]}>
-          {t('batakSelectTrumpSub', { n: winningBid })}
+    <View style={[styles.overlay, { bottom: reserveBottom }]} pointerEvents="box-none">
+      <View style={styles.card}>
+        <Text style={[styles.title, { fontSize: textSize }]} numberOfLines={1}>
+          {`${t('batakSelectTrumpTitle')} · ${t('batakSelectTrumpSub', { n: winningBid })}`}
         </Text>
 
         <View style={styles.suitRow}>
@@ -61,10 +57,8 @@ export function TrumpDialog({ visible, winningBid, scale, onSelectTrump }: Trump
                 accessibilityRole="button"
                 accessibilityLabel={`${symbol} ${name}`}
               >
-                <Text style={[styles.symbol, { color, fontSize: Math.round(44 * s) }]}>
-                  {symbol}
-                </Text>
-                <Text style={[styles.suitName, { color, fontSize: Math.round(18 * s) }]}>
+                <Text style={[styles.symbol, { color, fontSize: Math.round(34 * s) }]}>{symbol}</Text>
+                <Text style={[styles.suitName, { color, fontSize: Math.max(15, Math.round(16 * s)) }]} numberOfLines={1}>
                   {name}
                 </Text>
               </Pressable>
@@ -78,52 +72,53 @@ export function TrumpDialog({ visible, winningBid, scale, onSelectTrump }: Trump
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 6,
     zIndex: 1000,
   },
   card: {
     backgroundColor: colors.feltLight,
     borderColor: colors.wood,
-    borderWidth: 3,
-    borderRadius: 20,
-    padding: 24,
+    borderWidth: 2,
+    borderRadius: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
     alignItems: 'center',
-    gap: 16,
+    gap: 4,
+    maxWidth: '98%',
     shadowColor: '#000',
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
     elevation: 10,
   },
   title: {
-    color: colors.text,
-    fontWeight: '900',
-    textAlign: 'center',
-  },
-  subtitle: {
     color: colors.accent,
-    fontWeight: '700',
+    fontWeight: '800',
     textAlign: 'center',
   },
   suitRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 14,
-    marginTop: 8,
+    gap: 8,
   },
   suitBtn: {
     backgroundColor: colors.tile,
     borderColor: colors.tileBorder,
     borderWidth: 2,
     borderRadius: 14,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 8,
+    gap: 6,
+    paddingHorizontal: 6,
     shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 4,
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
     elevation: 4,
   },
   symbol: {
@@ -132,6 +127,5 @@ const styles = StyleSheet.create({
   },
   suitName: {
     fontWeight: '800',
-    marginTop: 4,
   },
 });
