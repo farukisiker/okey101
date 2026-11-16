@@ -10,3 +10,5 @@ export * from './TrumpDialog';
 export * from './TrickArea';
 export * from './trickLayout';
 export type { TrumpDialogProps } from './TrumpDialog';
+export * from './CompactCenterRow';
+export * from './opponentOrder';

@@ -62,17 +62,29 @@ export function rectsIntersect(a: Rect, b: Rect): boolean {
 
 /**
  * The biggest cross (card width at most `desired`) that fits the box. Names go under the cards while the cards stay
- * a readable size, and onto the cards' bottom edge when the screen is too short for that.
+ * a readable size, and onto the cards' bottom edge when the screen is too short for that. B12: the edge placement is
+ * also taken when it gives clearly bigger cards (OVERLAY_GAIN dp) than the best under-card layout.
  */
+export const OVERLAY_GAIN = 8;
+
 export function fitTrickLayout(boxW: number, boxH: number, desired: number): TrickLayout {
   const fits = (l: TrickLayout) => l.width <= boxW && l.height <= boxH;
+  let below: TrickLayout | null = null;
   for (let cw = Math.max(desired, MIN_CARD_BELOW); cw >= MIN_CARD_BELOW; cw--) {
     const l = trickLayout(cw, 'below');
-    if (fits(l)) return l;
+    if (fits(l)) {
+      below = l;
+      break;
+    }
   }
-  for (let cw = Math.max(Math.min(desired, MIN_CARD_BELOW), MIN_CARD_OVERLAY); cw >= MIN_CARD_OVERLAY; cw--) {
+  let overlay: TrickLayout | null = null;
+  for (let cw = Math.max(desired, MIN_CARD_OVERLAY); cw >= MIN_CARD_OVERLAY; cw--) {
     const l = trickLayout(cw, 'overlay');
-    if (fits(l)) return l;
+    if (fits(l)) {
+      overlay = l;
+      break;
+    }
   }
-  return trickLayout(MIN_CARD_OVERLAY, 'overlay');
+  if (below && (!overlay || overlay.cardWidth < below.cardWidth + OVERLAY_GAIN)) return below;
+  return overlay ?? trickLayout(MIN_CARD_OVERLAY, 'overlay');
 }

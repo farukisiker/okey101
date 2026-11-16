@@ -11,6 +11,8 @@ export interface PistiCenterPileProps {
   pistiChance?: boolean;
   cardWidth: number;
   onPress?(): void;
+  /** B12: badge to the right of the pile instead of under it (short windows). */
+  badgeBeside?: boolean;
   style?: ViewStyle;
 }
 
@@ -20,7 +22,7 @@ export interface PistiCenterPileProps {
  * - Stack effect if more than 1 card
  * - High-visibility pill badge: "Pişti fırsatı!" or "Yerde: N kart"
  */
-export function PistiCenterPile({ topCard, centerCount, pistiChance = false, cardWidth, onPress, style }: PistiCenterPileProps) {
+export function PistiCenterPile({ topCard, centerCount, pistiChance = false, cardWidth, onPress, badgeBeside = false, style }: PistiCenterPileProps) {
   const height = cardHeight(cardWidth);
   const isPistiOpportunity = pistiChance && centerCount === 1;
 
@@ -28,7 +30,7 @@ export function PistiCenterPile({ topCard, centerCount, pistiChance = false, car
     <Pressable
       onPress={onPress}
       disabled={!onPress}
-      style={[styles.container, style]}
+      style={[styles.container, badgeBeside && styles.containerBeside, style]}
       accessibilityRole="button"
       accessibilityLabel={
         isPistiOpportunity
@@ -90,6 +92,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
+  containerBeside: { flexDirection: 'row', gap: 12 },
   pileArea: {
     alignItems: 'center',
     justifyContent: 'center',

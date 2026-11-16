@@ -17,6 +17,7 @@ export function Hand({
   selectedCardId,
   canPlay,
   playableCardIds,
+  dimUnplayable = true,
   highlightedCardIds,
   onSelectCard,
   onPlayCard,
@@ -78,7 +79,7 @@ export function Hand({
                 card={card}
                 width={cardWidth}
                 selected={isSelected}
-                disabled={!isPlayable}
+                disabled={dimUnplayable && !isPlayable}
                 highlighted={isHighlighted}
               />
             </Pressable>

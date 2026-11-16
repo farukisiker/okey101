@@ -89,6 +89,8 @@ describe('trick area cross', () => {
         for (let j = i + 1; j < POS.length; j++) expect(rectsIntersect(l.slots[POS[i]], l.slots[POS[j]])).toBe(false);
       expect(l.width).toBeLessThanOrEqual(lay.trickBoxWidth);
       expect(l.height).toBeLessThanOrEqual(lay.trickBoxHeight);
+      // B12: on short phone windows the trick cards must be readable (>= 44 dp wide).
+      if (h < 500) expect(l.cardWidth).toBeGreaterThanOrEqual(44);
     });
   }
 });
