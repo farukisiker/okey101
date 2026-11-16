@@ -72,7 +72,7 @@ Komutlar: `pnpm test`, `pnpm typecheck`. Bu makinede `pnpm` PATH'te yok; `corepa
 - Süre: her tur 30 sn, elin ilk turu 60 sn (okey ile aynı).
 
 **Bilinen eksikler**
-- Cihazda henüz kullanıcı denemesi yok (koordinatör tablet duman testi yapıyor).
+- Tablette duman testleri geçti: Pişti (2 / 4 tekli / 4 eşli), Batak, B10/B11/B12 düzeltmeleri, test reklamı. Kullanıcının kendisi henüz denemedi. Telefon kompakt düzeni ve çevrimiçi kart masaları (2. cihaz) cihazda denenmedi.
 - Batak Usta bot Orta'dan biraz güçlü (savunma oyunu yok). Eşli Batak, Koz Maça, Gömmeli ilk sürümde yok.
 - Yeni metinler 11 dilde İngilizce yer tutucu (çeviri Faz D).
 - Olası çift reklam sayımı: el sonu ekranındayken uygulama arka plana atılıp dönülürse (tablette denenmeli).
