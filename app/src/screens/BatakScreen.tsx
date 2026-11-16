@@ -15,6 +15,8 @@ import {
   BidDialog,
   type Card,
   CardOpponentPanel,
+  CompactCenterRow,
+  opponentOrder,
   Hand,
   TrickArea,
   TrumpDialog,
@@ -114,7 +116,10 @@ export function BatakScreen({ view, viewAt, room, seat, summary: summaryProp, hu
   const isMyTurn = view.turn === seat;
   const isPlayingTurn = isMyTurn && view.phase === 'playing';
   const myPlayer = useMemo(() => players.find((p) => p.seat === seat), [players, seat]);
-  const opponents = useMemo(() => players.filter((p) => p.seat !== seat), [players, seat]);
+  const opponents = useMemo(() => {
+    const rank = opponentOrder(seat, players.length);
+    return players.filter((p) => p.seat !== seat).sort((a, b) => rank.indexOf(a.seat) - rank.indexOf(b.seat));
+  }, [players, seat]);
   const activePlayer = useMemo(() => players.find((p) => p.seat === view.turn), [players, view.turn]);
   const highestBidder = useMemo(
     () => (view.highestBidder != null ? players.find((p) => p.seat === view.highestBidder) : null),
@@ -204,6 +209,42 @@ export function BatakScreen({ view, viewAt, room, seat, summary: summaryProp, hu
       }`
     : t('batakTrumpNone');
 
+  const badges = (
+    <>
+      <View style={styles.infoBadge}>
+        <Text style={styles.infoBadgeLabel} numberOfLines={1}>{t('batakTrump', { suit: trumpName })}</Text>
+      </View>
+      {highestBidder && view.highestBid > 0 && (
+        <View style={styles.infoBadge}>
+          <Text style={styles.infoBadgeLabel} numberOfLines={1}>
+            {t('batakContract', { name: highestBidder.name, n: view.highestBid })}
+          </Text>
+        </View>
+      )}
+    </>
+  );
+  const hintLabel = `${t('batakTricksWon', { n: myPlayer?.tricksWon ?? 0 })}${myPlayer?.bid != null && myPlayer.bid > 0 ? ` / ${myPlayer.bid}` : myPlayer?.passed ? ` (${t('batakPass')})` : ''} · ${t('cardsTotal', { n: myPlayer?.totalScore ?? 0 })}`;
+  const sortButton = <Button title={t('cardsSort')} onPress={handleSort} variant="secondary" style={styles.actionBtn} />;
+  const playButton = (
+    <Button
+      title={t('cardsPlay')}
+      onPress={() => isSelectedLegal && handlePlayCard(selectedCardId!)}
+      disabled={!isSelectedLegal}
+      variant="primary"
+      style={styles.actionBtn}
+    />
+  );
+  const trickArea = (
+    <TrickArea
+      currentTrick={shownTrick}
+      players={players}
+      mySeat={seat}
+      cardWidth={layout.trickCardWidth}
+      boxWidth={layout.trickBoxWidth}
+      boxHeight={layout.trickBoxHeight}
+    />
+  );
+
   return (
     <View style={styles.root}>
       <GameShell
@@ -238,8 +279,9 @@ export function BatakScreen({ view, viewAt, room, seat, summary: summaryProp, hu
                   totalScore={opp.totalScore}
                   secondsLeft={oppSeconds}
                   connected={opp.connected}
-                  width={layout.oppPanelWidth}
-                  height={layout.oppPanelHeight}
+                  compact={layout.compact}
+                  width={layout.compact ? undefined : layout.oppPanelWidth}
+                  height={layout.compact ? undefined : layout.oppPanelHeight}
                 />
               );
             })}
@@ -247,56 +289,38 @@ export function BatakScreen({ view, viewAt, room, seat, summary: summaryProp, hu
         }
       >
         <View style={styles.tableArea}>
-          {/* Top badges: Trump & Contract */}
-          <View style={styles.topInfoRow}>
-            <View style={styles.infoBadge}>
-              <Text style={styles.infoBadgeLabel}>{t('batakTrump', { suit: trumpName })}</Text>
-            </View>
-
-            {highestBidder && view.highestBid > 0 && (
-              <View style={styles.infoBadge}>
-                <Text style={styles.infoBadgeLabel}>
-                  {t('batakContract', { name: highestBidder.name, n: view.highestBid })}
-                </Text>
+          {layout.compact ? (
+            <CompactCenterRow
+              insetLeft={layout.insets.left}
+              insetRight={layout.insets.right}
+              left={
+                <>
+                  {badges}
+                  {sortButton}
+                </>
+              }
+              right={
+                <>
+                  <Text style={[styles.hintText, styles.hintSide]} numberOfLines={2}>{hintLabel}</Text>
+                  {playButton}
+                </>
+              }
+            >
+              {trickArea}
+            </CompactCenterRow>
+          ) : (
+            <>
+              <View style={styles.topInfoRow}>{badges}</View>
+              <View style={styles.centerSection}>{trickArea}</View>
+              <View style={[styles.actionBar, { height: layout.actionBarHeight }]}>
+                {sortButton}
+                <View style={styles.actionHint}>
+                  <Text style={styles.hintText} numberOfLines={1}>{hintLabel}</Text>
+                </View>
+                {playButton}
               </View>
-            )}
-          </View>
-
-          {/* Central trick area */}
-          <View style={styles.centerSection}>
-            <TrickArea
-              currentTrick={shownTrick}
-              players={players}
-              mySeat={seat}
-              cardWidth={layout.trickCardWidth}
-              boxWidth={layout.trickBoxWidth}
-              boxHeight={layout.trickBoxHeight}
-            />
-          </View>
-
-          {/* Action bar */}
-          <View style={[styles.actionBar, { height: layout.actionBarHeight }]}>
-            <Button
-              title={t('cardsSort')}
-              onPress={handleSort}
-              variant="secondary"
-              style={styles.actionBtn}
-            />
-
-            <View style={styles.actionHint}>
-              <Text style={styles.hintText} numberOfLines={1}>
-                {`${t('batakTricksWon', { n: myPlayer?.tricksWon ?? 0 })}${myPlayer?.bid != null && myPlayer.bid > 0 ? ` / ${myPlayer.bid}` : myPlayer?.passed ? ` (${t('batakPass')})` : ''} · ${t('cardsTotal', { n: myPlayer?.totalScore ?? 0 })}`}
-              </Text>
-            </View>
-
-            <Button
-              title={t('cardsPlay')}
-              onPress={() => isSelectedLegal && handlePlayCard(selectedCardId!)}
-              disabled={!isSelectedLegal}
-              variant="primary"
-              style={styles.actionBtn}
-            />
-          </View>
+            </>
+          )}
 
           {/* Hand cards */}
           <Hand
@@ -305,6 +329,7 @@ export function BatakScreen({ view, viewAt, room, seat, summary: summaryProp, hu
             cardStep={layout.cardStep}
             selectedCardId={selectedCardId}
             canPlay={isPlayingTurn}
+            dimUnplayable={isPlayingTurn}
             playableCardIds={view.legalCardIds}
             onSelectCard={setSelectedCardId}
             onPlayCard={handlePlayCard}
@@ -411,6 +436,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  hintSide: { textAlign: 'right' },
   hintText: {
     color: colors.text,
     fontSize: font.small,

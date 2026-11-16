@@ -14,6 +14,8 @@ import { type HostTimes, msLeftNow } from '../net/localHost';
 import {
   type Card,
   CardOpponentPanel,
+  CompactCenterRow,
+  opponentOrder,
   Hand,
   PistiCenterPile,
   cardPlayFeedback,
@@ -110,7 +112,10 @@ export function PistiScreen({ view, viewAt, room, seat, summary: summaryProp, hu
   const players = useMemo(() => playersOf(view, room), [view, room]);
   const isMyTurn = view.turn === seat && view.phase === 'playing';
   const myPlayer = useMemo(() => players.find((p) => p.seat === seat), [players, seat]);
-  const opponents = useMemo(() => players.filter((p) => p.seat !== seat), [players, seat]);
+  const opponents = useMemo(() => {
+    const rank = opponentOrder(seat, players.length);
+    return players.filter((p) => p.seat !== seat).sort((a, b) => rank.indexOf(a.seat) - rank.indexOf(b.seat));
+  }, [players, seat]);
   const activePlayer = useMemo(() => players.find((p) => p.seat === view.turn), [players, view.turn]);
   const layout = useCardLayout(handOrder.length);
 
@@ -183,6 +188,33 @@ export function PistiScreen({ view, viewAt, room, seat, summary: summaryProp, hu
     await onNextRound?.();
   };
 
+  const deckBadge = (
+    <View style={layout.compact ? styles.deckBadgeCompact : styles.deckBadge}>
+      <Text style={styles.deckText}>{t('pistiDeckCount', { n: view.deckCount })}</Text>
+    </View>
+  );
+  const hintLabel = `${t('pistiCapturedCount', { n: myPlayer?.capturedCount ?? 0 })} · ${t('pistiCount', { n: myPlayer?.pistiCount ?? 0 })} · ${t('pistiYourScore', { n: myPlayer?.totalScore ?? 0 })}`;
+  const sortButton = <Button title={t('cardsSort')} onPress={handleSort} variant="secondary" style={styles.actionBtn} />;
+  const playButton = (
+    <Button
+      title={t('cardsPlay')}
+      onPress={() => isSelectedPlayable && handlePlayCard(selectedCardId!)}
+      disabled={!isSelectedPlayable}
+      variant="primary"
+      style={styles.actionBtn}
+    />
+  );
+  const centerPile = (
+    <PistiCenterPile
+      topCard={view.topCard}
+      centerCount={view.centerCount}
+      pistiChance={hasPistiChance(view.topCard, view.centerCount, handOrder)}
+      cardWidth={layout.centerPileCardWidth}
+      badgeBeside={layout.compact}
+      onPress={isSelectedPlayable ? () => handlePlayCard(selectedCardId!) : undefined}
+    />
+  );
+
   return (
     <View style={styles.root}>
       <GameShell
@@ -216,8 +248,9 @@ export function PistiScreen({ view, viewAt, room, seat, summary: summaryProp, hu
                   isPartner={myPlayer?.team != null && opp.team === myPlayer.team}
                   secondsLeft={oppSeconds}
                   connected={opp.connected}
-                  width={layout.oppPanelWidth}
-                  height={layout.oppPanelHeight}
+                  compact={layout.compact}
+                  width={layout.compact ? undefined : layout.oppPanelWidth}
+                  height={layout.compact ? undefined : layout.oppPanelHeight}
                 />
               );
             })}
@@ -225,47 +258,38 @@ export function PistiScreen({ view, viewAt, room, seat, summary: summaryProp, hu
         }
       >
         <View style={styles.tableArea}>
-          {/* Deck count indicator */}
-          <View style={styles.deckBadge}>
-            <Text style={styles.deckText}>{t('pistiDeckCount', { n: view.deckCount })}</Text>
-          </View>
-
-          {/* Center pile */}
-          <View style={styles.centerSection}>
-            <PistiCenterPile
-              topCard={view.topCard}
-              centerCount={view.centerCount}
-              pistiChance={hasPistiChance(view.topCard, view.centerCount, handOrder)}
-              cardWidth={layout.centerPileCardWidth}
-              onPress={
-                isSelectedPlayable ? () => handlePlayCard(selectedCardId!) : undefined
+          {layout.compact ? (
+            <CompactCenterRow
+              insetLeft={layout.insets.left}
+              insetRight={layout.insets.right}
+              left={
+                <>
+                  {deckBadge}
+                  {sortButton}
+                </>
               }
-            />
-          </View>
-
-          {/* Action bar right above hand */}
-          <View style={[styles.actionBar, { height: layout.actionBarHeight }]}>
-            <Button
-              title={t('cardsSort')}
-              onPress={handleSort}
-              variant="secondary"
-              style={styles.actionBtn}
-            />
-
-            <View style={styles.actionHint}>
-              <Text style={styles.hintText} numberOfLines={1}>
-                {`${t('pistiCapturedCount', { n: myPlayer?.capturedCount ?? 0 })} · ${t('pistiCount', { n: myPlayer?.pistiCount ?? 0 })} · ${t('pistiYourScore', { n: myPlayer?.totalScore ?? 0 })}`}
-              </Text>
-            </View>
-
-            <Button
-              title={t('cardsPlay')}
-              onPress={() => isSelectedPlayable && handlePlayCard(selectedCardId!)}
-              disabled={!isSelectedPlayable}
-              variant="primary"
-              style={styles.actionBtn}
-            />
-          </View>
+              right={
+                <>
+                  <Text style={[styles.hintText, styles.hintSide]} numberOfLines={2}>{hintLabel}</Text>
+                  {playButton}
+                </>
+              }
+            >
+              {centerPile}
+            </CompactCenterRow>
+          ) : (
+            <>
+              {deckBadge}
+              <View style={styles.centerSection}>{centerPile}</View>
+              <View style={[styles.actionBar, { height: layout.actionBarHeight }]}>
+                {sortButton}
+                <View style={styles.actionHint}>
+                  <Text style={styles.hintText} numberOfLines={1}>{hintLabel}</Text>
+                </View>
+                {playButton}
+              </View>
+            </>
+          )}
 
           {/* Hand cards */}
           <Hand
@@ -274,6 +298,7 @@ export function PistiScreen({ view, viewAt, room, seat, summary: summaryProp, hu
             cardStep={layout.cardStep}
             selectedCardId={selectedCardId}
             canPlay={isMyTurn}
+            dimUnplayable={isMyTurn}
             playableCardIds={view.playableCardIds}
             highlightedCardIds={highlightedCardIds}
             onSelectCard={setSelectedCardId}
@@ -326,6 +351,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     zIndex: 5,
   },
+  deckBadgeCompact: {
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  hintSide: { textAlign: 'right' },
   deckText: {
     color: colors.muted,
     fontSize: font.small,

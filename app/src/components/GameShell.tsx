@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import type { GameId } from '@kahve/core';
 import { adGate } from '../ads/interstitial';
 import { shouldShowAtBreak } from '../ads/policy';
@@ -8,6 +8,7 @@ import { colors, font } from '../theme';
 import { Button } from './Button';
 import { SummaryTable } from './SummaryTable';
 import { type RoundSummary, summaryHeadlineText } from './roundSummary';
+import { COMPACT_BAR_HEIGHT, COMPACT_OPPONENTS_HEIGHT, isCompactShell } from './shellBudget';
 
 export type { RoundSummary, RoundSummaryRow } from './roundSummary';
 export { summaryHeadline } from './roundSummary';
@@ -47,6 +48,8 @@ export interface GameShellProps {
  */
 export function GameShell(p: GameShellProps) {
   const { summary } = p;
+  // B12: on short windows (phones in landscape) the status line moves into the top bar and the opponents get one row.
+  const compact = isCompactShell(useWindowDimensions().height);
   const counted = useRef<RoundSummary | null>(null);
   const waiting = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -82,9 +85,22 @@ export function GameShell(p: GameShellProps) {
 
   return (
     <View style={styles.root}>
-      <View style={styles.bar}>
+      <View style={[styles.bar, compact && styles.barCompact]}>
         <Button title={t('leave')} variant="secondary" onPress={p.onExit} style={styles.barBtn} />
-        <Text style={styles.title} numberOfLines={1}>{p.title}</Text>
+        {compact ? (
+          <Text
+            style={styles.statusInBar}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            accessibilityLiveRegion="polite"
+            accessibilityLabel={p.status ? `${p.title}. ${p.status}` : p.title}
+          >
+            {p.status || p.title}
+          </Text>
+        ) : (
+          <Text style={styles.title} numberOfLines={1}>{p.title}</Text>
+        )}
         {p.secondsLeft != null && (
           <Text
             style={[styles.clock, p.secondsLeft <= 5 && { color: colors.danger }]}
@@ -95,8 +111,8 @@ export function GameShell(p: GameShellProps) {
         )}
         <Button title={p.muted ? '🔇' : '🔊'} variant="secondary" onPress={p.onToggleSound} style={styles.barBtn} />
       </View>
-      {p.opponents ? <View style={styles.opponents}>{p.opponents}</View> : null}
-      {p.status ? <Text style={styles.status} accessibilityLiveRegion="polite">{p.status}</Text> : null}
+      {p.opponents ? <View style={[styles.opponents, compact && styles.opponentsCompact]}>{p.opponents}</View> : null}
+      {!compact && p.status ? <Text style={styles.status} accessibilityLiveRegion="polite">{p.status}</Text> : null}
       <View style={styles.area}>{p.children}</View>
 
       {summary && (
@@ -137,10 +153,13 @@ export function GameShell(p: GameShellProps) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.felt },
   bar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12, paddingVertical: 6 },
+  barCompact: { paddingVertical: 2, height: COMPACT_BAR_HEIGHT },
+  statusInBar: { flex: 1, color: colors.text, fontSize: font.status, fontWeight: '800', textAlign: 'center' },
   barBtn: { minHeight: 56, minWidth: 56 },
   title: { flex: 1, color: colors.accent, fontSize: font.status, fontWeight: '900' },
   clock: { color: colors.text, fontSize: font.status, fontWeight: '800' },
   opponents: { flexDirection: 'row', justifyContent: 'center', gap: 8, paddingHorizontal: 8 },
+  opponentsCompact: { height: COMPACT_OPPONENTS_HEIGHT, alignItems: 'center', paddingHorizontal: 8 },
   status: { color: colors.text, fontSize: font.status, fontWeight: '700', textAlign: 'center', paddingVertical: 4 },
   area: { flex: 1 },
   overlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 500 },

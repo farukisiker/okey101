@@ -103,6 +103,8 @@ export interface HandProps {
   selectedCardId: number | null;
   canPlay: boolean;
   playableCardIds?: readonly number[];
+  /** Dim cards that are not playable (default true). Screens pass false outside the play turn: full colour, just not tappable. */
+  dimUnplayable?: boolean;
   highlightedCardIds?: readonly number[];
   onSelectCard(cardId: number | null): void;
   onPlayCard(cardId: number): void;
