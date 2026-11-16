@@ -18,7 +18,7 @@ export function CardView({ card, width, selected, disabled, highlighted, badgeTe
   const borderRadius = Math.round(width * 0.12);
 
   const cornerRankSize = Math.max(16, Math.round(width * (isTen ? 0.28 : 0.32)));
-  const cornerSymbolSize = Math.max(12, Math.round(width * 0.2));
+  const cornerSymbolSize = Math.max(15, Math.round(width * 0.2));
   const mainSymbolSize = Math.max(26, Math.round(width * 0.54));
 
   return (
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   cornerSymbol: {
-    marginTop: -3,
+    marginTop: -5,
     includeFontPadding: false,
     textAlign: 'center',
   },

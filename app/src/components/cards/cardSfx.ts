@@ -3,11 +3,7 @@ import { buzz, isSoundOn } from '../../feedback';
 
 export type CardSfx = 'play' | 'take';
 
-/**
- * Audio sources registry.
- * In this headless run without .wav files, no missing assets are required directly.
- * Fable will register actual sound assets here once created.
- */
+/** Audio sources registry (sounds are registered at the bottom of this module). */
 const CARD_AUDIO_SOURCES: Partial<Record<CardSfx, number>> = {};
 const cardPlayers: Partial<Record<CardSfx, AudioPlayer>> = {};
 
@@ -54,3 +50,6 @@ export function cardTakeFeedback(isPisti = false) {
   playCardSfx('take');
   buzz(isPisti ? 'success' : 'medium');
 }
+
+registerCardAudioSource('play', require('../../../assets/sounds/card-play.wav'));
+registerCardAudioSource('take', require('../../../assets/sounds/card-take.wav'));

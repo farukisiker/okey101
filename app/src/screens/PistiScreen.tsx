@@ -84,7 +84,7 @@ export function PistiScreen({ view, viewAt, room, seat, summary: summaryProp, hu
     view.lastCapture && view.lastAction && view.lastAction.card.id === view.lastCapture.cardId ? view.lastCapture : null;
   const captureKey = freshCapture ? `${view.round}:${view.lastAction!.turnNumber}` : null;
 
-  // Audio feedback on card captures and Pişti events (cardSfx stays silent until sound files are registered)
+  // Audio feedback on card captures and Pişti events
   const lastCaptureRef = useRef(captureKey);
   useEffect(() => {
     if (captureKey && captureKey !== lastCaptureRef.current && freshCapture) cardTakeFeedback(freshCapture.isPisti);
