@@ -97,6 +97,6 @@ Astra, Codex dönünce C1'i ikinci göz olarak inceler (B3'teki gibi).
 |---|---|---|
 | C1 `@kahve/tavla` motor | Claude Opus (Codex yerine) | bitti 08ba2d2, birleşti 0cb5249; 50 test, 200 seed bot-bot 0 geçersiz, botMove ≤ ~23 ms. Fable kararları: 15. pul toplanınca oyun commit beklemeden biter; hard bot 8000 düğüm sınırı (deterministik). Astra incelemesi bekliyor (Codex 18.11 20:18) |
 | C2 `TavlaScreen` | Claude Sonnet (Antigravity yerine) | bitti 2789c20, birleşti 58d1ec4; sahte view ile 120 app testi. Fable kararı: koltuk 1 tahtası dikey aynalanır (iki koltuk da evi sağ altta, saat yönü tersine). Telefonda pul 21–23 dp (cihazda bakılacak) |
-| C3 entegrasyon (catalog, sunucu, App) | Claude Opus | C1+C2 sonrası |
-| C4a sim + sızıntı | Cline | C1 sonrası |
-| C4b `docs/oyunlar/tavla.md` | OpenCode | C1 sonrası |
+| C3 entegrasyon (catalog, sunucu, App) | Claude Opus | bitti bfd131d; 626 test, paket 5.6 MB; tablet testi bekliyor. Açık: maç uzunluğu seçici yok (5 sayı), 11 dilde Tavla metinleri İngilizce |
+| C4a sim + sızıntı | Cline | çalışıyor |
+| C4b `docs/oyunlar/tavla.md` | OpenCode | bitti e241432 |
