@@ -46,7 +46,7 @@ describe('tavla summary from the view', () => {
 
   it('every locale has every tavla key the screen uses', async () => {
     const keys = Object.keys(tr).filter((k) => k.startsWith('tavla'));
-    expect(keys).toHaveLength(21);
+    expect(keys).toHaveLength(26);
     for (const loc of ['de', 'en', 'es', 'fr', 'hi', 'id', 'it', 'ja', 'ko', 'pt', 'ru', 'zh']) {
       const mod = (await import(`../src/i18n/locales/${loc}.ts`)) as Record<string, Record<string, string>>;
       const dict = mod[loc];

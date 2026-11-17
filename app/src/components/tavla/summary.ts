@@ -27,5 +27,5 @@ export function tavlaSummary(p: TavlaSummaryInput): RoundSummary {
     mySeat: p.mySeat,
     you: p.you,
   });
-  return { ...summary, note: p.note(p.kindLabel[p.result.kind], p.result.points) };
+  return { ...summary, note: p.note(p.kindLabel[p.result.kind], p.result.points), wording: 'tavla' };
 }

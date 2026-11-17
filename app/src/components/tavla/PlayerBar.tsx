@@ -24,7 +24,10 @@ export function PlayerBar({ view, mySeat, totals, compact }: PlayerBarProps) {
       {order.map((p) => {
         const active = view.turn === p.seat;
         const off = view.board.off[p.seat] ?? 0;
-        const score = totals ? t('tavlaScore', { n: totals[p.seat] ?? 0, target: view.options.targetScore }) : null;
+        const n = totals?.[p.seat] ?? 0;
+        // A won match can end past the target (5 needed, a mars at 4 makes 6): then just the score.
+        const target = view.options.targetScore;
+        const score = totals ? (n >= target ? t('tavlaScoreFinal', { n }) : t('tavlaScore', { n, target })) : null;
         const pips = t('tavlaPips', { n: p.pips });
         return (
           <View key={p.seat} style={[styles.panel, compact && styles.panelCompact, active && styles.active]} accessibilityLabel={`${p.name}. ${pips}. ${score ?? ''}`}>

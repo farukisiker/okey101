@@ -362,4 +362,9 @@ export const en: Dict = {
   tavlaKindMars: 'Gammon',
   tavlaKindKoncina: 'Backgammon',
   tavlaResultNote: '{kind} — {n} points',
+  tavlaYouWonGame: 'You won this game!',
+  tavlaGameWinner: '{name} won the game',
+  tavlaThisGame: 'This game',
+  tavlaNextGame: 'Next game',
+  tavlaScoreFinal: 'Score {n}',
 };

@@ -15,7 +15,8 @@ export const tavlaDef: GameDefinition<TavlaState, TavlaAction, TavlaView, TavlaO
   defaultOptions,
   normalizeOptions,
   seats: () => SEATS,
-  clock: { baseMs: 30000, firstTurnFactor: 1.5 },
+  // 60 s a turn (doubles are 4 moves, 8 taps; the players are often 60+); the opening turn gets no extra.
+  clock: { baseMs: 60000, firstTurnFactor: 1 },
   create,
   isAction,
   apply,

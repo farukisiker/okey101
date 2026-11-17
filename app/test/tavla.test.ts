@@ -250,5 +250,6 @@ describe('fake views and summary', () => {
     expect(s.rows.map((r) => r.points)).toEqual([2, 0]);
     expect(s.winnerSeats).toEqual([0]);
     expect(s.note).toBe('Mars — 2 sayı');
+    expect(s.wording).toBe('tavla');
   });
 });

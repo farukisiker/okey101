@@ -101,6 +101,15 @@ Astra, Codex dönünce C1'i ikinci göz olarak inceler (B3'teki gibi).
 | C4a sim + sızıntı | Claude Sonnet (Cline haftalık limiti doldu, 5 gün) | bitti b616056, birleşti 3ff73e5; 1000 seed tavla: 0 geçersiz, 0 bitmeyen, 15 pul korunumu her adımda; leak-tavla 5 test. Sim'de tek bir hard botMove 854 ms ölçüldü; Fable ölçümü (300 seed, yalnız hard): ~60 bin çağrıda 3'ü 40 ms üstü, en kötü 68 ms (GC/CPU gürültüsü). Uygulama ve sunucu bugün botlarda yalnız 'medium' kullanıyor |
 | C4b `docs/oyunlar/tavla.md` | OpenCode | bitti e241432 |
 
+## Tavla tablet testi (bfd131d) düzeltmeleri, 18.11.2026
+
+Koordinatör tam maç oynadı, işlevsel PASS. Bulunan 4 sorun:
+- A: Oyun sonu penceresinde kart oyunu dili kalmıştı. Artık "Oyunu X kazandı" / "Bu oyunu sen kazandın!", sütun "Bu oyun", düğme "Sonraki oyun" (`RoundSummary.wording: 'tavla'`). Maç sonu metni aynı kaldı.
+- B: Tur süresi 30 sn'den **60 sn**'ye çıktı (ilk tur da 60 sn); docs/oyunlar/tavla.md güncellendi.
+- C: Skor hedefi aşınca "Skor 6 / 5" yerine "Skor 6" görünüyor.
+- D: uiautomator ekranın dökümünü alamıyordu. Döngüye giren bir animasyon bulunamadı; tek sürekli iş saniyelik saat. Tahta, panel ve oyuncu çubuğu artık saat her saniye işlediğinde yeniden çizilmiyor (useMemo). Kök nedenin bu olduğu doğrulanmadı; tablette tekrar `uiautomator dump` denenecek.
+- Yeni 5 i18n anahtarı tr dışında İngilizce (diğer Tavla anahtarları gibi).
+
 ## Sonraya bırakılanlar (backlog)
 - **UI/UX geçişi (oyunlar işlevsel olarak bitince):** Tavla tahtası ve pullar için daha güzel görsel, zar atışına üç boyutlu hava.
   Kullanıcı (17.11.2026): "Daha güzel görsel kullana mıyız tavla ve pullar için. Zar atılması içinde üç boyutlu havası katacak bişiler. Gerçi sen önce genel oyunu bitir fonksiyonel olarak hazır olsun UI UX kısmına detaylı tekrar bakarız".

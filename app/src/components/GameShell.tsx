@@ -7,7 +7,7 @@ import { t } from '../i18n';
 import { colors, font } from '../theme';
 import { Button } from './Button';
 import { SummaryTable } from './SummaryTable';
-import { type RoundSummary, summaryHeadlineText } from './roundSummary';
+import { type RoundSummary, summaryHeadlineText, summaryLabels } from './roundSummary';
 import { COMPACT_BAR_HEIGHT, COMPACT_OPPONENTS_HEIGHT, isCompactShell } from './shellBudget';
 
 export type { RoundSummary, RoundSummaryRow } from './roundSummary';
@@ -123,7 +123,7 @@ export function GameShell(p: GameShellProps) {
               {summary.note ? <Text style={styles.note}>{summary.note}</Text> : null}
               <SummaryTable
                 cellSize={font.status}
-                headers={[t('player'), t('thisHand'), t('total')]}
+                headers={[t('player'), t(summaryLabels(summary).thisHand), t('total')]}
                 rows={summary.rows.map((r) => ({
                   key: r.seat,
                   name: !r.seats && r.seat === p.mySeat ? t('you') : r.name,
@@ -134,7 +134,7 @@ export function GameShell(p: GameShellProps) {
               />
               <View style={styles.buttons}>
                 <Button
-                  title={summary.matchOver ? t('newMatch') : t('nextHand')}
+                  title={t(summaryLabels(summary).next)}
                   disabled={busy}
                   onPress={() => void proceed('next')}
                   style={{ minWidth: 240, minHeight: 64 }}

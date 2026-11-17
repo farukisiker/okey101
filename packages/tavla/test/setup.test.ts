@@ -9,7 +9,7 @@ describe('definition and options', () => {
     expect(tavlaDef).toMatchObject({ id: 'tavla', group: 'tavla', status: 'active', seatChoices: [2], titleKey: 'game.tavla' });
     expect(tavlaDef.seats(tavlaDef.defaultOptions)).toBe(2);
     expect(tavlaDef.defaultOptions).toEqual({ variant: 'klasik', targetScore: 5, koncinaPoints: 3 });
-    expect(tavlaDef.clock).toEqual({ baseMs: 30000, firstTurnFactor: 1.5 });
+    expect(tavlaDef.clock).toEqual({ baseMs: 60000, firstTurnFactor: 1 });
     expect(tavlaDef.noticeOf).toBeUndefined();
     expect(tavlaDef.refillsClock({ type: 'commit' })).toBe(false);
   });

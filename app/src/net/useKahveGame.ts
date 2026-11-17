@@ -234,6 +234,7 @@ export function useKahveGame<V = unknown, A = unknown>(gameId: GameId | null, se
         you: t('you'),
       }),
       ...(note ? { note } : {}),
+      ...(tavlaPointsFromView(view) ? { wording: 'tavla' as const } : {}),
     };
     summaryRef.current = { key, summary: s };
     return s;

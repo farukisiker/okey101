@@ -376,6 +376,11 @@ export const tr = {
   tavlaKindMars: 'Mars',
   tavlaKindKoncina: 'Konçina',
   tavlaResultNote: '{kind} — {n} sayı',
+  tavlaYouWonGame: 'Bu oyunu sen kazandın!',
+  tavlaGameWinner: 'Oyunu {name} kazandı',
+  tavlaThisGame: 'Bu oyun',
+  tavlaNextGame: 'Sonraki oyun',
+  tavlaScoreFinal: 'Skor {n}',
 };
 
 export type Key = keyof typeof tr;

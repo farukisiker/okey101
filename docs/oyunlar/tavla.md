@@ -144,7 +144,7 @@ Pullarının hepsini önce kendi evine getirip sonra toplayan oyuncu oyunu kazan
 
 ## Süre ve Zaman Aşımı
 
-- Her tur için **30 saniye** vardır. Oyunun ilk turunda bu süre **45 saniye**dir.
+- Her tur için **60 saniye** vardır (ilk tur da dahil).
 - Bu süreler oyun ayarı değildir; her masada aynıdır.
 - Süre biterse uygulama sizin yerinize oynar: zarları olabildiğince oynayan yasal dizilerden
   ilkini adım adım oynar, zarlar bitince turu kapatır. Hiç hamle yoksa **Pas** geçer.

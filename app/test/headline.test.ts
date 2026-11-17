@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type RoundSummary, summaryHeadlineText } from '../src/components/roundSummary';
+import { type RoundSummary, summaryHeadlineText, summaryLabels } from '../src/components/roundSummary';
 import { hasPistiChance } from '../src/components/cards/pistiChance';
 import { cardSummary } from '../src/net/cardSummary';
 
@@ -10,6 +10,16 @@ const rows = [
 const okey: RoundSummary = { rows, matchOver: false, winnerSeats: [1] };
 
 describe('summaryHeadlineText', () => {
+  it('tavla says game, not hand; the match end keeps the match wording', () => {
+    const tavla: RoundSummary = { ...okey, cardGame: true, wording: 'tavla' };
+    expect(summaryHeadlineText(tavla, 0)).toEqual({ key: 'tavlaGameWinner', vars: { name: 'Hasan' } });
+    expect(summaryHeadlineText({ ...tavla, winnerSeats: [0] }, 0)).toEqual({ key: 'tavlaYouWonGame' });
+    expect(summaryHeadlineText({ ...tavla, matchOver: true }, 0)).toEqual({ key: 'cardMatchWinner', vars: { name: 'Hasan' } });
+    expect(summaryLabels(tavla)).toEqual({ thisHand: 'tavlaThisGame', next: 'tavlaNextGame' });
+    expect(summaryLabels({ ...tavla, matchOver: true }).next).toBe('newMatch');
+    expect(summaryLabels({ ...okey, cardGame: true })).toEqual({ thisHand: 'thisHand', next: 'nextHand' });
+  });
+
   it('okey summaries (no cardGame flag) keep the okey wording', () => {
     expect(summaryHeadlineText(okey, 0)).toEqual({ key: 'actFinished', vars: { name: 'Hasan' } });
     expect(summaryHeadlineText({ ...okey, winnerSeats: [0] }, 0)).toEqual({ key: 'youFinished' });

@@ -259,29 +259,45 @@ export function TavlaScreen({ view, viewAt, room, seat, summary: summaryProp, hu
     </View>
   );
 
-  const panel = (
-    <View style={[styles.panel, { width: geom.panelW, height: geom.mode === 'side' ? geom.areaH : undefined, gap: compact ? 8 : 16 }]}>
-      <DicePanel view={view} size={diceSize} />
-      <Text style={styles.hint} numberOfLines={2} accessibilityLiveRegion="polite">{statusText}</Text>
-      {buttons}
-    </View>
+  // The clock ticks once a second and re-renders this screen; the board, panel and player bar only change with
+  // a new view or a tap, so they are memoized (no per-second re-render of ~100 views, no idle-blocking churn).
+  const panel = useMemo(
+    () => (
+      <View style={[styles.panel, { width: geom.panelW, height: geom.mode === 'side' ? geom.areaH : undefined, gap: compact ? 8 : 16 }]}>
+        <DicePanel view={view} size={diceSize} />
+        <Text style={styles.hint} numberOfLines={2} accessibilityLiveRegion="polite">{statusText}</Text>
+        {buttons}
+      </View>
+    ),
+    // `buttons` is rebuilt from these same values.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [geom, compact, view, diceSize, statusText, isMyTurn, busy, replaying, send],
   );
 
-  const boardEl = (
-    <TavlaBoard
-      geom={geom}
-      viewer={viewer}
-      board={board}
-      mySeat={seat}
-      selected={selected}
-      movable={movable}
-      targets={targets}
-      interactive={canPlay && !busy}
-      flying={anim.flying}
-      onPoint={onPoint}
-      onBar={onBar}
-      onOff={onOff}
-    />
+  const boardEl = useMemo(
+    () => (
+      <TavlaBoard
+        geom={geom}
+        viewer={viewer}
+        board={board}
+        mySeat={seat}
+        selected={selected}
+        movable={movable}
+        targets={targets}
+        interactive={canPlay && !busy}
+        flying={anim.flying}
+        onPoint={onPoint}
+        onBar={onBar}
+        onOff={onOff}
+      />
+    ),
+    // The handlers read only these values (and `view`/`seat` through planSteps and wouldHit).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [geom, viewer, board, seat, selected, movable, targets, canPlay, busy, anim.flying, view, send],
+  );
+  const opponents = useMemo(
+    () => <PlayerBar view={view} mySeat={seat} totals={totals} compact={compact} />,
+    [view, seat, totals, compact],
   );
 
   return (
@@ -300,7 +316,7 @@ export function TavlaScreen({ view, viewAt, room, seat, summary: summaryProp, hu
         onNextHand={next}
         onNewMatch={next}
         onLeaveTable={() => onLeave?.()}
-        opponents={<PlayerBar view={view} mySeat={seat} totals={totals} compact={compact} />}
+        opponents={opponents}
       >
         <View
           style={[
