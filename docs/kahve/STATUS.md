@@ -88,3 +88,15 @@ Komutlar: `pnpm test`, `pnpm typecheck`. Bu makinede `pnpm` PATH'te yok; `corepa
 2. Pi sunucusunun bu dala güncellenmesi (çevrimiçi kart masaları için) ne zaman?
 3. Faz C (Tavla) için "devam".
 4. Daha önceden açık: çift açma ve sürükleme düzeltmesinin canlı `feat/okey101-app`'e alınması (1.0.2), Faz E kararları.
+
+## Faz C (17.11.2026 başladı; kullanıcı: "varsayılanlar uygun, Faz C'ye geç")
+Sözleşme: `packages/tavla/src/types.ts` (C0, 4cb68b0). İlk sürüm yalnız Klasik tavla; varsayılan 5 sayı, konçina 3, zarlama küpü yok.
+**Kota:** Codex 18.11 20:18'e kadar, Argon (agy) 88 saat kapalı. ORKESTRA §1.6 gereği C1 motor → Claude Opus (feat/kahve-codex), C2 ekran → Claude Sonnet (feat/kahve-agy).
+Astra, Codex dönünce C1'i ikinci göz olarak inceler (B3'teki gibi).
+| Görev | Takım | Durum |
+|---|---|---|
+| C1 `@kahve/tavla` motor | Claude Opus (Codex yerine) | çalışıyor |
+| C2 `TavlaScreen` | Claude Sonnet (Antigravity yerine) | çalışıyor |
+| C3 entegrasyon (catalog, sunucu, App) | Claude Opus | C1+C2 sonrası |
+| C4a sim + sızıntı | Cline | C1 sonrası |
+| C4b `docs/oyunlar/tavla.md` | OpenCode | C1 sonrası |
