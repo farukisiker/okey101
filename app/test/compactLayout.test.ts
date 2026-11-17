@@ -4,6 +4,7 @@ import {
   COMPACT_BAR_HEIGHT,
   COMPACT_OPPONENTS_HEIGHT,
   FULL_HEADER_HEIGHT,
+  clockA11ySeconds,
   isCompactShell,
   shellHeaderBudget,
 } from '../src/components/shellBudget';
@@ -17,6 +18,12 @@ const PHONES: [string, number, number][] = [
   ['812x375', 812, 375],
   ['852x393', 852, 393],
 ];
+
+describe('GameShell clock label', () => {
+  it('changes only every 10 s', () => {
+    expect([60, 59, 51, 50, 41, 10, 9, 1, 0].map(clockA11ySeconds)).toEqual([60, 60, 60, 50, 50, 10, 10, 10, 0]);
+  });
+});
 
 describe('GameShell header budget', () => {
   it('is compact below 500 dp window height only', () => {

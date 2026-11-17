@@ -107,7 +107,7 @@ Koordinatör tam maç oynadı, işlevsel PASS. Bulunan 4 sorun:
 - A: Oyun sonu penceresinde kart oyunu dili kalmıştı. Artık "Oyunu X kazandı" / "Bu oyunu sen kazandın!", sütun "Bu oyun", düğme "Sonraki oyun" (`RoundSummary.wording: 'tavla'`). Maç sonu metni aynı kaldı.
 - B: Tur süresi 30 sn'den **60 sn**'ye çıktı (ilk tur da 60 sn); docs/oyunlar/tavla.md güncellendi.
 - C: Skor hedefi aşınca "Skor 6 / 5" yerine "Skor 6" görünüyor.
-- D: uiautomator ekranın dökümünü alamıyordu. Döngüye giren bir animasyon bulunamadı; tek sürekli iş saniyelik saat. Tahta, panel ve oyuncu çubuğu artık saat her saniye işlediğinde yeniden çizilmiyor (useMemo). Kök nedenin bu olduğu doğrulanmadı; tablette tekrar `uiautomator dump` denenecek.
+- D: uiautomator ekranın dökümünü alamıyordu. Döngüye giren bir animasyon bulunamadı; tek sürekli iş saniyelik saat. Tahta, panel ve oyuncu çubuğu artık saat her saniye işlediğinde yeniden çizilmiyor (useMemo). Kök nedenin bu olduğu doğrulanmadı; tablette tekrar `uiautomator dump` denenecek. 11cac77 tablette A ve B PASS, D düzelmedi. Koordinatörün tahmini: saatin erişilebilirlik etiketi her saniye değişiyor; sorun Batak'ta da var. Ortak GameShell saatinde etiket artık 10 sn'de bir değişiyor, işleyen rakamlar erişilebilirlikten gizli (TalkBack de saati her saniye okumaz).
 - Yeni 5 i18n anahtarı tr dışında İngilizce (diğer Tavla anahtarları gibi).
 
 ## Sonraya bırakılanlar (backlog)

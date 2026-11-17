@@ -33,3 +33,8 @@ export function shellHeaderBudget(windowHeight: number, s = 1, hasOpponents = tr
   const total = Math.round(FULL_HEADER_HEIGHT * Math.min(1.2, s));
   return { compact: false, bar: 68, opponents: 52, status: 36, total };
 }
+
+/** The clock's spoken value: rounded up to the next 10 s, so its label does not change every second. */
+export function clockA11ySeconds(secondsLeft: number): number {
+  return Math.max(0, Math.ceil(secondsLeft / 10) * 10);
+}

@@ -8,7 +8,7 @@ import { colors, font } from '../theme';
 import { Button } from './Button';
 import { SummaryTable } from './SummaryTable';
 import { type RoundSummary, summaryHeadlineText, summaryLabels } from './roundSummary';
-import { COMPACT_BAR_HEIGHT, COMPACT_OPPONENTS_HEIGHT, isCompactShell } from './shellBudget';
+import { COMPACT_BAR_HEIGHT, COMPACT_OPPONENTS_HEIGHT, clockA11ySeconds, isCompactShell } from './shellBudget';
 
 export type { RoundSummary, RoundSummaryRow } from './roundSummary';
 export { summaryHeadline } from './roundSummary';
@@ -102,12 +102,13 @@ export function GameShell(p: GameShellProps) {
           <Text style={styles.title} numberOfLines={1}>{p.title}</Text>
         )}
         {p.secondsLeft != null && (
-          <Text
-            style={[styles.clock, p.secondsLeft <= 5 && { color: colors.danger }]}
-            accessibilityLabel={t('timeLeftA11y', { n: p.secondsLeft })}
-          >
-            {`⏱ ${p.secondsLeft}`}
-          </Text>
+          // The digits change every second; screen readers (and uiautomator's idle wait) get a label that
+          // changes only every 10 s, and the ticking text itself is hidden from accessibility.
+          <View accessible accessibilityLabel={t('timeLeftA11y', { n: clockA11ySeconds(p.secondsLeft) })}>
+            <View importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+              <Text style={[styles.clock, p.secondsLeft <= 5 && { color: colors.danger }]}>{`⏱ ${p.secondsLeft}`}</Text>
+            </View>
+          </View>
         )}
         <Button title={p.muted ? '🔇' : '🔊'} variant="secondary" onPress={p.onToggleSound} style={styles.barBtn} />
       </View>
