@@ -100,3 +100,8 @@ Astra, Codex dönünce C1'i ikinci göz olarak inceler (B3'teki gibi).
 | C3 entegrasyon (catalog, sunucu, App) | Claude Opus | bitti bfd131d; 626 test, paket 5.6 MB; tablet testi bekliyor. Açık: maç uzunluğu seçici yok (5 sayı), 11 dilde Tavla metinleri İngilizce |
 | C4a sim + sızıntı | Claude Sonnet (Cline haftalık limiti doldu, 5 gün) | bitti b616056, birleşti 3ff73e5; 1000 seed tavla: 0 geçersiz, 0 bitmeyen, 15 pul korunumu her adımda; leak-tavla 5 test. Sim'de tek bir hard botMove 854 ms ölçüldü; Fable ölçümü (300 seed, yalnız hard): ~60 bin çağrıda 3'ü 40 ms üstü, en kötü 68 ms (GC/CPU gürültüsü). Uygulama ve sunucu bugün botlarda yalnız 'medium' kullanıyor |
 | C4b `docs/oyunlar/tavla.md` | OpenCode | bitti e241432 |
+
+## Sonraya bırakılanlar (backlog)
+- **UI/UX geçişi (oyunlar işlevsel olarak bitince):** Tavla tahtası ve pullar için daha güzel görsel, zar atışına üç boyutlu hava.
+  Kullanıcı (17.11.2026): "Daha güzel görsel kullana mıyız tavla ve pullar için. Zar atılması içinde üç boyutlu havası katacak bişiler. Gerçi sen önce genel oyunu bitir fonksiyonel olarak hazır olsun UI UX kısmına detaylı tekrar bakarız".
+  Sınır: yeni native modül yok (reanimated ile sahte 3B dönüş/gölge, hazır görsel varlıklar).
