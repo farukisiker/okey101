@@ -26,8 +26,9 @@ function botTurn(s: TavlaState, level: BotLevel, seed = 1): { state: TavlaState;
   let maxMs = 0;
   for (let i = 0; i < 6; i++) {
     let a: TavlaAction = { type: 'commit' };
-    // Medium/hard ignore the rng, so repeating the call is safe; the fastest of three filters out GC and machine noise.
-    const reps = level === 'easy' ? 1 : 3;
+    // Medium/hard ignore the rng, so repeating the call is safe; the fastest of five filters out GC and machine noise
+    // (the root suite runs packages in parallel, so single runs can spike on a busy CPU).
+    const reps = level === 'easy' ? 1 : 5;
     let best = Infinity;
     for (let k = 0; k < reps; k++) best = Math.min(best, timeIt(() => (a = tavlaDef.botMove(s, seat, level, rng))));
     maxMs = Math.max(maxMs, best);
@@ -109,7 +110,8 @@ describe('bots', () => {
         for (const dice of [[1, 1], [2, 2], [3, 3], [4, 4], [6, 5], [2, 1]] as [number, number][]) {
           const s = position(b, seat, dice);
           const p = toPos(s.board, seat);
-          const g = timeIt(() => sequences(p, s.remaining));
+          let g = Infinity;
+          for (let k = 0; k < 5; k++) g = Math.min(g, timeIt(() => sequences(p, s.remaining)));
           genMax = Math.max(genMax, g);
           for (const level of ['medium', 'hard'] as const) {
             const { maxMs } = botTurn(s, level);
@@ -122,5 +124,6 @@ describe('bots', () => {
     console.log(`[tavla timing] ${report.join('; ')}`);
     expect(genMax).toBeLessThan(50);
     expect(botMax).toBeLessThan(50);
-  });
+    // Many timed calls: the per-test limit (5 s) is too tight while the simulation test runs in parallel.
+  }, 60_000);
 });
