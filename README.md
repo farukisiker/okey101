@@ -96,3 +96,8 @@ Kurallar ve ayarlar: [docs/oyunlar/pisti.md](docs/oyunlar/pisti.md)
 
 Kart masaları: 4 kişi, ihaleli tekli; ihale, koz ve 13 löve.
 Kurallar ve ayarlar: [docs/oyunlar/batak.md](docs/oyunlar/batak.md)
+
+### Tavla
+
+Tahta oyunları: 2 kişi, 15 pul ve iki zar; kapı, kırma, toplama.
+Kurallar ve ayarlar: [docs/oyunlar/tavla.md](docs/oyunlar/tavla.md)
