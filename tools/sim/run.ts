@@ -165,6 +165,12 @@ interface RoundOutcome {
   refills: number;
   mix: LevelMix;
   scores: number[] | null;
+  botCalls: number;
+  botMsSum: number;
+  botMsMax: number;
+  botMsHardMax: number;
+  /** Game-specific: finished turns (tavla: turnNumber at the end). */
+  turns: number;
 }
 
 interface GameTotals {
@@ -179,6 +185,11 @@ interface GameTotals {
   mix: LevelMix;
   seatVariants: number[];
   refills: number;
+  botCalls: number;
+  botMsSum: number;
+  botMsMax: number;
+  botMsHardMax: number;
+  turns: number;
 }
 
 interface RunConfig {
@@ -231,13 +242,33 @@ function jsonProblem(value: unknown, path: string, seen: Set<object> = new Set()
   return null;
 }
 
+/** The slice of the tavla state the invariant reads (@kahve/tavla is not a sim dependency; the catalog does not export TavlaState). */
+interface TavlaState {
+  board: { points: number[]; bar: [number, number]; off: [number, number] };
+  turnNumber: number;
+}
+
+/** Tavla invariant: for each seat, checkers on points + bar + off = 15 (null when it holds). */
+function tavlaCheckerProblem(s: TavlaState): string | null {
+  for (const seat of [0, 1]) {
+    let onPoints = 0;
+    for (let p = 1; p <= 24; p++) {
+      const n = s.board.points[p] ?? 0;
+      if (seat === 0 ? n > 0 : n < 0) onPoints += Math.abs(n);
+    }
+    const total = onPoints + s.board.bar[seat] + s.board.off[seat];
+    if (total !== 15) return `seat ${seat} has ${total} checkers (points ${onPoints} + bar ${s.board.bar[seat]} + off ${s.board.off[seat]})`;
+  }
+  return null;
+}
+
 // -------------------------------------------------------------------------------------------------
 // One round of one seed
 // -------------------------------------------------------------------------------------------------
 
 function playRound(def: AnyGameDefinition, opts: unknown, names: string[], seed: number, round: number, cfg: RunConfig): RoundOutcome {
   const started = Date.now();
-  const out: RoundOutcome = { steps: 0, ms: 0, invalid: 0, unfinished: 0, jsonErrors: 0, refills: 0, mix: emptyMix(), scores: null };
+  const out: RoundOutcome = { steps: 0, ms: 0, invalid: 0, unfinished: 0, jsonErrors: 0, refills: 0, mix: emptyMix(), scores: null, botCalls: 0, botMsSum: 0, botMsMax: 0, botMsHardMax: 0, turns: 0 };
   const note = (message: string) => cfg.notes.push(message);
   const where = (step: number) => `${def.id} seed=${seed} round=${round} step=${step}`;
 
@@ -277,7 +308,13 @@ function playRound(def: AnyGameDefinition, opts: unknown, names: string[], seed:
     };
     const ctx = () => ({ clock, now: nowMs });
 
+    const botStarted = performance.now();
     const action = def.botMove(state, turn.seat, level, cfg.botRng);
+    const botMs = performance.now() - botStarted;
+    out.botCalls++;
+    out.botMsSum += botMs;
+    out.botMsMax = Math.max(out.botMsMax, botMs);
+    if (level === 'hard') out.botMsHardMax = Math.max(out.botMsHardMax, botMs);
     if (!def.isAction(action)) {
       out.jsonErrors++;
       note(`${where(step)}: isAction(botMove()) is false`);
@@ -314,6 +351,14 @@ function playRound(def: AnyGameDefinition, opts: unknown, names: string[], seed:
     }
     state = applied.state;
     step++;
+
+    if (def.id === 'tavla') {
+      const problem = tavlaCheckerProblem(state as TavlaState);
+      if (problem) {
+        out.jsonErrors++;
+        note(`${where(step)}: tavla invariant: ${problem}`);
+      }
+    }
 
     if (def.refillsClock(action) && clock !== null && !clock.refilled) {
       clock = { turnNumber: clock.turnNumber, deadline: nowMs + def.clock.baseMs, refilled: true };
@@ -363,6 +408,7 @@ function playRound(def: AnyGameDefinition, opts: unknown, names: string[], seed:
     }
   }
 
+  if (def.id === 'tavla') out.turns = (state as TavlaState).turnNumber;
   out.steps = step;
   out.ms = Date.now() - started;
   return out;
@@ -396,6 +442,11 @@ function runGame(def: AnyGameDefinition, seeds: number[], opts: SimOptions, note
     mix: emptyMix(),
     seatVariants: [],
     refills: 0,
+    botCalls: 0,
+    botMsSum: 0,
+    botMsMax: 0,
+    botMsHardMax: 0,
+    turns: 0,
   };
   const progressEvery = Math.max(1, Math.round(seeds.length / 10));
   const verbose = !opts.quiet && !opts.json;
@@ -441,6 +492,11 @@ function runGame(def: AnyGameDefinition, seeds: number[], opts: SimOptions, note
         unfinished += result.unfinished;
         jsonErrors += result.jsonErrors;
         refills += result.refills;
+        totals.botCalls += result.botCalls;
+        totals.botMsSum += result.botMsSum;
+        totals.botMsMax = Math.max(totals.botMsMax, result.botMsMax);
+        totals.botMsHardMax = Math.max(totals.botMsHardMax, result.botMsHardMax);
+        totals.turns += result.turns;
         addMix(mix, result.mix);
         totals.rounds++;
         if (result.scores) for (let k = 0; k < seats; k++) matchTotals[k] += result.scores[k] ?? 0;
@@ -570,6 +626,11 @@ function main(argv: string[]): number {
       `${pad(game.game, 10)}${pad(game.seeds, 7)}${pad(game.rounds, 7)}${pad(game.steps, 9)}${pad(game.ms, 9)}${pad(game.invalid, 10)}${pad(game.unfinished, 10)}${pad(game.jsonErrors, 10)}${game.mix.easy}/${game.mix.medium}/${game.mix.hard}`,
     );
     console.log(`  ${game.game}: koltuk=${game.seatVariants.join('/')} saatTazeleme=${game.refills}`);
+    console.log(
+      `  ${game.game}: botMove ${game.botCalls} cagri, ort=${(game.botMsSum / Math.max(1, game.botCalls)).toFixed(3)} ms, ` +
+        `max=${game.botMsMax.toFixed(2)} ms, hard max=${game.botMsHardMax.toFixed(2)} ms` +
+        (game.game === 'tavla' ? `, ortalama tur/oyun=${(game.turns / Math.max(1, game.rounds)).toFixed(1)} (30 pul korunumu her adimda)` : ''),
+    );
   }
   console.log(
     `TOPLAM: ${totals.games} oyun, ${totals.seeds} seed, ${totals.rounds} el, ${totals.steps} adim, ` +
