@@ -1,4 +1,4 @@
-// B5 (Claude Opus): one client hook for every non-okey game (pişti now, batak next).
+// B5 (Claude Opus): one client hook for every non-okey game (pişti, batak, tavla).
 // Offline: a LocalHost on the device (same clock, notice freeze, seeded bots as the server Room).
 // Online: protocol v2 over its own socket, open only while a card lobby or game is on screen, so okey's
 // useOkey connection stays exactly as it was.
@@ -21,6 +21,7 @@ import type { RoundSummary } from '../components/roundSummary';
 import { t } from '../i18n';
 import { batakNoteFromView } from './batakSummary';
 import { cardSummary, viewScores, viewTeams } from './cardSummary';
+import { tavlaNoteFromView, tavlaPointsFromView } from './tavlaSummary';
 import { type HostTimes, LocalHost } from './localHost';
 
 export { type HostTimes, msLeftNow } from './localHost';
@@ -30,6 +31,7 @@ import type { Session } from './useOkey';
 type KahveSocket = Socket<KahveServerToClientEvents, KahveClientToServerEvents>;
 
 const ME = 0;
+/** Before a bot's move (tavla: the first step of its turn; the steps after it follow at the catalog's 600 ms). */
 const BOT_DELAY_MS = 1300;
 const OFFLINE_ROOM = 'YEREL';
 
@@ -214,12 +216,13 @@ export function useKahveGame<V = unknown, A = unknown>(gameId: GameId | null, se
   const summaryRef = useRef<{ key: string; summary: RoundSummary } | null>(null);
   const summary = useMemo<RoundSummary | null>(() => {
     if (!room || !view) return null;
-    const points = offline && host?.state && host.roundOver() ? host.def.scoreRound(host.state) : viewScores(view);
+    const points =
+      offline && host?.state && host.roundOver() ? host.def.scoreRound(host.state) : (viewScores(view) ?? tavlaPointsFromView(view));
     if (!points) return null;
     const key = `${room.id}:${roundKeyOf(view, room)}`;
     if (summaryRef.current?.key === key) return summaryRef.current.summary;
     const names = room.seats.map((x, i) => x?.name ?? String(i + 1));
-    const note = batakNoteFromView(view, points, names, seat, t('you'), t);
+    const note = batakNoteFromView(view, points, names, seat, t('you'), t) ?? tavlaNoteFromView(view, t);
     const s: RoundSummary = {
       ...cardSummary({
         names,

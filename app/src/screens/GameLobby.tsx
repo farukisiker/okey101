@@ -1,9 +1,9 @@
-// B5 (Claude Opus): the lobby of a card game (pişti now, batak next): play bots now, or a table with friends.
+// B5 (Claude Opus): the lobby of a non-okey game (pişti, batak, tavla): play bots now, or a table with friends.
 import { useEffect, useState } from 'react';
 import { BackHandler, ScrollView, StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { GameId } from '@kahve/core';
-import { CATALOG } from '@kahve/catalog';
+import { CATALOG, gamesInGroup } from '@kahve/catalog';
 import { Button } from '../components/Button';
 import { loadName } from '../feedback';
 import { type Key, t, tErr } from '../i18n';
@@ -58,6 +58,8 @@ export function GameLobby({ gameId, client, serverUrl, onServerUrlChange, onBack
 
   const player = name ?? t('player');
   const title = t((meta?.titleKey ?? `game.${gameId}`) as Key);
+  // Tavla is alone in its group: its lobby goes back to the salon, not to a list of one game.
+  const backKey: Key = meta && gamesInGroup(meta.group).length === 1 ? 'backToSalon' : 'backToGames';
 
   if (friends) {
     return (
@@ -126,7 +128,7 @@ export function GameLobby({ gameId, client, serverUrl, onServerUrlChange, onBack
         />
       </View>
       {error && <Text style={styles.warn}>{error}</Text>}
-      <Button title={t('backToGames')} variant="secondary" onPress={onBack} style={{ minWidth: 120 }} />
+      <Button title={t(backKey)} variant="secondary" onPress={onBack} style={{ minWidth: 120 }} />
     </ScrollView>
   );
 }

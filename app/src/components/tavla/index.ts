@@ -7,7 +7,6 @@ export * from './DicePanel';
 export * from './ActionButton';
 export * from './PlayerBar';
 export * from './summary';
-export * from './text';
 export * from './fakeView';
 export * from './sfx';
 export * from './useOpponentAnim';

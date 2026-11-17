@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GAME_IDS } from '@kahve/core';
 import { DEFAULT_RESHUFFLES, seededRng, TURN_MS } from '@okey/shared';
-import { CATALOG, gamesInGroup, getDefinition, okey101Def, okeyDuzDef, pistiDef, batakDef } from '../src';
+import { CATALOG, gamesInGroup, getDefinition, okey101Def, okeyDuzDef, pistiDef, batakDef, tavlaDef } from '../src';
 
 describe('CATALOG', () => {
   it('lists every game id once, with titleKey game.<id>', () => {
@@ -9,9 +9,9 @@ describe('CATALOG', () => {
     for (const g of CATALOG) expect(g.titleKey).toBe(`game.${g.id}`);
   });
 
-  it('okey, pişti and batak are active; seat choices and groups', () => {
+  it('okey, pişti, batak and tavla are active; seat choices and groups', () => {
     const by = Object.fromEntries(CATALOG.map((g) => [g.id, g]));
-    expect(CATALOG.filter((g) => g.status === 'active').map((g) => g.id)).toEqual(['okey101', 'okeyDuz', 'pisti', 'batak']);
+    expect(CATALOG.filter((g) => g.status === 'active').map((g) => g.id)).toEqual(['okey101', 'okeyDuz', 'pisti', 'batak', 'tavla']);
     expect(by.pisti!.seatChoices).toEqual([2, 4]);
     expect(by.batak!.seatChoices).toEqual([4]);
     expect(by.tavla!.seatChoices).toEqual([2]);
@@ -22,12 +22,13 @@ describe('CATALOG', () => {
     expect(gamesInGroup('dama')).toEqual([]);
   });
 
-  it('getDefinition returns okey, pişti and batak defs and null for soon games', () => {
+  it('getDefinition returns okey, pişti, batak and tavla defs and null for soon games', () => {
     expect(getDefinition('okey101')).toBe(okey101Def);
     expect(getDefinition('okeyDuz')).toBe(okeyDuzDef);
     expect(getDefinition('pisti')).toBe(pistiDef);
     expect(getDefinition('batak')).toBe(batakDef);
-    for (const id of ['tavla', 'king', 'konken', 'elli1'] as const) expect(getDefinition(id)).toBeNull();
+    expect(getDefinition('tavla')).toBe(tavlaDef);
+    for (const id of ['king', 'konken', 'elli1'] as const) expect(getDefinition(id)).toBeNull();
   });
 
   it('is plain JSON', () => {

@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { TavlaView } from '@kahve/tavla';
 import { colors, font } from '../../theme';
 import { Checker } from './Checker';
-import { tt } from './text';
+import { t } from '../../i18n';
 
 export interface PlayerBarProps {
   view: Pick<TavlaView, 'players' | 'board' | 'turn' | 'options'>;
@@ -24,15 +24,15 @@ export function PlayerBar({ view, mySeat, totals, compact }: PlayerBarProps) {
       {order.map((p) => {
         const active = view.turn === p.seat;
         const off = view.board.off[p.seat] ?? 0;
-        const score = totals ? tt('tavlaScore', { n: totals[p.seat] ?? 0, target: view.options.targetScore }) : null;
-        const pips = tt('tavlaPips', { n: p.pips });
+        const score = totals ? t('tavlaScore', { n: totals[p.seat] ?? 0, target: view.options.targetScore }) : null;
+        const pips = t('tavlaPips', { n: p.pips });
         return (
           <View key={p.seat} style={[styles.panel, compact && styles.panelCompact, active && styles.active]} accessibilityLabel={`${p.name}. ${pips}. ${score ?? ''}`}>
             <Checker seat={p.seat} size={compact ? 22 : 30} />
             <View style={styles.texts}>
               <Text style={styles.name} numberOfLines={1}>{p.seat === mySeat ? `${p.name} ★` : p.name}</Text>
               {compact ? null : (
-                <Text style={styles.sub} numberOfLines={1}>{[pips, off ? tt('tavlaOffCount', { n: off }) : null, score].filter(Boolean).join(' · ')}</Text>
+                <Text style={styles.sub} numberOfLines={1}>{[pips, off ? t('tavlaOffCount', { n: off }) : null, score].filter(Boolean).join(' · ')}</Text>
               )}
             </View>
             {compact ? (

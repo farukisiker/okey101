@@ -21,7 +21,7 @@ import {
   nextTurnClock,
   seededRng,
 } from '@kahve/core';
-import { getDefinition } from '@kahve/catalog';
+import { botStepDelayMs, getDefinition } from '@kahve/catalog';
 
 export interface Seat {
   name: string;
@@ -42,6 +42,11 @@ export interface RoomOptions {
   /** Sitting down needs this 6-digit password (the table is still listed). */
   password?: string | null;
   botDelayMs?: number;
+  /**
+   * Pause before a bot's next action within the same turn (tavla: the steps after the first, then the commit).
+   * Missing = the catalog's botStepDelayMs for the game (tavla 600 ms, capped at `botDelayMs`; others = `botDelayMs`).
+   */
+  botStepDelayMs?: number;
   /**
    * A human who doesn't move in time gets the game's quick move instead (okey:
    * draw from the deck, throw a tile outside their melds). The first turn of a
@@ -146,6 +151,9 @@ export class Room<S = GameState, A = Action, V = PlayerView> {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private clock: TurnClock | null = null;
   private readonly botDelayMs: number;
+  private readonly botStepDelayMs: number;
+  /** The last action kept the same seat on the same turn (a multi-action turn goes on: bots use the step delay). */
+  private sameTurn = false;
   private readonly turnTimeoutMs: number;
   private readonly noticeMs: number;
   /** Id of the last GameNotice seen this round (0 = none). */
@@ -173,6 +181,7 @@ export class Room<S = GameState, A = Action, V = PlayerView> {
     this.totals = Array(n).fill(0);
     this.mode = modeOfGame(this.gameId) ?? '101';
     this.botDelayMs = opts.botDelayMs ?? 1000;
+    this.botStepDelayMs = opts.botStepDelayMs ?? botStepDelayMs(this.def.id, this.botDelayMs);
     this.turnTimeoutMs = opts.turnTimeoutMs ?? this.def.clock.baseMs;
     this.noticeMs = opts.noticeMs ?? (this.turnTimeoutMs > 0 ? NOTICE_MS : 0);
     if (opts.rng) {
@@ -324,6 +333,7 @@ export class Room<S = GameState, A = Action, V = PlayerView> {
     this.round++;
     this.lastNoticeId = 0;
     this.frozenUntil = 0;
+    this.sameTurn = false;
     this.tick(null);
     this.changed();
     this.schedule();
@@ -333,7 +343,10 @@ export class Room<S = GameState, A = Action, V = PlayerView> {
     if (!this.game) return 'Oyun başlamadı';
     const res = this.def.apply(this.game, seat, action);
     if (!res.ok) return res.error;
+    const before = this.def.turn(this.game);
     this.game = res.state;
+    const after = this.def.turn(this.game);
+    this.sameTurn = !!before && !!after && before.seat === after.seat && before.key === after.key;
     this.log.push({ t: 'act', seat, action });
     this.tick(action);
     this.freezeForNotice();
@@ -425,7 +438,8 @@ export class Room<S = GameState, A = Action, V = PlayerView> {
     // A timed-out human's first quick move leaves the clock run out, so the rest follows at once.
     // Bots and absent players also wait out a notice panel.
     const now = Date.now();
-    const delay = auto ? Math.max(this.botDelayMs, this.frozenUntil - now) : Math.max(0, this.clock!.deadline - now);
+    const botDelay = this.sameTurn ? this.botStepDelayMs : this.botDelayMs;
+    const delay = auto ? Math.max(botDelay, this.frozenUntil - now) : Math.max(0, this.clock!.deadline - now);
     this.timer = setTimeout(() => this.autoPlay(), delay);
   }
 

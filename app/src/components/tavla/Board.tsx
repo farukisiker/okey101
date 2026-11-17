@@ -6,7 +6,7 @@ import { colors } from '../../theme';
 import { countAt, moveLabel, moveLabelText, pointCell, stackShown } from './boardMath';
 import { Checker, CHECKER_COLORS } from './Checker';
 import { FRAME, type TavlaGeom, barX, colX, rowY, slotCenter, trayX } from './tavlaGeometry';
-import { tt } from './text';
+import { t } from '../../i18n';
 
 /** One checker sliding from one place to another (the opponent's move). */
 export interface FlyingSpec {
@@ -142,7 +142,7 @@ export function TavlaBoard(p: TavlaBoardProps) {
     return (
       <View key={`offstack${seat}`} style={StyleSheet.absoluteFill}>
         {items}
-        <Text style={[styles.abs, styles.offCount, { left: trayX(g), width: g.trayW, top: labelTop }]} accessibilityLabel={tt('tavlaOffCount', { n })}>
+        <Text style={[styles.abs, styles.offCount, { left: trayX(g), width: g.trayW, top: labelTop }]} accessibilityLabel={t('tavlaOffCount', { n })}>
           {n}
         </Text>
       </View>
@@ -186,7 +186,7 @@ export function TavlaBoard(p: TavlaBoardProps) {
               disabled={!p.interactive}
               onPress={() => p.onPoint(n)}
               accessibilityRole="button"
-              accessibilityLabel={count ? tt('tavlaPoint', { n, c: count }) : tt('tavlaPointEmpty', { n })}
+              accessibilityLabel={count ? t('tavlaPoint', { n, c: count }) : t('tavlaPointEmpty', { n })}
               style={[
                 styles.abs,
                 styles.touch,
@@ -201,14 +201,14 @@ export function TavlaBoard(p: TavlaBoardProps) {
           disabled={!barMovable}
           onPress={p.onBar}
           accessibilityRole="button"
-          accessibilityLabel={tt('tavlaBar')}
+          accessibilityLabel={t('tavlaBar')}
           style={[styles.abs, styles.touch, { left: barX(g), top: g.boardH - g.pointH, width: g.barW, height: g.pointH }, p.selected === 'bar' && styles.sel]}
         />
         <Pressable
           disabled={!p.interactive || !offTarget}
           onPress={p.onOff}
           accessibilityRole="button"
-          accessibilityLabel={tt('tavlaBearOff')}
+          accessibilityLabel={t('tavlaBearOff')}
           style={[styles.abs, styles.touch, { left: trayX(g), top: g.boardH - g.pointH, width: g.trayW, height: g.pointH }, offTarget && styles.target]}
         />
 

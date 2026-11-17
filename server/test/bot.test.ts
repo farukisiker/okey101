@@ -51,7 +51,8 @@ describe('bot', () => {
     }
     expect(opened).toBeGreaterThan(0);
     console.log(`${level}, 40 rounds: ${opened} openings, ${won} finished by a player`);
-  });
+    // CPU-heavy: next to the other packages' suites (pnpm -r) it can pass 5 s.
+  }, 30_000);
 
   function rigged(hand: Tile[]) {
     const g = createGame({ rng: seededRng(2) });

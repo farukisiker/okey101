@@ -3,7 +3,7 @@ import type { TavlaView } from '@kahve/tavla';
 import { colors, font } from '../../theme';
 import { usedDice } from './boardMath';
 import { Die } from './Die';
-import { tt } from './text';
+import { t } from '../../i18n';
 
 export interface DicePanelProps {
   view: Pick<TavlaView, 'dice' | 'openingRoll' | 'remaining' | 'turnNumber' | 'players' | 'phase'>;
@@ -19,7 +19,7 @@ export function DicePanel({ view, size }: DicePanelProps) {
   const faces = opening ? view.openingRoll : view.dice;
   const used = usedDice(view.dice, view.remaining);
   const double = !opening && view.dice[0] === view.dice[1] && view.dice[0] > 0;
-  const nameOf = (seat: number) => view.players.find((p) => p.seat === seat)?.name ?? (seat === 0 ? tt('tavlaWhite') : tt('tavlaBlack'));
+  const nameOf = (seat: number) => view.players.find((p) => p.seat === seat)?.name ?? (seat === 0 ? t('tavlaWhite') : t('tavlaBlack'));
   const markers = Math.max(10, Math.round(size * 0.2));
   return (
     <View style={styles.wrap}>
@@ -33,7 +33,7 @@ export function DicePanel({ view, size }: DicePanelProps) {
           </View>
         ))}
       </View>
-      {opening ? <Text style={styles.caption} numberOfLines={2}>{tt('tavlaOpeningRoll')}</Text> : null}
+      {opening ? <Text style={styles.caption} numberOfLines={2}>{t('tavlaOpeningRoll')}</Text> : null}
       {double ? (
         <View style={styles.markers} accessibilityLabel={String(view.remaining.length)}>
           {[0, 1, 2, 3].map((i) => (

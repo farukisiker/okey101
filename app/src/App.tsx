@@ -12,7 +12,9 @@ import { type HostTimes, useKahveGame } from './net/useKahveGame';
 import { GameLobby } from './screens/GameLobby';
 import { PistiScreen } from './screens/PistiScreen';
 import { BatakScreen } from './screens/BatakScreen';
-import type { BatakAction, BatakView, PistiAction, PistiView } from '@kahve/catalog';
+import { TavlaScreen } from './screens/TavlaScreen';
+import { CATALOG, gamesInGroup } from '@kahve/catalog';
+import type { BatakAction, BatakView, PistiAction, PistiView, TavlaAction, TavlaView } from '@kahve/catalog';
 import { isOkeyGame } from '@okey/shared';
 import { GameScreen } from './screens/GameScreen';
 import { Intro } from './screens/Intro';
@@ -31,6 +33,12 @@ import { initPurchases, syncOnce } from './purchases';
 // The live server runs on the Raspberry Pi behind a Cloudflare Tunnel (docs/raspberry-pi-kurulum.md).
 // For local development, set EXPO_PUBLIC_SERVER_URL (e.g. http://localhost:3001).
 const DEFAULT_SERVER = process.env.EXPO_PUBLIC_SERVER_URL || 'https://okey.lightsoldiergames.com';
+
+/** A group with a single game (Tavla Köşesi) opens that game's lobby directly, and its lobby steps back to the salon. */
+function soleGame(g: TableGroup): GameId | null {
+  const games = gamesInGroup(g);
+  return games.length === 1 && games[0].status === 'active' ? games[0].id : null;
+}
 
 export default function App() {
   // A slow game shouldn't let the screen go dark mid-turn.
@@ -62,9 +70,15 @@ export default function App() {
     setNav('cardLobi');
   }, []);
   const toSecim = useCallback(() => {
+    const g = CATALOG.find((m) => m.id === cardGame)?.group;
     setCardGame(null);
+    if (g && soleGame(g)) {
+      setNav('salon');
+      return;
+    }
+    if (g) setGroup(g);
     setNav('secim');
-  }, []);
+  }, [cardGame]);
   const onCardStart = useCallback((id: GameId) => {
     saveLastGame(id);
     setLast(id);
@@ -158,6 +172,21 @@ export default function App() {
         onLeave={kahve.leave}
       />
     );
+  } else if (kahve.mode && kahve.view && kahve.gameId === 'tavla') {
+    screen = (
+      <TavlaScreen
+        key={kahve.room?.id}
+        view={kahve.view as TavlaView & HostTimes}
+        viewAt={kahve.viewAt}
+        room={kahve.room}
+        seat={kahve.seat}
+        summary={kahve.summary}
+        humanCount={kahve.humanCount}
+        onAction={(a: TavlaAction) => kahve.act(a)}
+        onNextRound={kahve.nextRound}
+        onLeave={kahve.leave}
+      />
+    );
   } else if (kahve.mode) {
     // At a card table whose first view is still on its way.
     screen = null;
@@ -177,7 +206,9 @@ export default function App() {
       <KahveSalonu
         last={last}
         onOpenGroup={(g) => {
+          const only = soleGame(g);
           if (g === 'okey') setNav('okeyLobi');
+          else if (only) openGame(only);
           else {
             setGroup(g);
             setNav('secim');

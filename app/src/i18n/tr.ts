@@ -354,6 +354,28 @@ export const tr = {
   cardsPreviewBatakDone: 'Batak El Sonu',
   cardsPreviewGalleryTab: 'Kart Galerisi (52)',
   cardsPreviewGalleryTitle: '52 Standart Kart Galerisi & Kart Sırtı',
+  // Tavla (C2 texts, moved to i18n in C3)
+  tavlaUndo: 'Geri al',
+  tavlaCommit: 'Tamam',
+  tavlaPass: 'Oynayacak hamle yok — Pas',
+  tavlaPickChecker: 'Sıra sende — oynayacağın pula dokun',
+  tavlaPickTarget: 'Şimdi gideceğin yere dokun',
+  tavlaPressDone: "Hamlen bitti — Tamam'a bas",
+  tavlaNoMove: 'Zarlarla hamle yok',
+  tavlaOpeningRoll: 'Büyük atan başlar',
+  tavlaWhite: 'Beyaz',
+  tavlaBlack: 'Siyah',
+  tavlaPips: 'Pip {n}',
+  tavlaOffCount: 'Toplanan {n}',
+  tavlaScore: 'Skor {n} / {target}',
+  tavlaBar: 'Bar',
+  tavlaBearOff: 'Toplama alanı',
+  tavlaPoint: '{n}. hane, {c} pul',
+  tavlaPointEmpty: '{n}. hane, boş',
+  tavlaKindTek: 'Tek',
+  tavlaKindMars: 'Mars',
+  tavlaKindKoncina: 'Konçina',
+  tavlaResultNote: '{kind} — {n} sayı',
 };
 
 export type Key = keyof typeof tr;

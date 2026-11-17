@@ -22,7 +22,6 @@ import {
   planSteps,
   targetsFor,
   tavlaSummary,
-  tt,
   useOpponentAnim,
   viewerSeatOf,
   wouldHit,
@@ -203,8 +202,8 @@ export function TavlaScreen({ view, viewAt, room, seat, summary: summaryProp, hu
 
   let statusText: string;
   if (view.phase === 'finished') statusText = '';
-  else if (isMyTurn && view.mustPass) statusText = tt('tavlaNoMove');
-  else if (isMyTurn) statusText = selected != null ? tt('tavlaPickTarget') : view.canCommit ? tt('tavlaPressDone') : tt('tavlaPickChecker');
+  else if (isMyTurn && view.mustPass) statusText = t('tavlaNoMove');
+  else if (isMyTurn) statusText = selected != null ? t('tavlaPickTarget') : view.canCommit ? t('tavlaPressDone') : t('tavlaPickChecker');
   else if (activePlayer) statusText = t('cardsWaitingTurn', { name: activePlayer.name });
   else statusText = t('cardsWaitingOpponent');
 
@@ -219,8 +218,8 @@ export function TavlaScreen({ view, viewAt, room, seat, summary: summaryProp, hu
       matchOver: room?.matchOver ?? (sums ? Math.max(...sums) >= view.options.targetScore : false),
       mySeat: seat,
       you: t('you'),
-      kindLabel: { tek: tt('tavlaKindTek'), mars: tt('tavlaKindMars'), koncina: tt('tavlaKindKoncina') },
-      note: (kind, n) => tt('tavlaResultNote', { kind, n }),
+      kindLabel: { tek: t('tavlaKindTek'), mars: t('tavlaKindMars'), koncina: t('tavlaKindKoncina') },
+      note: (kind, n) => t('tavlaResultNote', { kind, n }),
     });
   }, [summaryProp, view.result, view.options.targetScore, players, room, seat]);
   const summary = summaryProp !== undefined ? summaryProp : fallbackSummary;
@@ -244,12 +243,12 @@ export function TavlaScreen({ view, viewAt, room, seat, summary: summaryProp, hu
 
   const buttons = (
     <View style={styles.buttons}>
-      <ActionButton title={tt('tavlaUndo')} onPress={() => send({ type: 'undo' })} disabled={idle || !view.canUndo} height={btnH} style={styles.btn} />
+      <ActionButton title={t('tavlaUndo')} onPress={() => send({ type: 'undo' })} disabled={idle || !view.canUndo} height={btnH} style={styles.btn} />
       {showPass ? (
-        <ActionButton title={tt('tavlaPass')} primary onPress={() => send({ type: 'commit' })} disabled={idle} height={btnH} style={styles.btnWide} />
+        <ActionButton title={t('tavlaPass')} primary onPress={() => send({ type: 'commit' })} disabled={idle} height={btnH} style={styles.btnWide} />
       ) : (
         <ActionButton
-          title={tt('tavlaCommit')}
+          title={t('tavlaCommit')}
           primary={commitPrimary}
           onPress={() => send({ type: 'commit' })}
           disabled={idle || !view.canCommit}

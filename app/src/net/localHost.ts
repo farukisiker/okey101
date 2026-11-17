@@ -4,6 +4,7 @@
 // server/test/local-host-equivalence.test.ts proves it moves exactly like Room for the same seed and moves.
 import { freezeClock } from '@okey/shared';
 import { type GameDefinition, type TurnClock, NOTICE_MS, nextTurnClock, seededRng } from '@kahve/core';
+import { botStepDelayMs } from '@kahve/catalog';
 
 type Rng = () => number;
 
@@ -35,6 +36,8 @@ export interface LocalHostOptions {
   humans?: readonly number[];
   /** Room's default is 1000. */
   botDelayMs?: number;
+  /** A bot's next action within the same turn (tavla steps). Missing = the catalog's botStepDelayMs, as Room. */
+  botStepDelayMs?: number;
   /** Missing = the game's clock.baseMs; 0 disables the clock. */
   turnTimeoutMs?: number;
   /** Missing = NOTICE_MS when the clock is on, else 0. */
@@ -67,6 +70,9 @@ export class LocalHost<S, A, V> {
   readonly log: HostLogEntry<A>[] = [];
   private readonly humans: ReadonlySet<number>;
   private readonly botDelayMs: number;
+  private readonly botStepDelayMs: number;
+  /** The last action kept the same seat on the same turn (Room.sameTurn). */
+  private sameTurn = false;
   private readonly turnTimeoutMs: number;
   private readonly noticeMs: number;
   private readonly dealRng: Rng;
@@ -86,6 +92,7 @@ export class LocalHost<S, A, V> {
     this.botRng = seededRng(this.seed ^ BOT_SALT);
     this.humans = new Set(opts.humans ?? [0]);
     this.botDelayMs = opts.botDelayMs ?? 1000;
+    this.botStepDelayMs = opts.botStepDelayMs ?? botStepDelayMs(def.id, this.botDelayMs);
     this.turnTimeoutMs = opts.turnTimeoutMs ?? def.clock.baseMs;
     this.noticeMs = opts.noticeMs ?? (this.turnTimeoutMs > 0 ? NOTICE_MS : 0);
   }
@@ -122,7 +129,10 @@ export class LocalHost<S, A, V> {
     if (!this.state) return { ok: false, error: 'noGame' };
     const res = this.def.apply(this.state, seat, action);
     if (!res.ok) return res;
+    const before = this.def.turn(this.state);
     this.state = res.state;
+    const after = this.def.turn(this.state);
+    this.sameTurn = !!before && !!after && before.seat === after.seat && before.key === after.key;
     this.log.push({ t: 'act', seat, action });
     this.tick(action, now);
     this.freezeForNotice(now);
@@ -157,6 +167,7 @@ export class LocalHost<S, A, V> {
     this.round++;
     this.lastNoticeId = 0;
     this.frozenUntil = 0;
+    this.sameTurn = false;
     this.tick(null, now);
     this.schedule(now);
   }
@@ -188,7 +199,8 @@ export class LocalHost<S, A, V> {
     this.due = null;
     if (!turn) return;
     if (!this.humans.has(turn.seat)) {
-      this.due = { seat: turn.seat, kind: 'bot', at: now + Math.max(this.botDelayMs, this.frozenUntil - now) };
+      const botDelay = this.sameTurn ? this.botStepDelayMs : this.botDelayMs;
+      this.due = { seat: turn.seat, kind: 'bot', at: now + Math.max(botDelay, this.frozenUntil - now) };
     } else if (this.clock) {
       this.due = { seat: turn.seat, kind: 'quick', at: now + Math.max(0, this.clock.deadline - now) };
     }

@@ -27,7 +27,7 @@ describe('generic room', () => {
   });
 
   it('refuses a game without a playable definition ("Yakında")', () => {
-    expect(() => new Room('G3', noop, { game: 'tavla' })).toThrow(/tavla/);
+    expect(() => new Room('G3', noop, { game: 'king' })).toThrow(/king/);
   });
 
   it('seats, totals and bots come from the definition (2-seat stub)', () => {

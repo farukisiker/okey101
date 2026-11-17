@@ -2,7 +2,7 @@
 // same seed, same names, same human moves -> same states, clocks, notice freezes, bot timing, totals and log.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnyGameDefinition, GameDefinition } from '@kahve/core';
-import { batakDef, okey101Def, okeyDuzDef, pistiDef } from '@kahve/catalog';
+import { batakDef, okey101Def, okeyDuzDef, pistiDef, tavlaDef } from '@kahve/catalog';
 import { Room, replay } from '../src/room';
 import { LocalHost } from '../../app/src/net/localHost';
 import { type StubAction, type StubOptions, type StubState, type StubView, stubDef } from './stub-game';
@@ -23,7 +23,10 @@ interface Pair {
 }
 
 /** One human at seat 0 (connected), bots elsewhere; the host is driven by a real (fake) timer like the hook. */
-function pair(def: AnyGameDefinition, opts: { seed: number; options?: unknown; botDelayMs: number; turnTimeoutMs: number; noticeMs?: number }): Pair {
+function pair(
+  def: AnyGameDefinition,
+  opts: { seed: number; options?: unknown; botDelayMs: number; botStepDelayMs?: number; turnTimeoutMs: number; noticeMs?: number },
+): Pair {
   const room = new Room<unknown, unknown, unknown>('EQ', () => {}, { ...opts, definition: def });
   room.join('Ali', 's1');
   expect(room.start()).toBeNull();
@@ -144,7 +147,8 @@ describe('LocalHost = Room', () => {
       }
       p.stop();
     }
-  });
+    // CPU-heavy (2.5 s alone): next to the other packages' suites (pnpm -r) it can pass the 5 s default.
+  }, 30_000);
 
   it('card-style views get turnMsLeft on the host clock (frozen during a notice); okey views keep their own', () => {
     const p = pair(noticeStub, { seed: 5, options: { seats: 2, target: 30 }, botDelayMs: 200, turnTimeoutMs: 3000, noticeMs: 1500 });
@@ -208,6 +212,83 @@ describe('LocalHost = Room', () => {
       expect(replay(batakDef, p.host.options, p.host.seed, p.host.log)).toEqual(p.host.state);
       p.stop();
     }
+  });
+
+  it('tavla (steps, undo-free bot turns, the human timing out) through the real definition, up to a match end', () => {
+    for (const [seed, targetScore] of [
+      [51, 3],
+      [52, 1],
+    ] as const) {
+      const p = pair(tavlaDef, { seed, options: { targetScore }, botDelayMs: 20, turnTimeoutMs: 100 });
+      let rounds = 0;
+      while (rounds < 12) {
+        run(p, 60_000, 500);
+        expect(p.host.roundOver()).toBe(true);
+        rounds++;
+        if (p.host.matchOver()) break;
+        expect(p.room.nextRound()).toBeNull();
+        expect(p.host.nextRound(Date.now())).toEqual({ ok: true });
+        same(p);
+      }
+      expect(p.host.matchOver()).toBe(true);
+      expect(Math.max(...p.host.totals)).toBeGreaterThanOrEqual(targetScore);
+      expect(JSON.stringify(p.host.view(0, Date.now()))).not.toContain('rngState');
+      expect(replay(tavlaDef, p.host.options, p.host.seed, p.host.log)).toEqual(p.host.state);
+      p.stop();
+    }
+  });
+
+  it('tavla bot pacing: the first action of a bot turn waits the bot delay, its next steps 600 ms; card games keep the bot delay', () => {
+    // Real delays (1000 ms like the server); both hosts must agree on every due time.
+    const p = pair(tavlaDef, { seed: 61, botDelayMs: 1000, turnTimeoutMs: 30_000 });
+    const gaps: number[] = [];
+    let lastKey = -1;
+    let lastAt = Date.now();
+    // Let the human (seat 0) play its turns at once with the first offered step, so the bot's turns come quickly.
+    for (let i = 0; i < 400 && !p.host.roundOver(); i++) {
+      const s = p.host.state as { turn: number; turnNumber: number };
+      if (s.turn === 0) {
+        const a = tavlaDef.quickMove(p.host.state as never, 0);
+        expect(p.room.act(0, a)).toBeNull();
+        expect(p.host.act(0, a, Date.now())).toEqual({ ok: true });
+        same(p);
+        lastAt = Date.now();
+        lastKey = -1;
+        continue;
+      }
+      const due = p.host.due!;
+      expect(due.kind).toBe('bot');
+      gaps.push(lastKey === s.turnNumber ? -(due.at - lastAt) : due.at - lastAt);
+      vi.advanceTimersByTime(due.at - Date.now());
+      same(p);
+      lastKey = (p.host.state as { turnNumber: number }).turnNumber === s.turnNumber ? s.turnNumber : -1;
+      lastAt = Date.now();
+    }
+    // Positive gaps: first action of a bot turn; negative: a later action in the same turn.
+    expect(gaps.filter((g) => g > 0).every((g) => g === 1000)).toBe(true);
+    expect(gaps.filter((g) => g < 0).every((g) => g === -600)).toBe(true);
+    expect(gaps.filter((g) => g < 0).length).toBeGreaterThan(10);
+    p.stop();
+
+    // Batak keeps 1000 ms for every bot action (botStepDelayMs is the bot delay for games not listed).
+    const b = pair(batakDef, { seed: 62, botDelayMs: 1000, turnTimeoutMs: 30_000 });
+    let botMoves = 0;
+    for (let i = 0; i < 20 && botMoves < 8; i++) {
+      if (b.host.due?.kind !== 'bot') {
+        // The person's turn: play the quick move on both, then the bots go on.
+        const a = batakDef.quickMove(b.host.state as never, 0);
+        expect(b.room.act(0, a)).toBeNull();
+        expect(b.host.act(0, a, Date.now())).toEqual({ ok: true });
+        same(b);
+        continue;
+      }
+      expect(b.host.due.at - Date.now()).toBe(1000);
+      vi.advanceTimersByTime(1000);
+      same(b);
+      botMoves++;
+    }
+    expect(botMoves).toBeGreaterThan(0);
+    b.stop();
   });
 
   it('the host log replays to the same state (bug reports work offline too)', () => {
