@@ -96,7 +96,7 @@ Astra, Codex dönünce C1'i ikinci göz olarak inceler (B3'teki gibi).
 | Görev | Takım | Durum |
 |---|---|---|
 | C1 `@kahve/tavla` motor | Claude Opus (Codex yerine) | çalışıyor |
-| C2 `TavlaScreen` | Claude Sonnet (Antigravity yerine) | çalışıyor |
+| C2 `TavlaScreen` | Claude Sonnet (Antigravity yerine) | bitti 2789c20, birleşti 58d1ec4; sahte view ile 120 app testi. Fable kararı: koltuk 1 tahtası dikey aynalanır (iki koltuk da evi sağ altta, saat yönü tersine). Telefonda pul 21–23 dp (cihazda bakılacak) |
 | C3 entegrasyon (catalog, sunucu, App) | Claude Opus | C1+C2 sonrası |
 | C4a sim + sızıntı | Cline | C1 sonrası |
 | C4b `docs/oyunlar/tavla.md` | OpenCode | C1 sonrası |
