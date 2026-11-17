@@ -27,6 +27,8 @@ export function Hand({
 }: HandProps) {
   const overlap = Math.max(0, cardWidth - cardStep);
   const height = cardHeight(cardWidth);
+  // Overlapped hands (Batak) are drawn as a gentle fan, like cards held in the hand.
+  const fan = overlap > 0 && cards.length > 4 ? fanGeometry(cards.length, height) : null;
 
   const handleCardPress = (cardId: number, isPlayable: boolean) => {
     if (!canPlay || !isPlayable) {
@@ -71,6 +73,7 @@ export function Hand({
                   zIndex: isSelected ? 50 : index + 1,
                   opacity: pressed ? 0.85 : 1,
                 },
+                fan && { transform: fan.transform(index) },
               ]}
               hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
               accessibilityRole="button"
@@ -88,6 +91,23 @@ export function Hand({
       </View>
     </View>
   );
+}
+
+/**
+ * Fan of `n` overlapped cards: small rotation outwards and a slight arc. The middle cards rise (instead of the edges
+ * dropping) so the hand row keeps the height the layout budgeted for it.
+ */
+export function fanGeometry(n: number, cardH: number) {
+  const mid = (n - 1) / 2;
+  const degPerCard = Math.min(2.5, 18 / Math.max(1, n - 1));
+  const maxDrop = Math.round(cardH * 0.08);
+  return {
+    maxDrop,
+    transform(index: number) {
+      const rel = mid === 0 ? 0 : (index - mid) / mid; // -1 .. 1
+      return [{ translateY: -Math.round((1 - rel * rel) * maxDrop) }, { rotate: `${((index - mid) * degPerCard).toFixed(2)}deg` }];
+    },
+  };
 }
 
 const styles = StyleSheet.create({

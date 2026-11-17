@@ -6,6 +6,8 @@ import { fitTrickLayout } from './trickLayout';
 export const COMPACT_SIDE_WIDTH = 140;
 /** Compact side padding of the table row (on top of the safe-area insets). */
 export const COMPACT_ROW_PADDING = 12;
+/** Batak hand: visible share of each overlapped card (the rest is under the next card). */
+export const HELD_HAND_STEP = 0.5;
 export interface CardGameLayout {
   /** B12: short window (< 500 dp high): merged header, action buttons beside the table centre, no action bar row. */
   compact: boolean;
@@ -78,13 +80,15 @@ export function computeCardLayout(
     cardWidth = compact ? Math.min(60, Math.max(46, targetWidth)) : Math.max(46, Math.min(targetWidth, maxHandW));
     cardStep = cardWidth + Math.round(12 * s);
   } else {
-    // Batak style (up to 13 cards, slight overlap on compact screens)
-    const maxHandH = isCompactHeight ? Math.floor(remainingCardsHeight * 0.42) : 120;
+    // Batak style: a held hand, cards overlapping like in a real hand (user, 17.11.2026: "elde üst üste tutmak").
+    // Each card shows its left half (corner rank + suit stay visible); never laid out side by side like an okey rack.
+    // Overlapping frees width, so tablet cards grow (as big as Pişti's).
+    const maxHandH = isCompactHeight ? Math.floor(remainingCardsHeight * 0.42) : 140;
     const maxHandW = Math.floor(maxHandH / 1.38);
-    const baseWidth = compact ? 46 : Math.max(40, Math.min(Math.round(56 * s), maxHandW));
+    const baseWidth = compact ? 50 : Math.max(40, Math.min(Math.round(72 * s), maxHandW));
     const maxAvailableStep = Math.floor((usableWidth - 32 - baseWidth) / Math.max(1, handCount - 1));
     cardWidth = baseWidth;
-    cardStep = Math.min(baseWidth + 4, Math.max(40, maxAvailableStep));
+    cardStep = Math.min(maxAvailableStep, Math.max(compact ? 30 : 34, Math.round(baseWidth * HELD_HAND_STEP)));
   }
 
   const cardHeight = Math.round(cardWidth * 1.38);

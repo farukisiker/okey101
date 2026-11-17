@@ -92,17 +92,19 @@ describe('compact card layout on 6-inch landscape phones', () => {
   });
 });
 
-describe('tablet 1280x800 is unchanged', () => {
+describe('tablet 1280x800', () => {
   const lay = computeCardLayout(1280, 800, flat, 13);
   const pis = computeCardLayout(1280, 800, flat, 4);
   it('keeps the old numbers', () => {
     expect(lay.compact).toBe(false);
     expect(lay.actionBarHeight).toBe(84);
-    expect(lay.trickBoxHeight).toBe(401);
+    expect(lay.trickBoxHeight).toBe(378);
     expect(lay.trickCardWidth).toBe(84);
     expect(fitTrickLayout(lay.trickBoxWidth, lay.trickBoxHeight, lay.trickCardWidth)).toMatchObject({ cardWidth: 84, tagMode: 'below' });
-    expect(lay.cardWidth).toBe(84);
-    expect(lay.cardStep).toBe(88);
+    // Batak hand is held overlapped (17.11.2026): bigger cards, each showing its left half.
+    expect(lay.cardWidth).toBe(101);
+    expect(lay.cardStep).toBe(51);
+    expect(lay.cardStep).toBeLessThan(lay.cardWidth);
     expect(pis.centerPileCardWidth).toBe(96);
     expect(pis.cardWidth).toBe(101);
   });
