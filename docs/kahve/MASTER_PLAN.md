@@ -132,6 +132,8 @@ Aşağıdaki varsayılanlar UYGULANIR (genel kabul / KURALLAR_argon "Seçenek A"
 
 ## 5. Faz C: Tavla · Faz D: Yayına hazırlık
 - C: Codex `@kahve/tavla` (hamle dizisi üretimi <50 ms, Usta 1 zar beklenen değer) · Antigravity `TavlaScreen` · Opus sunucu tarafı seed'li zar · OpenCode sim + `tavla.md`.
+  **Başladı 17.11.2026** (kullanıcı: "varsayılanlar uygun, Faz C'ye geç"). Sözleşme `packages/tavla/src/types.ts` (C0, donduruldu). Görevler: `tasks/C1-CODEX.md` (motor),
+  `C2-AGY.md` (ekran), `C3-OPUS.md` (entegrasyon), `C4-CLINE-OC.md` (sim, sızıntı, tavla.md). İlk sürüm yalnız Klasik; Gülbara/Tapa ve zarlama küpü yok. Varsayılan 5 sayı, konçina 3.
 - D (her adım onayla): 15 dilde mağaza metni (kullanıcı kuralı: en-US birincil), UI çevirileri, "Demli Kahve" adı, ikon, 1.1.0,
   önce Pi sunucusu, canlıda v1 istemci kontrolü, en son `feat/okey101-app` merge.
 
