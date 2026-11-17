@@ -70,7 +70,8 @@ export function Hand({
                   width: cardWidth,
                   height,
                   marginLeft: index === 0 ? 0 : -overlap,
-                  zIndex: isSelected ? 50 : index + 1,
+                  // In a held (fanned) hand the raised card stays in its place in the stack, so it never hides its neighbour.
+                  zIndex: isSelected && !fan ? 50 : index + 1,
                   opacity: pressed ? 0.85 : 1,
                 },
                 fan && { transform: fan.transform(index) },
