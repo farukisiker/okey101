@@ -97,6 +97,7 @@ Asıl sorular:
 | – | Ayrıca not: çiftteki okey alınamaz (Faz 0 kararı); `viewFor` tüm ıskarta geçmişini gönderiyor (masada kronoloji için kullanılıyor; "hafıza yardımı" ayarı adayı) |
 
 ## 4d. Faz E önerisi: Kahve havası (C'den sonra, D'den önce) · ÖNERİ, İŞ BAŞLAMADI
+**Kullanıcı 18.11.2026: "Mağazaya çıkmasına daha var. Hediye gönderme ödeme olayları var".** Demli Kahve mağazaya Faz E (hesap, sohbet, hediye, ödeme) bittikten sonra çıkar. Aşağıdaki kararlar alınınca E1 başlar.
 Kaynak: `docs/kahve/arastirma/SOSYAL_HEDIYE_claude.md` (§4 zarar etmeyen lot defteri, §10 alt aşamalar, §10b Argon çapraz kontrolü), `KAHVE_HAVASI_argon.md`.
 | Alt aşama | İçerik | Önerilen takım |
 |---|---|---|
