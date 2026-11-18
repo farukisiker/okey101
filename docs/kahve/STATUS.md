@@ -144,3 +144,8 @@ Açık: Apple nonce ve Google azp kontrolü yok; giriş sonrası sahipsiz kalan 
 
 ## E1 tablet sonucu (19.11.2026)
 a9e2cad + 8c14617 Cloud Run hesap sunucusuyla tablette PASS: Profilim, isim, rıza, galeri (izin penceresi yok, sistem seçici), kamera izni, yükleme → inceleme → yönetici onayı → foto görünür, hesap silme. Salon ızgarası gezinme çubuğunun üstünde. **E1 bitti; E2 kullanıcı onayı bekliyor.**
+
+## E2 / E2b tablet sonucu (19.11.2026)
+65de693 → a58d0be → db10574 → 001e9ac tablette PASS (Cloud Run test sunucuları): sözler ve emoji (balon konuşanın kutusunun altında), oran sınırı, Oyuncular paneli
+(sustur, şikâyet), lobi "Sesli masa" anahtarı, masa geçişi, RECORD_AUDIO izni. Gerçek ses denemesi LiveKit makinesinin Tailscale onayını bekliyor (KULLANICI_YARIN.md).
+UI geçişine not: orta rakibin balonu 3 sn boyunca "Sıra … oyuncuda" satırını örtebiliyor; kabul edildi, UI/UX geçişinde balon konumu yeniden ele alınacak.
