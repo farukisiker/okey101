@@ -37,3 +37,9 @@ Checks: all fields present and within limits (name/subtitle 30, keywords 100, pr
 - Keywords: Apple already indexes name and subtitle, so keywords avoid repeating them and add the generic terms (rummikub, rummy-like, card/tile, offline, bots, friends, table) plus local spellings of the game names (batak, pishti, tavla, backgammon). Turkish adds "kahvehane, kağıt, iskambil, zar, eşli". Comma-separated, no spaces after commas except multiword terms. All 95-100 chars for Latin scripts; CJK/hi are shorter because characters carry more meaning.
 - Okey is kept as the Turkish game name in every language (transliterated in ru/ja/ko/zh/hi); "Okey" and "Pishti/Pişti" and "Batak" are proper names.
 - Things for Fable to check: app name field vs store brand (colon in fr is French punctuation `Demli Kahve :`); Tavla must match what D1 locales call the game; if the iOS app has no large-text setting, remove that bullet.
+
+## Fable düzeltmesi (18.11.2026, kullanıcı: "tek başına bulunabilir olmaz")
+- "rummikub" tescilli marka: App Store anahtar kelimede başkasının markasını reddedebilir, her dilde "rummy" yapıldı.
+- en-US/en-GB: "domino" yerine "spades" (Batak'ın İngilizce aranan karşılığı).
+- tr alt başlık: "Batak, 101 Okey, internetsiz" (ad zaten Okey, Pişti, Tavla içeriyor; Batak artık ad+alt başlıkta).
+- "sohbet / chat" eklenmedi: uygulamada sohbet yok (Faz E2). Olmayan özellik anahtar kelimesi Apple 2.3.7 ihlalidir; sohbet çıkınca eklenecek.
