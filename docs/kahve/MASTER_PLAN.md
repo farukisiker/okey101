@@ -99,7 +99,7 @@ Asıl sorular:
 ## 4d. Faz E: Kahve havası · E1 BAŞLADI (18.11.2026)
 **Kullanıcı 18.11.2026 "İlk 2'yi yap":** (1) gerçek parayla jeton ve hediye satışı için kırmızı çizgi değişikliği ONAYLANDI (PROMPT_LOCAL §6, ORKESTRA §5.8 güncellendi);
 (2) yeni native modüller ONAYLANDI: LiveKit (sesli masa, E2), `expo-image-picker` + `expo-image-manipulator` (profil fotoğrafı, E1).
-Apple/Google giriş modülleri (`expo-apple-authentication`, Google Sign-In) bu onayda yok; E1 misafir hesapla başlar, giriş düğmeleri ayrı onayla eklenir.
+Apple/Google giriş modülleri (`expo-apple-authentication`, `@react-native-google-signin/google-signin`) kullanıcı 18.11.2026 "Evet ekle" ile ONAYLANDI (E1b, `tasks/E1b-OPUS-SONNET.md`).
 Hâlâ açık: ses sunucusu (VPS mi bulut mu), DB'nin çalışacağı yer, şirket/mali müşavir, alıcı payı, ödeme kuruluşu, harcama tavanı.
 **Kullanıcı 18.11.2026: "Mağazaya çıkmasına daha var. Hediye gönderme ödeme olayları var".** Demli Kahve mağazaya Faz E (hesap, sohbet, hediye, ödeme) bittikten sonra çıkar. Aşağıdaki kararlar alınınca E1 başlar.
 Kaynak: `docs/kahve/arastirma/SOSYAL_HEDIYE_claude.md` (§4 zarar etmeyen lot defteri, §10 alt aşamalar, §10b Argon çapraz kontrolü), `KAHVE_HAVASI_argon.md`.
