@@ -35,8 +35,11 @@ export function KahveSalonu({ last, onOpenGroup, onResume, onOpenProfile }: Prop
   const lastMeta = last ? KAHVE_GAMES.find((g) => g.id === last) : undefined;
   return (
     <ScrollView contentContainerStyle={styles.root}>
-      <Text style={styles.title}>{t('salonTitle')}</Text>
-      {onOpenProfile && <Button title={t('profTitle')} variant="secondary" onPress={onOpenProfile} />}
+      {/* Title and profile share one row so the profile button costs no height (the grid must fit above the nav bar). */}
+      <View style={styles.header}>
+        <Text style={styles.title}>{t('salonTitle')}</Text>
+        {onOpenProfile && <Button title={t('profTitle')} variant="secondary" onPress={onOpenProfile} />}
+      </View>
       {lastMeta && (
         <Pressable
           style={({ pressed }) => [styles.resume, pressed && styles.pressed]}
@@ -80,7 +83,8 @@ export function KahveSalonu({ last, onOpenGroup, onResume, onOpenProfile }: Prop
 }
 
 const styles = StyleSheet.create({
-  root: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 16, gap: 14 },
+  root: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 16, paddingBottom: 24, gap: 14 },
+  header: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', columnGap: 24, rowGap: 8 },
   title: { color: colors.accent, fontSize: font.title + 8, fontWeight: '900' },
   resume: {
     flexDirection: 'row',
@@ -88,14 +92,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 14,
-    minHeight: 64,
+    minHeight: 56,
     paddingHorizontal: 22,
+    paddingVertical: 6,
     borderRadius: 16,
     backgroundColor: colors.accent,
   },
-  resumeLabel: { color: '#2b1d00', fontSize: font.body, fontWeight: '600' },
-  resumeName: { color: '#2b1d00', fontSize: font.status, fontWeight: '900' },
-  resumeArrow: { color: '#2b1d00', fontSize: font.status },
+  resumeLabel: { color: '#2b1d00', fontSize: font.body, fontWeight: '600', includeFontPadding: false },
+  resumeName: { color: '#2b1d00', fontSize: font.status, fontWeight: '900', includeFontPadding: false },
+  resumeArrow: { color: '#2b1d00', fontSize: font.status, includeFontPadding: false },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 16, maxWidth: 760 },
   card: {
     width: 340,

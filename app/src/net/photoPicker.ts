@@ -5,9 +5,9 @@ export type PickResult = { uri: string } | { cancelled: true } | { permission: f
 
 /** Picks (or takes) a square photo and shrinks it to a 256x256 JPEG, ready to upload. */
 export async function pickProfilePhoto(source: 'gallery' | 'camera'): Promise<PickResult> {
-  const perm =
-    source === 'camera' ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!perm.granted) return { permission: false };
+  // Only the camera needs a permission. The gallery opens the system photo picker (Android photo picker, iOS PHPicker),
+  // which shows only the photo the user picks, so asking for media access would just be one more scary dialog.
+  if (source === 'camera' && !(await ImagePicker.requestCameraPermissionsAsync()).granted) return { permission: false };
   const opts: ImagePicker.ImagePickerOptions = {
     mediaTypes: ['images'],
     allowsEditing: true,
