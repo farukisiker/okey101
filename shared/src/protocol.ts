@@ -15,6 +15,11 @@ export const PROTOCOL_VERSION = 2;
 /** What a client puts in socket.io's `auth` option. v1 clients send nothing. */
 export interface HandshakeAuth {
   v?: number;
+  /**
+   * E2, v2 only: the accounts-server id of the player (UNVERIFIED; used only as a report/block target).
+   * Same as `accountId` on room:create / room:join / room:quickPlay; the payload wins when both are sent.
+   */
+  accountId?: string;
 }
 
 /** The client's protocol version from `socket.handshake.auth`: missing or junk = 1. */
@@ -58,6 +63,11 @@ export interface SeatInfo {
   name: string;
   isBot: boolean;
   connected: boolean;
+  /**
+   * E2, v2 sockets only (never sent to v1): the accounts id the player's app sent with hello/join.
+   * UNVERIFIED (the game server does not check it): only a target for report/block. Missing for bots and guests without one.
+   */
+  accountId?: string;
 }
 
 export interface RoomInfo {
@@ -78,6 +88,8 @@ export interface RoomInfo {
   isPublic?: boolean;
   /** Listed, but sitting down needs this 6-digit password. Sent only to the people at the table. */
   password?: string;
+  /** E2, v2 sockets only: the host opened voice chat for this table (voice:token works). */
+  voice?: boolean;
 }
 
 /** One table in the salon list. */
@@ -99,19 +111,69 @@ export interface TableSummary {
 /** A table password: exactly 6 digits. */
 export const isTablePassword = (p: unknown): p is string => typeof p === 'string' && /^\d{6}$/.test(p);
 
+/** E2: the fixed "Kahve Sözleri". No free text at the table; the app shows them through i18n keys. */
+export const QUICK_SAYINGS = [
+  'hayirliOlsun',
+  'cayBenden',
+  'eline',
+  'gecmisOlsun',
+  'kolayGelsin',
+  'sansinBol',
+  'tebrikler',
+  'biraBekle',
+  'tesekkurler',
+  'hadiBakalim',
+] as const;
+export type QuickSaying = (typeof QUICK_SAYINGS)[number];
+export const QUICK_EMOJI = ['👍', '😄', '👏', '☕', '😮', '🙏'] as const;
+export type QuickEmoji = (typeof QUICK_EMOJI)[number];
+
+export const isQuickSaying = (v: unknown): v is QuickSaying => typeof v === 'string' && (QUICK_SAYINGS as readonly string[]).includes(v);
+export const isQuickEmoji = (v: unknown): v is QuickEmoji => typeof v === 'string' && (QUICK_EMOJI as readonly string[]).includes(v);
+
+/** 'table:say' payload: exactly one of the two. */
+export interface TableSay {
+  saying?: QuickSaying;
+  emoji?: QuickEmoji;
+}
+/** 'table:said': someone at the table said something (v2 sockets only). `at` = server epoch ms. */
+export interface TableSaid extends TableSay {
+  seat: number;
+  at: number;
+}
+/** 'table:say' errors: not seated at a table, bad payload, or over the limit (1 per 2 s, 15 per minute). */
+export type TableSayError = 'not_seated' | 'invalid' | 'rate_limited';
+export const SAY_MIN_GAP_MS = 2000;
+export const SAY_PER_MINUTE = 15;
+
+/** 'voice:token' answer: a LiveKit access token for the table's audio room. */
+export type VoiceTokenResult =
+  | { ok: true; url: string; token: string; room: string; identity: string }
+  | { ok: false; error: 'voice_off' | 'not_seated' | 'not_configured' };
+
 export type Ack<T = object> = (res: ({ ok: true } & T) | { ok: false; error: string }) => void;
 
 export interface ClientToServerEvents {
   /** `isPublic`: list the table in the salon. `password` (6 digits): listed, locked with it. */
+  /** E2 (v2): `voice` = voice chat at this table (missing: on for a friends table, off for an open listed one); `accountId` see SeatInfo. */
   'room:create': (
-    p: { name: string; mode?: GameMode; game?: GameId; options?: unknown; isPublic?: boolean; password?: string },
+    p: {
+      name: string;
+      mode?: GameMode;
+      game?: GameId;
+      options?: unknown;
+      isPublic?: boolean;
+      password?: string;
+      voice?: boolean;
+      accountId?: string;
+    },
     ack: Ack<{ roomId: string; seat: number }>,
   ) => void;
   /** `password`: needed for a locked table. */
   /** `game` (v2): what the client expects to find; a mismatch is an error, not a silent okey table. */
-  'room:join': (p: { roomId: string; name: string; password?: string; game?: GameId }, ack: Ack<{ roomId: string; seat: number }>) => void;
+  'room:join': (p: { roomId: string; name: string; password?: string; game?: GameId; accountId?: string }, ack: Ack<{ roomId: string; seat: number }>) => void;
   /** Creates a room, fills empty seats with bots and starts immediately. */
-  'room:quickPlay': (p: { name: string; mode?: GameMode; game?: GameId; options?: unknown }, ack: Ack<{ roomId: string; seat: number }>) => void;
+  'room:quickPlay': (p: { name: string; mode?: GameMode; game?: GameId; options?: unknown; accountId?: string }, ack: Ack<{ roomId: string; seat: number }>) => void;
   /** Host only: fill empty seats with bots and start. */
   'room:start': (ack: Ack) => void;
   'room:nextRound': (ack: Ack) => void;
@@ -135,9 +197,15 @@ export interface ServerToClientEvents {
  */
 export interface KahveClientToServerEvents extends Omit<ClientToServerEvents, 'game:action'> {
   'game:action': (action: unknown, ack: Ack) => void;
+  /** E2: a quick saying or emoji to the table. Seated humans only; 1 per 2 s and 15 per minute per socket. */
+  'table:say': (msg: TableSay, ack: (res: { ok: true } | { ok: false; error: TableSayError }) => void) => void;
+  /** E2: LiveKit token for the table's voice room (table opened with voice, caller seated, server configured). */
+  'voice:token': (ack: (r: VoiceTokenResult) => void) => void;
 }
 
 export interface KahveServerToClientEvents extends Omit<ServerToClientEvents, 'game:view'> {
   /** v1 socket: bare okey PlayerView. v2 socket: GameViewEnvelope for every game, okey included. */
   'game:view': (view: PlayerView | GameViewEnvelope) => void;
+  /** E2, v2 sockets only: a saying/emoji from `seat`. */
+  'table:said': (m: TableSaid) => void;
 }

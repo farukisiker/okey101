@@ -7,6 +7,7 @@ import { t } from '../i18n';
 import { colors, font } from '../theme';
 import { Button } from './Button';
 import { SummaryTable } from './SummaryTable';
+import { useSocialSheets } from './TableSocialUI';
 import { type RoundSummary, summaryHeadlineText, summaryLabels } from './roundSummary';
 import { COMPACT_BAR_HEIGHT, COMPACT_OPPONENTS_HEIGHT, clockA11ySeconds, isCompactShell } from './shellBudget';
 
@@ -53,6 +54,8 @@ export function GameShell(p: GameShellProps) {
   const counted = useRef<RoundSummary | null>(null);
   const waiting = useRef(false);
   const [busy, setBusy] = useState(false);
+  // E2: ready sayings, voice, mute/block/report. Both parts are null unless this is an online table with other people.
+  const social = useSocialSheets();
 
   useEffect(() => {
     if (summary && counted.current !== summary) {
@@ -110,6 +113,7 @@ export function GameShell(p: GameShellProps) {
             </View>
           </View>
         )}
+        {social.bar}
         <Button title={p.muted ? '🔇' : '🔊'} variant="secondary" onPress={p.onToggleSound} style={styles.barBtn} />
       </View>
       {p.opponents ? <View style={[styles.opponents, compact && styles.opponentsCompact]}>{p.opponents}</View> : null}
@@ -147,6 +151,7 @@ export function GameShell(p: GameShellProps) {
         </View>
       )}
       {p.notice ? <View style={styles.notice} pointerEvents="box-none">{p.notice}</View> : null}
+      {social.layer}
     </View>
   );
 }

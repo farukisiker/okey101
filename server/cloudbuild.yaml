@@ -1,0 +1,6 @@
+# Builds server/Dockerfile with the repo root as context (gcloud run deploy --source can't point at server/Dockerfile).
+# From the repo root: gcloud builds submit --config server/cloudbuild.yaml --substitutions _IMAGE=<region>-docker.pkg.dev/<project>/<repo>/kahve-server .
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ['build', '-f', 'server/Dockerfile', '-t', '${_IMAGE}', '.']
+images: ['${_IMAGE}']

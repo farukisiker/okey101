@@ -1,5 +1,5 @@
-import type { AccountRecord, AccountStore, LinkResult, PhotoMeta, PhotoRecord, ProviderLink } from './store';
-import { PROVIDERS, type AdminPhotoItem, type PhotoStatus, type Provider, type ReasonCode } from './types';
+import type { AccountRecord, AccountStore, BlockResult, LinkResult, PhotoMeta, PhotoRecord, ProviderLink, ReportRecord } from './store';
+import { PROVIDERS, type AdminPhotoItem, type PhotoStatus, type Provider, type ReasonCode, type ReportStatus } from './types';
 
 export class MemoryStore implements AccountStore {
   private accounts = new Map<string, AccountRecord>();
@@ -9,6 +9,9 @@ export class MemoryStore implements AccountStore {
   private uploads = new Map<string, number>(); // `${id}|${day}`
   private blocked = new Map<string, ReasonCode[]>();
   private links = new Map<string, ProviderLink>(); // `${provider}|${sub}`
+  private reports: ReportRecord[] = [];
+  private voiceBans = new Map<string, number>();
+  private blocks = new Map<string, Map<string, number>>(); // accountId -> (blockedId -> createdAt), insertion order
 
   async createAccount(id: string, tokenHash: string, now: number): Promise<void> {
     this.accounts.set(id, { id, displayName: null, createdAt: now, photoConsentVersion: 0 });
@@ -134,7 +137,63 @@ export class MemoryStore implements AccountStore {
     return r ? [...r] : null;
   }
 
+  async addReport(r: Omit<ReportRecord, 'status'>): Promise<void> {
+    this.reports.push({ ...r, status: 'open' });
+  }
+
+  async countReportsBy(reporterId: string, since: number): Promise<number> {
+    return this.reports.filter((r) => r.reporterId === reporterId && r.createdAt >= since).length;
+  }
+
+  async listReports(q: { status: ReportStatus; since: number; targetId?: string }): Promise<ReportRecord[]> {
+    return this.reports
+      .filter((r) => r.status === q.status && r.createdAt >= q.since && (q.targetId === undefined || r.targetId === q.targetId))
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .map((r) => ({ ...r }));
+  }
+
+  async closeReports(targetId: string): Promise<number> {
+    let n = 0;
+    for (const r of this.reports) {
+      if (r.targetId === targetId && r.status === 'open') {
+        r.status = 'closed';
+        n++;
+      }
+    }
+    return n;
+  }
+
+  async getVoiceBan(accountId: string): Promise<number | null> {
+    return this.voiceBans.get(accountId) ?? null;
+  }
+
+  async setVoiceBan(accountId: string, until: number | null): Promise<void> {
+    if (until === null) this.voiceBans.delete(accountId);
+    else this.voiceBans.set(accountId, until);
+  }
+
+  async listBlocks(accountId: string): Promise<string[]> {
+    return [...(this.blocks.get(accountId) ?? new Map<string, number>()).keys()];
+  }
+
+  async addBlock(accountId: string, blockedId: string, now: number, max: number): Promise<BlockResult> {
+    const list = this.blocks.get(accountId) ?? new Map<string, number>();
+    if (list.has(blockedId)) return 'exists';
+    if (list.size >= max) return 'limit';
+    list.set(blockedId, now);
+    this.blocks.set(accountId, list);
+    return 'ok';
+  }
+
+  async removeBlock(accountId: string, blockedId: string): Promise<void> {
+    this.blocks.get(accountId)?.delete(blockedId);
+  }
+
   async deleteAccount(id: string): Promise<void> {
+    this.reports = this.reports.filter((r) => r.reporterId !== id && r.targetId !== id);
+    this.voiceBans.delete(id);
+    this.blocks.delete(id);
+    for (const list of this.blocks.values()) list.delete(id);
     this.accounts.delete(id);
     this.photos.delete(id);
     this.photoSeq.delete(id);

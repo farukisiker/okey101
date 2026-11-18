@@ -16,6 +16,10 @@ export type ReasonCode =
 
 export type Provider = 'apple' | 'google';
 
+/** E2 report reasons and where the behaviour happened (docs/kahve/tasks/E2-OPUS-SONNET.md). */
+export type ReportReason = 'insult' | 'harass' | 'askGift' | 'spam' | 'other';
+export type ReportContext = 'voice' | 'saying' | 'photo' | 'name';
+
 /** `switched`: the sign-in belonged to an existing account, so this device now uses that one instead. */
 export interface AuthResult {
   accountId: string;
@@ -30,6 +34,8 @@ export interface Me {
   displayName: string | null;
   photoConsent: boolean;
   uploadsLeftToday: number;
+  /** E2: epoch ms until which this account's voice chat is closed (after reports); null/missing = open. */
+  voiceBannedUntil?: number | null;
   /** `url` is a server-relative path, only present when approved. Use photoUrl(). */
   photo: { status: PhotoStatus; reasons: ReasonCode[]; url: string | null };
 }
@@ -94,6 +100,7 @@ export function createAccountsClient(deps: AccountsDeps) {
   const readFile = deps.readFile ?? (async (uri: string) => (await doFetch(uri)).blob());
   let token: string | null = null;
   let guestInFlight: Promise<string> | null = null;
+  let myId: string | null = null;
 
   const enabled = () => base.length > 0;
 
@@ -127,6 +134,7 @@ export function createAccountsClient(deps: AccountsDeps) {
         const j = (await res.json()) as { token?: string };
         if (!j.token) throw new AccountsError('unknown', res.status);
         token = j.token;
+        myId = null;
         await deps.storage.setItem(TOKEN_KEY, j.token).catch(() => {});
         return j.token;
       })().finally(() => {
@@ -180,6 +188,7 @@ export function createAccountsClient(deps: AccountsDeps) {
     const j = (await res.json()) as Partial<AuthResult>;
     if (!j.token || !j.accountId) throw new AccountsError('unknown', res.status);
     token = j.token;
+    myId = j.accountId;
     await deps.storage.setItem(TOKEN_KEY, j.token).catch(() => {});
     return { accountId: j.accountId, token: j.token, switched: j.switched === true };
   }
@@ -225,10 +234,38 @@ export function createAccountsClient(deps: AccountsDeps) {
     async signInGoogle(idToken: string): Promise<AuthResult> {
       return auth('/v1/auth/google', { idToken });
     },
+    /** E2: the signed-in account's id (cached after the first getMe), or null when it can't be read. */
+    async myAccountId(): Promise<string | null> {
+      if (myId) return myId;
+      try {
+        myId = (await (await call('GET', '/v1/me')).json() as Me).accountId;
+      } catch {
+        return null;
+      }
+      return myId;
+    },
+    /** E2: reports another account (204). Own account -> bad_request, over the daily limit -> rate_limited. */
+    async report(targetAccountId: string, reason: ReportReason, context?: ReportContext): Promise<void> {
+      const body: Record<string, string> = { targetAccountId, reason };
+      if (context) body.context = context;
+      await call('POST', '/v1/reports', json(body), 'application/json');
+    },
+    /** E2: accounts this account blocked. */
+    async getBlocks(): Promise<string[]> {
+      const j = (await (await call('GET', '/v1/blocks')).json()) as { blocked?: unknown };
+      return Array.isArray(j.blocked) ? j.blocked.filter((x): x is string => typeof x === 'string') : [];
+    },
+    async blockAccount(accountId: string): Promise<void> {
+      await call('PUT', `/v1/blocks/${encodeURIComponent(accountId)}`);
+    },
+    async unblockAccount(accountId: string): Promise<void> {
+      await call('DELETE', `/v1/blocks/${encodeURIComponent(accountId)}`);
+    },
     /** Deletes the account on the server and forgets the token. */
     async deleteAccount(): Promise<void> {
       await call('DELETE', '/v1/me');
       token = null;
+      myId = null;
       await deps.storage.removeItem(TOKEN_KEY).catch(() => {});
     },
   };

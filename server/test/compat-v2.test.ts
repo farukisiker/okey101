@@ -58,11 +58,11 @@ function waitFor<T>(sock: V1Client | V2Client, event: EventName, pred: (v: T) =>
   return new Promise((resolve) => {
     const h = (v: T) => {
       if (pred(v)) {
-        sock.off(event, h as never);
+        (sock as V1Client).off(event, h as never); // the event maps differ since E2 (table:said); these names exist in both
         resolve(v);
       }
     };
-    sock.on(event, h as never);
+    (sock as V1Client).on(event, h as never);
   });
 }
 
@@ -155,6 +155,20 @@ describe('compat v2 (Demli Kahve client)', () => {
       expect(room.game).toBe('okeyDuz');
       expect(room.mode).toBe('duz');
       c.emit('room:leave');
+    },
+    2000,
+  );
+
+  it(
+    'E2: v2 RoomInfo carries voice and the seat accountId',
+    async () => {
+      const c = v2();
+      const state = waitFor<RoomInfo>(c, 'room:state', () => true);
+      const ack = await within(c.emitWithAck('room:create', { name: 'Ali', game: 'okey101', accountId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee' }));
+      expect(ack).toMatchObject({ ok: true });
+      const room = await within(state);
+      expect(room.voice).toBe(true);
+      expect(room.seats[0]?.accountId).toBe('aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee');
     },
     2000,
   );

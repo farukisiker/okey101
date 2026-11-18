@@ -28,6 +28,8 @@ export interface Seat {
   isBot: boolean;
   /** Socket id of the human in this seat, null when disconnected. */
   socketId: string | null;
+  /** E2: accounts id the player's app sent (unverified; report/block target only). */
+  accountId?: string | null;
 }
 
 export interface RoomOptions {
@@ -41,6 +43,8 @@ export interface RoomOptions {
   isPublic?: boolean;
   /** Sitting down needs this 6-digit password (the table is still listed). */
   password?: string | null;
+  /** E2: the host opened voice chat for this table. Missing = false. */
+  voice?: boolean;
   botDelayMs?: number;
   /**
    * Pause before a bot's next action within the same turn (tavla: the steps after the first, then the commit).
@@ -145,6 +149,7 @@ export class Room<S = GameState, A = Action, V = PlayerView> {
   readonly mode: GameMode;
   readonly isPublic: boolean;
   readonly password: string | null;
+  readonly voice: boolean;
   /** Null for legacy `rng` tables (not replayable). */
   readonly seed: number | null;
   private readonly log: RoomLogEntry<A>[] = [];
@@ -195,6 +200,7 @@ export class Room<S = GameState, A = Action, V = PlayerView> {
     }
     this.isPublic = opts.isPublic ?? false;
     this.password = opts.password ?? null;
+    this.voice = opts.voice ?? false;
   }
 
   get started() {
@@ -206,11 +212,13 @@ export class Room<S = GameState, A = Action, V = PlayerView> {
     return this.log;
   }
 
-  join(name: string, socketId: string): number | string {
+  /** `accountId`: E2, what the app claims (unverified), kept only to name a report/block target. */
+  join(name: string, socketId: string, accountId: string | null = null): number | string {
     // Reclaim a disconnected seat with the same name (reconnect).
     const back = this.seats.findIndex((s) => s && !s.isBot && s.socketId === null && s.name === name);
     if (back >= 0) {
       this.seats[back]!.socketId = socketId;
+      this.seats[back]!.accountId = accountId;
       this.changed();
       this.schedule();
       return back;
@@ -220,7 +228,7 @@ export class Room<S = GameState, A = Action, V = PlayerView> {
     if (seat < 0) seat = this.seats.findIndex((s) => s?.isBot);
     if (seat < 0) return 'Oda dolu';
     if (this.seats.every((s) => s === null || s.isBot)) this.hostSeat = seat;
-    this.seats[seat] = { name, isBot: false, socketId };
+    this.seats[seat] = { name, isBot: false, socketId, accountId };
     this.rename(seat, name);
     this.changed();
     this.schedule();
@@ -365,8 +373,17 @@ export class Room<S = GameState, A = Action, V = PlayerView> {
       game: this.gameId,
       isPublic: this.isPublic,
       ...(this.password !== null && { password: this.password }),
+      voice: this.voice,
       seats: this.seats.map((s, seat) =>
-        s ? { seat, name: s.name, isBot: s.isBot, connected: s.isBot || s.socketId !== null } : null,
+        s
+          ? {
+              seat,
+              name: s.name,
+              isBot: s.isBot,
+              connected: s.isBot || s.socketId !== null,
+              ...(!s.isBot && s.accountId && { accountId: s.accountId }),
+            }
+          : null,
       ),
       hostSeat: this.hostSeat,
       started: this.started,

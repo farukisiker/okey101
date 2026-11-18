@@ -31,7 +31,8 @@
         "monochromeImage": "./assets/adaptive-icon-mono.png",
         "backgroundColor": "#0b3d2e"
       },
-      "permissions": ["com.android.vending.BILLING"]
+      "permissions": ["com.android.vending.BILLING"],
+      "blockedPermissions": ["android.permission.SYSTEM_ALERT_WINDOW"]
     },
     "icon": "./assets/icon.png",
     "locales": {
@@ -88,6 +89,14 @@
           "photosPermission": "Choose a profile photo from your gallery.",
           "cameraPermission": "Take a profile photo with the camera.",
           "microphonePermission": false
+        }
+      ],
+      "@livekit/react-native-expo-plugin",
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "microphonePermission": "Your microphone is used only to talk with the people at your table, and only when you turn it on. Audio is never recorded.",
+          "cameraPermission": "Take a profile photo with the camera."
         }
       ],
       [

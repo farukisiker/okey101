@@ -7,6 +7,8 @@ import { DEFAULT_MATCH_END, type MatchEnd } from '@kahve/catalog';
 import type { TableClient } from '../net/tableClient';
 import { colors, font } from '../theme';
 import { type Key, t, tErr } from '../i18n';
+import { voiceAvailable } from '../net/TableSocial';
+import { voiceDefault } from '../net/social';
 
 interface Props {
   client: TableClient;
@@ -41,6 +43,11 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack, matc
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [code, setCode] = useState('');
+  /** E2 voice switch of a new card table: null = not touched (on for a locked or private table, off for an open one). */
+  const [voiceChoice, setVoiceChoice] = useState<boolean | null>(null);
+  const showVoice = card && voiceAvailable();
+  /** Card tables send the host's voice choice as the 6th createRoom argument; okey ignores it. */
+  const voiceExtra = (hasPassword: boolean) => (card ? { voice: voiceDefault(hasPassword, voiceChoice) } : undefined);
   const offline = !client.connected;
   const tableName = (m: GameMode) => (card ? t(`game.${game}` as Key) : modeName(m));
   const newTableOptions = card ? options : mode === '101' ? { matchEnd } : undefined;
@@ -65,7 +72,7 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack, matc
     if (!pinFor) return { ok: false as const, error: '' };
     const res =
       pinFor.kind === 'create'
-        ? await run(() => client.createRoom(name, mode, true, pin, newTableOptions))
+        ? await run(() => client.createRoom(name, mode, true, pin, newTableOptions, voiceExtra(true)))
         : await run(() => client.joinRoom(name, pinFor.table.id, pin));
     if (res.ok) setPinFor(null);
     return res;
@@ -119,11 +126,20 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack, matc
               />
             ))}
           </View>)}
+          {showVoice && (
+            <Button
+              title={voiceChoice === null ? `🎤 ${t('voiceSwitch')}` : `${voiceChoice ? '✓' : '✕'} 🎤 ${t('voiceSwitch')}: ${voiceChoice ? t('voiceOn') : t('voiceOff')}`}
+              subtitle={voiceChoice === null ? t('voiceSwitchAuto') : t('voiceSwitchSub')}
+              variant={voiceChoice === true ? 'success' : 'secondary'}
+              onPress={() => setVoiceChoice((v) => (v === null ? true : !v))}
+              disabled={busy}
+            />
+          )}
           <Button
             title={t('openTable')}
             subtitle={t('openTableSub')}
             variant="success"
-            onPress={() => run(() => client.createRoom(name, mode, true, undefined, newTableOptions))}
+            onPress={() => run(() => client.createRoom(name, mode, true, undefined, newTableOptions, voiceExtra(false)))}
             disabled={busy || offline}
           />
           <Button
@@ -142,7 +158,7 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack, matc
                 title={t('privateTable')}
                 subtitle={t('privateTableSub')}
                 variant="secondary"
-                onPress={() => run(() => client.createRoom(name, mode, false, undefined, newTableOptions))}
+                onPress={() => run(() => client.createRoom(name, mode, false, undefined, newTableOptions, voiceExtra(true)))}
                 disabled={busy || offline}
               />
               <View style={styles.codeRow}>

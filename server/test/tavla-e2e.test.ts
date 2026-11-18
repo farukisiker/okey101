@@ -51,10 +51,10 @@ function next<T>(sock: V1Client | V2Client, event: 'game:view' | 'room:state' | 
     const h = (v: T) => {
       if (!pred(v)) return;
       clearTimeout(timer);
-      sock.off(event, h as never);
+      (sock as V1Client).off(event, h as never); // the event maps differ since E2 (table:said); these names exist in both
       resolve(v);
     };
-    sock.on(event, h as never);
+    (sock as V1Client).on(event, h as never);
   });
 }
 

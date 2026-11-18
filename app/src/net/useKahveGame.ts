@@ -23,6 +23,9 @@ import { batakNoteFromView } from './batakSummary';
 import { cardSummary, viewScores, viewTeams } from './cardSummary';
 import { tavlaNoteFromView, tavlaPointsFromView } from './tavlaSummary';
 import { type HostTimes, LocalHost } from './localHost';
+import { accounts, accountsEnabled } from './accounts';
+import { type SaidMsg, type SayMsg, parseSaid } from './social';
+import type { TokenReply } from './voice';
 
 export { type HostTimes, msLeftNow } from './localHost';
 import type { Result, TableClient } from './tableClient';
@@ -34,6 +37,12 @@ const ME = 0;
 /** Before a bot's move (tavla: the first step of its turn; the steps after it follow at the catalog's 600 ms). */
 const BOT_DELAY_MS = 1300;
 const OFFLINE_ROOM = 'YEREL';
+
+/** The account id sent with room:create / join / quickPlay (unverified, only a target for report/block); null if unavailable. */
+async function myAccountId(): Promise<string | null> {
+  if (!accountsEnabled()) return null;
+  return Promise.race([accounts.myAccountId(), new Promise<null>((r) => setTimeout(() => r(null), 1500))]).catch(() => null);
+}
 
 const isEnvelope = (p: PlayerView | GameViewEnvelope): p is GameViewEnvelope =>
   typeof p === 'object' && p !== null && 'view' in p && 'game' in p;
@@ -79,6 +88,8 @@ export function useKahveGame<V = unknown, A = unknown>(gameId: GameId | null, se
   const sessionRef = useRef<Session | null>(null);
   const roomRef = useRef<RoomInfo | null>(null);
   const watchingSalon = useRef(false);
+  const accountIdRef = useRef<string | null>(null);
+  const saidListeners = useRef(new Set<(m: SaidMsg) => void>());
   const gameRef = useRef(gameId);
   gameRef.current = gameId;
   const [connected, setConnected] = useState(false);
@@ -96,7 +107,7 @@ export function useKahveGame<V = unknown, A = unknown>(gameId: GameId | null, se
       if (watchingSalon.current) socket.emit('salon:watch', true, { games: [gameId] });
       const s = sessionRef.current;
       if (s)
-        socket.emit('room:join', { roomId: s.roomId, name: s.name, password: s.password, game: gameId }, (res) => {
+        socket.emit('room:join', { roomId: s.roomId, name: s.name, password: s.password, game: gameId, ...(accountIdRef.current ? { accountId: accountIdRef.current } : {}) }, (res) => {
           if (res.ok && res.seat !== s.seat) {
             sessionRef.current = { ...s, seat: res.seat };
             setSession(sessionRef.current);
@@ -113,6 +124,10 @@ export function useKahveGame<V = unknown, A = unknown>(gameId: GameId | null, se
       if (isEnvelope(p) && p.game === gameRef.current) setOnlineView({ view: p.view as V, at: Date.now() });
     });
     socket.on('salon:list', setSalon);
+    socket.on('table:said', (m) => {
+      const said = parseSaid(m);
+      if (said) for (const fn of saidListeners.current) fn(said);
+    });
     return () => {
       socket.removeAllListeners();
       socket.close();
@@ -130,19 +145,23 @@ export function useKahveGame<V = unknown, A = unknown>(gameId: GameId | null, se
   }, []);
 
   const enter = useCallback(
-    async (kind: 'room:create' | 'room:join' | 'room:quickPlay', name: string, p: { roomId?: string; isPublic?: boolean; password?: string; options?: unknown }): Promise<Result> => {
+    async (kind: 'room:create' | 'room:join' | 'room:quickPlay', name: string, p: { roomId?: string; isPublic?: boolean; password?: string; options?: unknown; voice?: boolean }): Promise<Result> => {
       const socket = socketRef.current;
       const game = gameRef.current;
       if (!socket?.connected || !game) return { ok: false, error: t('cantReachServer') };
       const extra = p.options === undefined ? {} : { options: p.options };
+      // E2: `accountId` (a report/block target) and `voice` (host's choice) are extra fields; a v1 server ignores them.
+      const accountId = await myAccountId();
+      accountIdRef.current = accountId;
+      const who = accountId ? { accountId } : {};
       let res;
       try {
         res =
           kind === 'room:join'
-            ? await socket.timeout(5000).emitWithAck('room:join', { roomId: p.roomId ?? '', name, password: p.password, game })
+            ? await socket.timeout(5000).emitWithAck('room:join', { roomId: p.roomId ?? '', name, password: p.password, game, ...who })
             : kind === 'room:create'
-              ? await socket.timeout(5000).emitWithAck('room:create', { name, game, isPublic: p.isPublic ?? false, password: p.password, ...extra })
-              : await socket.timeout(5000).emitWithAck('room:quickPlay', { name, game, ...extra });
+              ? await socket.timeout(5000).emitWithAck('room:create', { name, game, isPublic: p.isPublic ?? false, password: p.password, ...extra, ...who, ...(p.voice === undefined ? {} : { voice: p.voice }) })
+              : await socket.timeout(5000).emitWithAck('room:quickPlay', { name, game, ...extra, ...who });
       } catch {
         return { ok: false, error: t('serverNoReply') };
       }
@@ -306,14 +325,37 @@ export function useKahveGame<V = unknown, A = unknown>(gameId: GameId | null, se
     setError(null);
   }, [mode, clearOnline]);
 
+  // ---- E2: table chat and voice (online tables only) ----
+  const say = useCallback(
+    async (msg: SayMsg): Promise<Result> => {
+      const socket = socketRef.current;
+      if (!socket?.connected) return { ok: false, error: t('noConnection') };
+      try {
+        return await socket.timeout(5000).emitWithAck('table:say', msg);
+      } catch {
+        return { ok: false, error: t('serverNoReply') };
+      }
+    },
+    [],
+  );
+  const subscribeSaid = useCallback((fn: (m: SaidMsg) => void) => {
+    saidListeners.current.add(fn);
+    return () => void saidListeners.current.delete(fn);
+  }, []);
+  const fetchVoiceToken = useCallback(async (): Promise<TokenReply> => {
+    const socket = socketRef.current;
+    if (!socket) throw new Error('no socket');
+    return socket.timeout(5000).emitWithAck('voice:token');
+  }, []);
+
   const client: TableClient = {
     connected,
     session: offline ? { roomId: OFFLINE_ROOM, seat: ME, name: host?.names[ME] ?? '' } : session,
     room,
     salon,
     watchSalon,
-    createRoom: (name: string, _mode: GameMode, isPublic = false, password?: string, options?: unknown) =>
-      enter('room:create', name, { isPublic, password, options }),
+    createRoom: (name: string, _mode: GameMode, isPublic = false, password?: string, options?: unknown, extra?: { voice?: boolean }) =>
+      enter('room:create', name, { isPublic, password, options, voice: extra?.voice }),
     joinRoom: (name: string, roomId: string, password?: string) => enter('room:join', name, { roomId, password }),
     start: () => call((s) => s.timeout(5000).emitWithAck('room:start')),
     leave,
@@ -340,6 +382,9 @@ export function useKahveGame<V = unknown, A = unknown>(gameId: GameId | null, se
     quickPlay: (name: string, options?: unknown) => enter('room:quickPlay', name, { options }),
     act,
     nextRound,
+    say,
+    subscribeSaid,
+    fetchVoiceToken,
   };
 }
 

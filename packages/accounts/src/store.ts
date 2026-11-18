@@ -1,4 +1,4 @@
-import type { AdminPhotoItem, PhotoStatus, Provider, ReasonCode } from './types';
+import type { AdminPhotoItem, PhotoStatus, Provider, ReasonCode, ReportContext, ReportReason, ReportStatus } from './types';
 
 export interface AccountRecord {
   id: string;
@@ -29,6 +29,20 @@ export interface ProviderLink {
   /** Apple refresh token sealed with AES-256-GCM (SecretBox), or null. Never plaintext. */
   appleRefreshEnc: string | null;
 }
+
+/** E2: one report, written by `reporterId` about `targetId`. */
+export interface ReportRecord {
+  id: string;
+  reporterId: string;
+  targetId: string;
+  reason: ReportReason;
+  context: ReportContext | null;
+  createdAt: number;
+  status: ReportStatus;
+}
+
+/** Result of addBlock: 'exists' = already blocked (no change), 'limit' = the list already has `max` entries. */
+export type BlockResult = 'ok' | 'exists' | 'limit';
 
 /** Result of linkProvider: 'sub_taken' = this identity is linked to some account; 'provider_taken' = the account already has this provider. */
 export type LinkResult = 'ok' | 'sub_taken' | 'provider_taken';
@@ -72,7 +86,26 @@ export interface AccountStore {
   unblockHash(sha256: string): Promise<void>;
   blockedReasons(sha256: string): Promise<ReasonCode[] | null>;
 
-  /** Removes account, sessions, provider links, photo, consents and counters. */
+  // E2 reports, voice bans, blocks
+  addReport(r: Omit<ReportRecord, 'status'>): Promise<void>;
+  /** Reports written by `reporterId` since `since` (any status): the daily limit. */
+  countReportsBy(reporterId: string, since: number): Promise<number>;
+  /** Reports with `status` created at or after `since`, optionally about one target; oldest first. */
+  listReports(q: { status: ReportStatus; since: number; targetId?: string }): Promise<ReportRecord[]>;
+  /** Marks the target's open reports closed; returns how many. */
+  closeReports(targetId: string): Promise<number>;
+  getVoiceBan(accountId: string): Promise<number | null>;
+  /** null lifts the ban. */
+  setVoiceBan(accountId: string, until: number | null): Promise<void>;
+  /** Blocked account ids, in the order they were blocked. */
+  listBlocks(accountId: string): Promise<string[]>;
+  addBlock(accountId: string, blockedId: string, now: number, max: number): Promise<BlockResult>;
+  removeBlock(accountId: string, blockedId: string): Promise<void>;
+
+  /**
+   * Removes account, sessions, provider links, photo, consents and counters; E2: the reports it wrote and the
+   * reports about it, its voice ban, its block list and its entries in other people's block lists.
+   */
   deleteAccount(id: string): Promise<void>;
   close?(): void;
 }

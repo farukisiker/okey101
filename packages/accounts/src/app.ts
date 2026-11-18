@@ -5,14 +5,52 @@ import { AuthService, type AuthOptions } from './auth';
 import { InvalidTokenError, JwksUnavailableError } from './jwt';
 import { BadJpegError, cleanJpeg } from './jpeg';
 import { runModeration, type ModerationLayer, type ModerationResult } from './moderation';
-import type { AccountRecord, AccountStore } from './store';
-import { isReasonCode, type AuthResult, type ErrorCode, type Me, type PhotoStatus, type Provider, type ReasonCode } from './types';
+import type { AccountRecord, AccountStore, ReportRecord } from './store';
+import {
+  isReasonCode,
+  isReportContext,
+  isReportReason,
+  REPORT_STATUSES,
+  type AdminReportItem,
+  type AuthResult,
+  type ErrorCode,
+  type Me,
+  type PhotoStatus,
+  type Provider,
+  type ReasonCode,
+  type ReportStatus,
+} from './types';
 
 export const PHOTO_CONSENT_VERSION = 1;
 export const DAILY_UPLOAD_LIMIT = 3;
 export const GUEST_PER_IP_PER_HOUR = 10;
 export const MAX_PHOTO_SIDE = 512;
 export const MAX_PHOTO_BYTES = 150 * 1024;
+/** E2: reports one account may send in any 24 hours. */
+export const DAILY_REPORT_LIMIT = 20;
+/** E2: entries in one block list. */
+export const MAX_BLOCKS = 500;
+/** E2: this many different reporters within VOICE_BAN_WINDOW_MS turn voice off for VOICE_BAN_MS. */
+export const VOICE_BAN_REPORTERS = 3;
+export const VOICE_BAN_WINDOW_MS = 7 * 24 * 3600_000;
+export const VOICE_BAN_MS = 24 * 3600_000;
+
+/** Groups reports by target for the admin list: most reporters first, then most reports, then newest. */
+export function summarizeReports(reports: readonly ReportRecord[]): Omit<AdminReportItem, 'displayName' | 'voiceBannedUntil'>[] {
+  const byTarget = new Map<string, { count: number; reporters: Set<string>; reasons: AdminReportItem['reasons']; contexts: AdminReportItem['contexts']; lastAt: number }>();
+  for (const r of reports) {
+    const t = byTarget.get(r.targetId) ?? { count: 0, reporters: new Set<string>(), reasons: {}, contexts: {}, lastAt: 0 };
+    t.count++;
+    t.reporters.add(r.reporterId);
+    t.reasons[r.reason] = (t.reasons[r.reason] ?? 0) + 1;
+    if (r.context) t.contexts[r.context] = (t.contexts[r.context] ?? 0) + 1;
+    t.lastAt = Math.max(t.lastAt, r.createdAt);
+    byTarget.set(r.targetId, t);
+  }
+  return [...byTarget]
+    .map(([targetAccountId, t]) => ({ targetAccountId, count: t.count, reporters: t.reporters.size, reasons: t.reasons, contexts: t.contexts, lastAt: t.lastAt }))
+    .sort((a, b) => b.reporters - a.reporters || b.count - a.count || b.lastAt - a.lastAt);
+}
 
 export interface AccountsAppOptions {
   store: AccountStore;
@@ -106,6 +144,7 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
     const photo = await store.getPhotoMeta(acc.id);
     const providers = (await store.listProviderLinks(acc.id)).map((l) => l.provider);
     const used = await store.getUploads(acc.id, utcDay(now()));
+    const ban = await store.getVoiceBan(acc.id);
     return {
       accountId: acc.id,
       displayName: acc.displayName,
@@ -119,7 +158,24 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
           }
         : { status: 'none', reasons: [], url: null },
       providers,
+      voiceBannedUntil: ban !== null && ban > now() ? ban : null,
     };
+  }
+
+  /** The admin report list (last 7 days) with names and current voice bans. */
+  async function adminReports(status: ReportStatus): Promise<AdminReportItem[]> {
+    const t = now();
+    const groups = summarizeReports(await store.listReports({ status, since: t - VOICE_BAN_WINDOW_MS }));
+    return Promise.all(
+      groups.map(async (g) => {
+        const ban = await store.getVoiceBan(g.targetAccountId);
+        return {
+          ...g,
+          displayName: (await store.getAccount(g.targetAccountId))?.displayName ?? null,
+          voiceBannedUntil: ban !== null && ban > t ? ban : null,
+        };
+      }),
+    );
   }
 
   async function sendMe(req: AuthedReq, res: Response, status = 200): Promise<void> {
@@ -302,6 +358,49 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
     res.status(204).end();
   });
 
+  // ------------------------------------------------------------ E2 reports and blocks
+  app.post('/v1/reports', requireUser, json, async (req: AuthedReq, res) => {
+    const b = req.body as { targetAccountId?: unknown; reason?: unknown; context?: unknown } | undefined;
+    if (!b || typeof b !== 'object' || Array.isArray(b)) return fail(res, 400, 'bad_request');
+    const { targetAccountId: target, reason, context } = b;
+    if (typeof target !== 'string' || !UUID_RE.test(target) || !isReportReason(reason)) return fail(res, 400, 'bad_request');
+    if (context !== undefined && context !== null && !isReportContext(context)) return fail(res, 400, 'bad_request');
+    const me = req.account!.id;
+    if (target === me) return fail(res, 400, 'bad_request');
+    if (!(await store.getAccount(target))) return fail(res, 404, 'not_found');
+    const t = now();
+    if ((await store.countReportsBy(me, t - 24 * 3600_000)) >= DAILY_REPORT_LIMIT) return fail(res, 429, 'rate_limited');
+    // Only a new reporter can trigger (or extend) a voice ban: the same person reporting again changes nothing.
+    const prior = await store.listReports({ status: 'open', since: t - VOICE_BAN_WINDOW_MS, targetId: target });
+    const newReporter = !prior.some((r) => r.reporterId === me);
+    await store.addReport({ id: randomUUID(), reporterId: me, targetId: target, reason, context: context ?? null, createdAt: t });
+    if (newReporter && new Set([...prior.map((r) => r.reporterId), me]).size >= VOICE_BAN_REPORTERS) {
+      const until = t + VOICE_BAN_MS;
+      const current = await store.getVoiceBan(target);
+      if (current === null || current < until) await store.setVoiceBan(target, until);
+    }
+    res.status(204).end();
+  });
+
+  app.get('/v1/blocks', requireUser, async (req: AuthedReq, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ blocked: await store.listBlocks(req.account!.id) });
+  });
+
+  app.put('/v1/blocks/:accountId', requireUser, async (req: AuthedReq, res) => {
+    const target = req.params.accountId as string;
+    if (!UUID_RE.test(target) || target === req.account!.id) return fail(res, 400, 'bad_request');
+    if ((await store.addBlock(req.account!.id, target, now(), MAX_BLOCKS)) === 'limit') return fail(res, 409, 'limit_reached');
+    res.status(204).end();
+  });
+
+  app.delete('/v1/blocks/:accountId', requireUser, async (req: AuthedReq, res) => {
+    const target = req.params.accountId as string;
+    if (!UUID_RE.test(target)) return fail(res, 400, 'bad_request');
+    await store.removeBlock(req.account!.id, target);
+    res.status(204).end();
+  });
+
   app.get('/v1/photos/:file', async (req, res) => {
     const m = /^(.+)\.jpg$/.exec(req.params.file);
     if (!m || !UUID_RE.test(m[1])) return fail(res, 404, 'not_found');
@@ -427,7 +526,26 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Vary', 'Authorization');
+    if (req.query.tab === 'reports') {
+      const reports = authed ? await adminReports('open') : null;
+      return void res.status(authed ? 200 : 401).type('html').send(renderAdminPage({ nonce, status, items: null, tab: 'reports', reports }));
+    }
     res.status(authed ? 200 : 401).type('html').send(renderAdminPage({ nonce, status, items: authed ? await store.listPhotos(status) : null }));
+  });
+
+  app.get('/admin/v1/reports', requireAdmin, async (req, res) => {
+    const q = typeof req.query.status === 'string' ? req.query.status : 'open';
+    if (!(REPORT_STATUSES as readonly string[]).includes(q)) return fail(res, 400, 'bad_request');
+    res.json(await adminReports(q as ReportStatus));
+  });
+
+  /** Dismisses the target's open reports and lifts its voice ban. */
+  app.post('/admin/v1/reports/:accountId/close', requireAdmin, async (req, res) => {
+    const id = req.params.accountId as string;
+    if (!UUID_RE.test(id)) return fail(res, 404, 'not_found');
+    const closed = await store.closeReports(id);
+    await store.setVoiceBan(id, null);
+    res.json({ accountId: id, closed });
   });
 
   app.get('/admin/v1/photos', requireAdmin, async (req, res) => {

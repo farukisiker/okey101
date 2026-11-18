@@ -39,6 +39,39 @@ export interface Me {
   photo: { status: PhotoStatus; reasons: ReasonCode[]; url: string | null };
   /** Linked sign-in providers, in a fixed order (apple, google). */
   providers: Provider[];
+  /**
+   * E2: epoch ms until which voice chat is off for this account (3 different people reported it within 7 days),
+   * null when not banned. Informational in E2: the app keeps its own microphone off; the game server does not enforce it yet.
+   */
+  voiceBannedUntil: number | null;
+}
+
+// ---------------------------------------------------------------- E2 reports and blocks
+export type ReportReason = 'insult' | 'harass' | 'askGift' | 'spam' | 'other';
+export const REPORT_REASONS: readonly ReportReason[] = ['insult', 'harass', 'askGift', 'spam', 'other'];
+export const isReportReason = (v: unknown): v is ReportReason => typeof v === 'string' && (REPORT_REASONS as readonly string[]).includes(v);
+
+/** Where the reported behaviour happened. */
+export type ReportContext = 'voice' | 'saying' | 'photo' | 'name';
+export const REPORT_CONTEXTS: readonly ReportContext[] = ['voice', 'saying', 'photo', 'name'];
+export const isReportContext = (v: unknown): v is ReportContext => typeof v === 'string' && (REPORT_CONTEXTS as readonly string[]).includes(v);
+
+/** 'open' until an admin closes (dismisses) the target's reports. */
+export type ReportStatus = 'open' | 'closed';
+export const REPORT_STATUSES: readonly ReportStatus[] = ['open', 'closed'];
+
+/** One reported account in the admin list: its reports of the last 7 days with the given status. */
+export interface AdminReportItem {
+  targetAccountId: string;
+  displayName: string | null;
+  /** Reports in the window (one person may report more than once). */
+  count: number;
+  /** Different people who reported. */
+  reporters: number;
+  reasons: Partial<Record<ReportReason, number>>;
+  contexts: Partial<Record<ReportContext, number>>;
+  lastAt: number;
+  voiceBannedUntil: number | null;
 }
 
 export interface AuthResult {
@@ -59,7 +92,9 @@ export type ErrorCode =
   | 'invalid_token'
   | 'already_linked'
   | 'not_configured'
-  | 'unavailable';
+  | 'unavailable'
+  /** E2: the block list is full (MAX_BLOCKS). */
+  | 'limit_reached';
 
 export interface AdminPhotoItem {
   accountId: string;

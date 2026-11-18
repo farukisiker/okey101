@@ -8,16 +8,23 @@ import {
   type PlayerView,
   type RoomInfo,
   type SalonFilter,
+  type SeatInfo,
   type TableSummary,
+  type TableSaid,
+  type VoiceTokenResult,
   ERR_UPDATE_APP,
   clientProtocol,
   gameOfMode,
   isOkeyGame,
+  isQuickEmoji,
+  isQuickSaying,
   isTablePassword,
 } from '@okey/shared';
 import { isGameId } from '@kahve/core';
 import { getDefinition } from '@kahve/catalog';
+import { SayLimiter } from './chat';
 import { type AnyRoom, Room, type RoomOptions } from './room';
+import { type LiveKitConfig, identitySuffix, liveKitConfigFromEnv, liveKitToken } from './voice';
 
 type IO = Server<KahveClientToServerEvents, KahveServerToClientEvents>;
 type ClientSocket = Socket<KahveClientToServerEvents, KahveServerToClientEvents>;
@@ -32,9 +39,12 @@ export interface OkeyServer {
 /** Tables a v1 client (Demli Okey ≤ 1.0.1) can see and sit at, and a v2 salon watcher without a filter gets. */
 const OKEY_GAMES: readonly GameId[] = ['okey101', 'okeyDuz'];
 
-/** v1 payloads are exactly what 1.0.1 got: no `game` (or A7 `matchOver`) field anywhere. */
-function v1Info({ game: _game, matchOver: _matchOver, ...info }: RoomInfo): RoomInfo {
-  return info;
+/** v1 payloads are exactly what 1.0.1 got: no `game` (or A7 `matchOver`, E2 `voice` / seat `accountId`) field anywhere. */
+function v1Info({ game: _game, matchOver: _matchOver, voice: _voice, ...info }: RoomInfo): RoomInfo {
+  return { ...info, seats: info.seats.map((s) => (s ? v1Seat(s) : null)) };
+}
+function v1Seat({ accountId: _accountId, ...seat }: SeatInfo): SeatInfo {
+  return seat;
 }
 /** v1 game views without the A7 notice fields (1.0.1 has no notice panel). */
 function v1View({ notice: _n, notices: _ns, noticeMsLeft: _l, islek: _i, ...view }: PlayerView): PlayerView {
@@ -44,7 +54,23 @@ function v1Summary({ game: _game, ...table }: TableSummary): TableSummary {
   return table;
 }
 
-export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 120_000): OkeyServer {
+/** Accounts ids are UUIDs; anything else is dropped (the id is unverified anyway, see SeatInfo.accountId). */
+const ACCOUNT_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const cleanAccountId = (v: unknown): string | null => (typeof v === 'string' && ACCOUNT_ID_RE.test(v) ? v.toLowerCase() : null);
+
+export interface ServerExtras {
+  /** E2 voice: LiveKit address and keys. Missing = read LIVEKIT_URL / LIVEKIT_API_KEY / LIVEKIT_API_SECRET; null = not configured. */
+  livekit?: LiveKitConfig | null;
+  /** E2 'table:say' limits (tests). Defaults: SAY_MIN_GAP_MS, SAY_PER_MINUTE. */
+  sayMinGapMs?: number;
+  sayPerMinute?: number;
+}
+
+export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 120_000, extras: ServerExtras = {}): OkeyServer {
+  const livekit = extras.livekit === undefined ? liveKitConfigFromEnv() : extras.livekit;
+  const sayLimiter = new SayLimiter(extras.sayMinGapMs, extras.sayPerMinute);
+  /** socket id -> random part of its LiveKit identity (stable per socket, so a re-requested token replaces the old participant) */
+  const voiceIds = new Map<string, string>();
   const app = express();
   const http = createHttpServer(app);
   const io: IO = new Server(http, { cors: { origin: '*' } });
@@ -138,9 +164,15 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
     }
   };
 
-  const enter = (socket: ClientSocket, room: AnyRoom, name: string) => {
+  /** v2 only: the accounts id from the payload, else from the handshake. v1 apps never send one. */
+  const accountIdOf = (socket: ClientSocket, fromPayload: unknown): string | null =>
+    isV1(socket.id)
+      ? null
+      : (cleanAccountId(fromPayload) ?? cleanAccountId((socket.handshake.auth as { accountId?: unknown } | null)?.accountId));
+
+  const enter = (socket: ClientSocket, room: AnyRoom, name: string, accountId: string | null = null) => {
     leave(socket);
-    const seat = room.join(name.trim().slice(0, 20) || 'Oyuncu', socket.id);
+    const seat = room.join(name.trim().slice(0, 20) || 'Oyuncu', socket.id, accountId);
     if (typeof seat === 'string') return seat;
     membership.set(socket.id, room.id);
     socket.join(room.id);
@@ -169,25 +201,30 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
   io.on('connection', (socket) => {
     protocols.set(socket.id, clientProtocol(socket.handshake.auth));
 
-    socket.on('room:create', ({ name, mode, game, options, isPublic, password }, ack) => {
+    socket.on('room:create', ({ name, mode, game, options, isPublic, password, voice, accountId }, ack) => {
       if (password !== undefined && !isTablePassword(password)) return ack({ ok: false, error: 'Şifre 6 rakam olmalı' });
       const g = gameFor(socket, { mode, game });
       if (typeof g !== 'string') return ack({ ok: false, error: g.error });
       // A locked table is listed in the salon too: people see it and ask for the password.
+      const listed = isPublic === true || password !== undefined;
+      // E2 voice is the host's choice. v2 default: on at a friends table (password, or code only), off at an
+      // open listed one. A v1 host never chose it, so its table stays without voice.
+      const withVoice = isV1(socket.id) ? false : typeof voice === 'boolean' ? voice : !listed || password !== undefined;
       const room = new Room(newRoomId(), broadcast, {
         ...roomOpts,
         game: g,
         options,
-        isPublic: isPublic === true || password !== undefined,
+        isPublic: listed,
         password: password ?? null,
+        voice: withVoice,
       });
       rooms.set(room.id, room);
-      const seat = enter(socket, room, name);
+      const seat = enter(socket, room, name, accountIdOf(socket, accountId));
       if (typeof seat === 'string') return ack({ ok: false, error: seat });
       ack({ ok: true, roomId: room.id, seat });
     });
 
-    socket.on('room:join', ({ roomId, name, password, game }, ack) => {
+    socket.on('room:join', ({ roomId, name, password, game, accountId }, ack) => {
       const room = rooms.get(String(roomId).trim().toUpperCase());
       if (!room) return ack({ ok: false, error: 'Masa bulunamadı' });
       if (isV1(socket.id) && !isOkeyGame(room.gameId)) return ack({ ok: false, error: ERR_UPDATE_APP });
@@ -203,18 +240,18 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
         }
         wrongPasswords.delete(socket.id);
       }
-      const seat = enter(socket, room, name);
+      const seat = enter(socket, room, name, accountIdOf(socket, accountId));
       if (typeof seat === 'string') return ack({ ok: false, error: seat });
       ack({ ok: true, roomId: room.id, seat });
       room.startIfFull();
     });
 
-    socket.on('room:quickPlay', ({ name, mode, game, options }, ack) => {
+    socket.on('room:quickPlay', ({ name, mode, game, options, accountId }, ack) => {
       const g = gameFor(socket, { mode, game });
       if (typeof g !== 'string') return ack({ ok: false, error: g.error });
       const room = new Room(newRoomId(), broadcast, { ...roomOpts, game: g, options });
       rooms.set(room.id, room);
-      const seat = enter(socket, room, name);
+      const seat = enter(socket, room, name, accountIdOf(socket, accountId));
       if (typeof seat === 'string') return ack({ ok: false, error: seat });
       ack({ ok: true, roomId: room.id, seat });
       room.start();
@@ -244,6 +281,41 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
       ack(err ? { ok: false, error: err } : { ok: true });
     });
 
+    // E2: quick sayings / emoji (no free text). Seated humans on v2 apps only, rate limited per socket.
+    socket.on('table:say', (msg, ack) => {
+      if (typeof ack !== 'function') return;
+      const r = roomOf(socket);
+      if (!r || r.seat < 0 || isV1(socket.id)) return ack({ ok: false, error: 'not_seated' });
+      const m = (typeof msg === 'object' && msg !== null ? msg : {}) as { saying?: unknown; emoji?: unknown };
+      const saying = m.saying === undefined ? undefined : isQuickSaying(m.saying) ? m.saying : null;
+      const emoji = m.emoji === undefined ? undefined : isQuickEmoji(m.emoji) ? m.emoji : null;
+      if (saying === null || emoji === null || (saying === undefined) === (emoji === undefined)) {
+        return ack({ ok: false, error: 'invalid' });
+      }
+      if (!sayLimiter.allow(socket.id)) return ack({ ok: false, error: 'rate_limited' });
+      const said: TableSaid = saying ? { seat: r.seat, saying, at: Date.now() } : { seat: r.seat, emoji: emoji!, at: Date.now() };
+      // v1 apps (Demli Okey <= 1.0.1) never get this event.
+      for (const id of io.sockets.adapter.rooms.get(r.room.id) ?? []) if (!isV1(id)) io.to(id).emit('table:said', said);
+      ack({ ok: true });
+    });
+
+    // E2: LiveKit token for the table's voice room. The server records nothing and does not police the room
+    // (leaving the table = the app leaves the room).
+    socket.on('voice:token', (ack) => {
+      if (typeof ack !== 'function') return;
+      const answer = (res: VoiceTokenResult) => ack(res);
+      const r = roomOf(socket);
+      const seat = r && r.seat >= 0 ? r.room.seats[r.seat] : null;
+      if (!r || !seat || seat.isBot || isV1(socket.id)) return answer({ ok: false, error: 'not_seated' });
+      if (!r.room.voice) return answer({ ok: false, error: 'voice_off' });
+      if (!livekit) return answer({ ok: false, error: 'not_configured' });
+      let suffix = voiceIds.get(socket.id);
+      if (!suffix) voiceIds.set(socket.id, (suffix = identitySuffix()));
+      const identity = `s${r.seat}-${suffix}`;
+      const token = liveKitToken(livekit, { room: r.room.id, identity, name: seat.name });
+      answer({ ok: true, url: livekit.url, token, room: r.room.id, identity });
+    });
+
     socket.on('room:leave', () => leave(socket, true));
     socket.on('salon:watch', (on, filter?: SalonFilter) => {
       if (!on) {
@@ -262,6 +334,8 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
       leave(socket);
       protocols.delete(socket.id);
       salonFilters.delete(socket.id);
+      sayLimiter.forget(socket.id);
+      voiceIds.delete(socket.id);
     });
   });
 

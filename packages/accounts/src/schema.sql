@@ -60,3 +60,32 @@ CREATE TABLE IF NOT EXISTS account_providers (
   PRIMARY KEY (provider, sub),
   UNIQUE (account_id, provider)
 );
+
+-- E2: reports, voice bans, block lists. Added with IF NOT EXISTS so an E1 database picks them up on start.
+-- A report is deleted with either account (writer or target). app.ts checks the target exists before inserting.
+CREATE TABLE IF NOT EXISTS reports (
+  id TEXT PRIMARY KEY,
+  reporter_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  target_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  reason TEXT NOT NULL,
+  context TEXT,
+  created_at BIGINT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open'
+);
+CREATE INDEX IF NOT EXISTS reports_target ON reports(target_id, created_at);
+CREATE INDEX IF NOT EXISTS reports_reporter ON reports(reporter_id, created_at);
+CREATE INDEX IF NOT EXISTS reports_status ON reports(status, created_at);
+
+CREATE TABLE IF NOT EXISTS voice_bans (
+  account_id TEXT PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+  until_at BIGINT NOT NULL
+);
+
+-- blocked_id has no foreign key: blocking needs only a well-formed id (the target may be deleted meanwhile).
+CREATE TABLE IF NOT EXISTS blocks (
+  account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  blocked_id TEXT NOT NULL,
+  created_at BIGINT NOT NULL,
+  PRIMARY KEY (account_id, blocked_id)
+);
+CREATE INDEX IF NOT EXISTS blocks_blocked ON blocks(blocked_id);

@@ -296,4 +296,26 @@ describe('compat v1 (store client 1.0.1)', () => {
     }
     c.close();
   });
+
+  it('E2: at a table with v2 players, a v1 socket gets no table:said and no voice / accountId in RoomInfo', async () => {
+    const c = client();
+    const kahve = connect(url, { transports: ['websocket'], forceNew: true, auth: { v: 2, accountId: '11111111-2222-4333-8444-555555555555' } });
+    const said: unknown[] = [];
+    (c as unknown as { on: (e: string, h: (m: unknown) => void) => void }).on('table:said', (m) => said.push(m));
+    const states: RoomInfo[] = [];
+    c.on('room:state', (r) => states.push(r));
+    const created = await kahve.emitWithAck('room:create', { name: 'Yeni', password: '246810', voice: true });
+    expect(await c.emitWithAck('room:join', { roomId: created.roomId, name: 'Eski', password: '246810' })).toMatchObject({ ok: true, seat: 1 });
+    expect(await kahve.emitWithAck('table:say', { saying: 'hayirliOlsun' })).toEqual({ ok: true });
+    expect(await kahve.emitWithAck('table:say', { emoji: '👍' })).toEqual({ ok: false, error: 'rate_limited' });
+    await new Promise((r) => setTimeout(r, 100));
+    expect(said).toEqual([]);
+    expect(states.length).toBeGreaterThan(0);
+    for (const r of states) {
+      expect(r).not.toHaveProperty('voice');
+      for (const s of r.seats) if (s) expect(s).not.toHaveProperty('accountId');
+    }
+    kahve.close();
+    c.close();
+  });
 });

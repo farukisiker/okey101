@@ -1,7 +1,17 @@
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import type { AccountRecord, AccountStore, LinkResult, PhotoMeta, PhotoRecord, ProviderLink } from './store';
-import { isReasonCode, PROVIDERS, type AdminPhotoItem, type PhotoStatus, type Provider, type ReasonCode } from './types';
+import type { AccountRecord, AccountStore, BlockResult, LinkResult, PhotoMeta, PhotoRecord, ProviderLink, ReportRecord } from './store';
+import {
+  isReasonCode,
+  isReportContext,
+  isReportReason,
+  PROVIDERS,
+  type AdminPhotoItem,
+  type PhotoStatus,
+  type Provider,
+  type ReasonCode,
+  type ReportStatus,
+} from './types';
 
 const SCHEMA_URL = new URL('./schema.sql', import.meta.url);
 
@@ -236,12 +246,93 @@ export class SqliteStore implements AccountStore {
     return r ? parseReasons(r.reasons) : null;
   }
 
+  async addReport(r: Omit<ReportRecord, 'status'>): Promise<void> {
+    this.db
+      .prepare(
+        "INSERT INTO reports (id, reporter_id, target_id, reason, context, created_at, status) VALUES (?, ?, ?, ?, ?, ?, 'open')",
+      )
+      .run(r.id, r.reporterId, r.targetId, r.reason, r.context, r.createdAt);
+  }
+
+  async countReportsBy(reporterId: string, since: number): Promise<number> {
+    const r = this.db.prepare('SELECT COUNT(*) AS n FROM reports WHERE reporter_id = ? AND created_at >= ?').get(reporterId, since);
+    return Number(r?.n ?? 0);
+  }
+
+  async listReports(q: { status: ReportStatus; since: number; targetId?: string }): Promise<ReportRecord[]> {
+    const rows =
+      q.targetId === undefined
+        ? this.db.prepare('SELECT * FROM reports WHERE status = ? AND created_at >= ? ORDER BY created_at ASC').all(q.status, q.since)
+        : this.db
+            .prepare('SELECT * FROM reports WHERE status = ? AND created_at >= ? AND target_id = ? ORDER BY created_at ASC')
+            .all(q.status, q.since, q.targetId);
+    return rows.flatMap((r) => {
+      const reason = String(r.reason);
+      if (!isReportReason(reason)) return [];
+      const context = r.context == null ? null : String(r.context);
+      return [
+        {
+          id: String(r.id),
+          reporterId: String(r.reporter_id),
+          targetId: String(r.target_id),
+          reason,
+          context: isReportContext(context) ? context : null,
+          createdAt: Number(r.created_at),
+          status: String(r.status) as ReportStatus,
+        },
+      ];
+    });
+  }
+
+  async closeReports(targetId: string): Promise<number> {
+    const res = this.db.prepare("UPDATE reports SET status = 'closed' WHERE target_id = ? AND status = 'open'").run(targetId);
+    return Number(res.changes);
+  }
+
+  async getVoiceBan(accountId: string): Promise<number | null> {
+    const r = this.db.prepare('SELECT until_at FROM voice_bans WHERE account_id = ?').get(accountId);
+    return r ? Number(r.until_at) : null;
+  }
+
+  async setVoiceBan(accountId: string, until: number | null): Promise<void> {
+    if (until === null) {
+      this.db.prepare('DELETE FROM voice_bans WHERE account_id = ?').run(accountId);
+      return;
+    }
+    this.db
+      .prepare('INSERT INTO voice_bans (account_id, until_at) VALUES (?, ?) ON CONFLICT (account_id) DO UPDATE SET until_at = excluded.until_at')
+      .run(accountId, until);
+  }
+
+  async listBlocks(accountId: string): Promise<string[]> {
+    return this.db
+      .prepare('SELECT blocked_id FROM blocks WHERE account_id = ? ORDER BY created_at ASC, blocked_id ASC')
+      .all(accountId)
+      .map((r) => String(r.blocked_id));
+  }
+
+  async addBlock(accountId: string, blockedId: string, now: number, max: number): Promise<BlockResult> {
+    return this.tx(() => {
+      if (this.db.prepare('SELECT 1 FROM blocks WHERE account_id = ? AND blocked_id = ?').get(accountId, blockedId)) return 'exists';
+      const r = this.db.prepare('SELECT COUNT(*) AS n FROM blocks WHERE account_id = ?').get(accountId);
+      if (Number(r?.n ?? 0) >= max) return 'limit';
+      this.db.prepare('INSERT INTO blocks (account_id, blocked_id, created_at) VALUES (?, ?, ?)').run(accountId, blockedId, now);
+      return 'ok';
+    });
+  }
+
+  async removeBlock(accountId: string, blockedId: string): Promise<void> {
+    this.db.prepare('DELETE FROM blocks WHERE account_id = ? AND blocked_id = ?').run(accountId, blockedId);
+  }
+
   async deleteAccount(id: string): Promise<void> {
     // Explicit deletes (do not rely on FK cascade being enabled in every database).
     this.tx(() => {
-      for (const t of ['sessions', 'account_providers', 'consents', 'photos', 'upload_counts']) {
+      for (const t of ['sessions', 'account_providers', 'consents', 'photos', 'upload_counts', 'voice_bans', 'blocks']) {
         this.db.prepare(`DELETE FROM ${t} WHERE account_id = ?`).run(id);
       }
+      this.db.prepare('DELETE FROM blocks WHERE blocked_id = ?').run(id);
+      this.db.prepare('DELETE FROM reports WHERE reporter_id = ? OR target_id = ?').run(id, id);
       this.db.prepare('DELETE FROM accounts WHERE id = ?').run(id);
     });
   }

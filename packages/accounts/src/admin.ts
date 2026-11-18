@@ -1,4 +1,4 @@
-import { REASON_CODES, type AdminPhotoItem, type PhotoStatus } from './types';
+import { REASON_CODES, type AdminPhotoItem, type AdminReportItem, type PhotoStatus } from './types';
 
 export function escapeHtml(s: string): string {
   return s.replace(/[&<>"'`]/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -15,14 +15,50 @@ export const ADMIN_STATUSES: readonly PhotoStatus[] = ['review', 'pending', 'app
  *   and the shell swaps in the #list element (parsed with DOMParser: inline scripts never run; CSP blocks them anyway).
  * - Images are fetched with the header and shown through blob: URLs.
  */
-export function renderAdminPage(opts: { nonce: string; status: PhotoStatus; items: AdminPhotoItem[] | null }): string {
-  const { nonce, status, items } = opts;
-  const tabs = ADMIN_STATUSES.map(
-    (s) => `<a href="?status=${s}"${s === status ? ' aria-current="page"' : ''}>${s}</a>`,
-  ).join(' ');
+function renderReports(reports: AdminReportItem[]): string {
+  if (reports.length === 0) return '<p>Açık şikâyet yok.</p>';
+  const counts = (o: Record<string, number | undefined>) =>
+    Object.entries(o)
+      .map(([k, n]) => `${escapeHtml(k)}: ${n}`)
+      .join(', ') || '-';
+  return reports
+    .map((r) => {
+      const id = escapeHtml(r.targetAccountId);
+      const name = r.displayName === null ? '<i>(isimsiz)</i>' : escapeHtml(r.displayName);
+      const ban = r.voiceBannedUntil === null ? 'yok' : escapeHtml(new Date(r.voiceBannedUntil).toISOString());
+      return `<li class="item" data-account="${id}">
+  <div class="meta"><b>${name}</b><br><code>${id}</code><br>şikâyet: ${r.count} | farklı kişi: ${r.reporters}<br>sebep: ${counts(r.reasons)}<br>yer: ${counts(r.contexts)}<br>son: ${escapeHtml(new Date(r.lastAt).toISOString())} | ses yasağı: ${ban}</div>
+  <div class="actions"><button type="button" data-close="${id}">Kapat (yasağı kaldır)</button></div>
+</li>`;
+    })
+    .join('\n');
+}
+
+/**
+ * `tab: 'reports'` (E2) shows the open reports of the last 7 days grouped by target instead of the photo queue;
+ * `reports` null = not signed in.
+ */
+export function renderAdminPage(opts: {
+  nonce: string;
+  status: PhotoStatus;
+  items: AdminPhotoItem[] | null;
+  tab?: 'photos' | 'reports';
+  reports?: AdminReportItem[] | null;
+}): string {
+  const { nonce, status } = opts;
+  const onReports = opts.tab === 'reports';
+  const items = onReports ? null : opts.items;
+  const signedIn = onReports ? (opts.reports ?? null) !== null : items !== null;
+  const query = onReports ? '?tab=reports' : `?status=${status}`;
+  const tabs =
+    ADMIN_STATUSES.map((s) => `<a href="?status=${s}"${!onReports && s === status ? ' aria-current="page"' : ''}>${s}</a>`).join(' ') +
+    ` <a href="?tab=reports"${onReports ? ' aria-current="page"' : ''}>Şikâyetler</a>`;
   const reasonOptions = REASON_CODES.map((r) => `<option value="${r}">${r}</option>`).join('');
-  const list =
-    items === null
+  const list = onReports
+    ? opts.reports
+      ? renderReports(opts.reports)
+      : '<p>Giriş gerekli.</p>'
+    : items === null
       ? '<p>Giriş gerekli.</p>'
       : items.length === 0
         ? '<p>Kuyruk boş.</p>'
@@ -55,9 +91,9 @@ ul{list-style:none;padding:0}.item{display:flex;gap:12px;align-items:center;bord
 img{background:#ccc;border-radius:8px;object-fit:cover}button{font-size:16px;padding:6px 12px}
 #login[hidden]{display:none}#msg{color:#a00}
 </style></head>
-<body data-status="${escapeHtml(status)}">
-<h1>Profil fotoğrafı inceleme</h1>
-<form id="login"${items === null ? '' : ' hidden'}><label>Admin token <input id="token" type="password" autocomplete="off" required></label> <button>Giriş</button></form>
+<body data-query="${escapeHtml(query)}">
+<h1>${onReports ? 'Şikâyetler' : 'Profil fotoğrafı inceleme'}</h1>
+<form id="login"${signedIn ? ' hidden' : ''}><label>Admin token <input id="token" type="password" autocomplete="off" required></label> <button>Giriş</button></form>
 <p id="msg"></p>
 <nav>${tabs} <button type="button" id="logout">Çıkış</button></nav>
 <ul id="list">${list}</ul>
@@ -66,7 +102,7 @@ img{background:#ccc;border-radius:8px;object-fit:cover}button{font-size:16px;pad
   var KEY = 'kahveAdminToken';
   function getT() { try { return sessionStorage.getItem(KEY); } catch (e) { return null; } }
   function setT(v) { try { if (v) sessionStorage.setItem(KEY, v); else sessionStorage.removeItem(KEY); } catch (e) {} }
-  var status = document.body.getAttribute('data-status');
+  var query = document.body.getAttribute('data-query');
   var msg = document.getElementById('msg');
   var login = document.getElementById('login');
   var blobs = [];
@@ -86,7 +122,7 @@ img{background:#ccc;border-radius:8px;object-fit:cover}button{font-size:16px;pad
   }
   async function load() {
     if (!getT()) { showLogin(); return; }
-    var r = await fetch('/admin?status=' + encodeURIComponent(status), { headers: auth(), cache: 'no-store' });
+    var r = await fetch('/admin' + query, { headers: auth(), cache: 'no-store' });
     if (r.status === 401) { setT(null); showLogin('Token geçersiz.'); return; }
     var doc = new DOMParser().parseFromString(await r.text(), 'text/html');
     var fresh = doc.getElementById('list');
@@ -101,6 +137,14 @@ img{background:#ccc;border-radius:8px;object-fit:cover}button{font-size:16px;pad
   });
   document.getElementById('logout').addEventListener('click', function () { setT(null); location.reload(); });
   document.addEventListener('click', async function (e) {
+    var c = e.target.closest && e.target.closest('button[data-close]');
+    if (c) {
+      c.disabled = true;
+      var rc = await fetch('/admin/v1/reports/' + encodeURIComponent(c.getAttribute('data-close')) + '/close', { method: 'POST', headers: auth() });
+      if (!rc.ok) msg.textContent = 'Hata: ' + rc.status;
+      load();
+      return;
+    }
     var b = e.target.closest && e.target.closest('button[data-decision]');
     if (!b) return;
     var id = b.getAttribute('data-account');

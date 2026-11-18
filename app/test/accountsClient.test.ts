@@ -260,3 +260,42 @@ describe('sign-in calls', () => {
     await expect(c.signInGoogle('t')).rejects.toMatchObject({ code: 'unknown' });
   });
 });
+
+describe('E2: reports, blocks, own account id', () => {
+  const setup = (handler: Parameters<typeof fakeFetch>[0]) => {
+    const { calls, fetchImpl } = fakeFetch(handler);
+    return { calls, c: createAccountsClient({ baseUrl: 'https://x', storage: memStorage('tok'), fetchImpl }) };
+  };
+
+  it('reports with the target, reason and context', async () => {
+    const { calls, c } = setup(() => ({ status: 204 }));
+    await c.report('target1', 'askGift', 'voice');
+    expect(calls[0]).toMatchObject({ method: 'POST', url: 'https://x/v1/reports', auth: 'Bearer tok', type: 'application/json' });
+    expect(JSON.parse(calls[0].body as string)).toEqual({ targetAccountId: 'target1', reason: 'askGift', context: 'voice' });
+    await c.report('target1', 'spam');
+    expect(JSON.parse(calls[1].body as string)).toEqual({ targetAccountId: 'target1', reason: 'spam' });
+  });
+
+  it('maps report errors: reporting yourself (400) and the daily limit (429)', async () => {
+    const { c } = setup((call) => ({ status: call.body && JSON.parse(call.body as string).reason === 'spam' ? 429 : 400, json: { error: JSON.parse(call.body as string).reason === 'spam' ? 'rate_limited' : 'bad_request' } }));
+    await expect(c.report('me', 'insult')).rejects.toMatchObject({ code: 'bad_request', status: 400 });
+    await expect(c.report('x', 'spam')).rejects.toMatchObject({ code: 'rate_limited', status: 429 });
+  });
+
+  it('lists, adds and removes blocks', async () => {
+    const { calls, c } = setup((call) => (call.method === 'GET' ? { status: 200, json: { blocked: ['a', 'b', 5] } } : { status: 204 }));
+    expect(await c.getBlocks()).toEqual(['a', 'b']);
+    await c.blockAccount('a/b');
+    await c.unblockAccount('c');
+    expect(calls.map((x) => `${x.method} ${x.url}`)).toEqual(['GET https://x/v1/blocks', 'PUT https://x/v1/blocks/a%2Fb', 'DELETE https://x/v1/blocks/c']);
+  });
+
+  it('knows its own account id after one /v1/me call and null when it cannot be read', async () => {
+    const { calls, c } = setup(() => ({ status: 200, json: me({ accountId: 'mine', voiceBannedUntil: 123 }) }));
+    expect(await c.myAccountId()).toBe('mine');
+    expect(await c.myAccountId()).toBe('mine');
+    expect(calls).toHaveLength(1);
+    const off = createAccountsClient({ baseUrl: undefined, storage: memStorage() });
+    expect(await off.myAccountId()).toBeNull();
+  });
+});

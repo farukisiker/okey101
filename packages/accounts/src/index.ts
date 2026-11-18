@@ -1,5 +1,5 @@
 export * from './types';
-export type { AccountRecord, AccountStore, LinkResult, PhotoMeta, PhotoRecord, ProviderLink } from './store';
+export type { AccountRecord, AccountStore, BlockResult, LinkResult, PhotoMeta, PhotoRecord, ProviderLink, ReportRecord } from './store';
 export { AuthService, parseList, type AuthOptions } from './auth';
 export { AppleApiError, AppleClient, appleClientSecret, loadApplePrivateKey, APPLE_REVOKE_URL, APPLE_TOKEN_URL, type AppleRevokeConfig } from './apple';
 export {
@@ -32,6 +32,12 @@ export {
 export {
   createAccountsApp,
   normalizeDisplayName,
+  summarizeReports,
+  DAILY_REPORT_LIMIT,
+  MAX_BLOCKS,
+  VOICE_BAN_MS,
+  VOICE_BAN_REPORTERS,
+  VOICE_BAN_WINDOW_MS,
   DAILY_UPLOAD_LIMIT,
   GUEST_PER_IP_PER_HOUR,
   MAX_PHOTO_BYTES,

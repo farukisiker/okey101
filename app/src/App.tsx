@@ -28,6 +28,7 @@ import type { GameId, TableGroup } from '@kahve/core';
 import { loadName } from './feedback';
 import { WaitingRoom } from './screens/WaitingRoom';
 import { colors } from './theme';
+import { TableSocialProvider } from './net/TableSocial';
 import { initAds } from './ads/consent';
 import { adGate } from './ads/interstitial';
 import { initPurchases, syncOnce } from './purchases';
@@ -246,7 +247,9 @@ export default function App() {
       <SafeAreaProvider>
         <SafeAreaView style={styles.root} edges={['left', 'right']}>
           <StatusBar hidden />
-          <DropZoneProvider>{screen}</DropZoneProvider>
+          <TableSocialProvider client={kahve}>
+            <DropZoneProvider>{screen}</DropZoneProvider>
+          </TableSocialProvider>
         </SafeAreaView>
       </SafeAreaProvider>
     </GestureHandlerRootView>

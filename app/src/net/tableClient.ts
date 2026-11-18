@@ -14,7 +14,8 @@ export interface TableClient {
   salon: TableSummary[];
   watchSalon(on: boolean): void;
   /** `mode` is okey's legacy mode; card clients ignore it and use their own game. */
-  createRoom(name: string, mode: GameMode, isPublic?: boolean, password?: string, options?: unknown): Promise<Result>;
+  /** `extra.voice`: the host's voice-table choice (E2); only card tables send it, okey ignores it. */
+  createRoom(name: string, mode: GameMode, isPublic?: boolean, password?: string, options?: unknown, extra?: { voice?: boolean }): Promise<Result>;
   joinRoom(name: string, roomId: string, password?: string): Promise<Result>;
   start(): Promise<Result>;
   leave(): void;
