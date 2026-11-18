@@ -1,0 +1,12 @@
+# gcloud builds submit from the repo root (server/cloudbuild.yaml): send only what server/Dockerfile copies.
+*
+!server/
+!server/**
+!shared/
+!shared/**
+!packages/
+!packages/**
+server/node_modules/
+shared/node_modules/
+packages/*/node_modules/
+**/test/
