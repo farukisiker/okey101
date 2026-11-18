@@ -34,3 +34,9 @@ Uçtan uca deneme (18.11.2026, uygulama istemcisi → Cloud Run): misafir hesap,
 Derleme (depo kökünden): `gcloud builds submit --project project-52f928a0-467a-4d41-962 --region europe-west1 --config server/cloudbuild.yaml --substitutions _IMAGE=europe-west1-docker.pkg.dev/project-52f928a0-467a-4d41-962/cloud-run-source-deploy/kahve-server .`
 sonra `gcloud run deploy kahve-game --image <aynı imaj> --region europe-west1 --max-instances 1 --session-affinity --timeout 3600 --no-invoker-iam-check`. Silme: `gcloud run services delete kahve-game --region europe-west1`.
 Uçtan uca (19.11.2026): pişti şifreli masa kur/katıl, voice=true, söz diğer oyuncuya gider, 2 sn içindeki ikinci söz rate_limited, voice:token not_configured. Geçti.
+
+## Masa geçişi sırrı (E2b, 19.11.2026)
+İki servis de `TABLE_PASS_SECRET` ile dağıtıldı (aynı değer; sadece bu PC'de `C:\Users\mfaru\.kahve\table-pass-secret.txt`). Yeniden dağıtırken ikisine de
+`--set-env-vars` ile verilmeli (accounts için ADMIN_TOKEN ile birlikte), yoksa geçişler devre dışı kalır ve herkes misafir görünür.
+Uçtan uca: uygulama istemcisi geçiş alır, oyun sunucusu koltuğu hesapla eşler, sahte geçiş hesapsız kalır, şikâyet gider. Geçti.
+Ses makinesi `kahve-livekit` (us-central1-a, dış IP yok, Tailscale bekliyor): boşta 30 dk sonra kendini kapatır; harcama bekçisi kurulu (taban ₺3.030).
