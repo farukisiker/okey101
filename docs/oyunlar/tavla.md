@@ -187,7 +187,7 @@ Açıklamalar:
 - **`variant`** — Oynanan biçim. İlk sürümde yalnız **`'klasik'`** vardır; uygulama her zaman
   klasik tavlayı açar. Gülbara ve Tapa için ayrı değerler **hazırlanıyor**; ilk sürümde
   oynanamaz, yazılan değer yok sayılır.
-- **`targetScore`** — Maçın hedef puanı. Kazananın toplam puanı bu sayıya ulaşınca maç biter.
+- **`targetScore`** — Maçın hedef puanı. Kazananın toplam puanı bu sayıya ulaşınca maç biter. Lobide "Maç kaç sayı olsun?" ile masayı kuran seçer; son seçim cihazda hatırlanır.
 - **`koncinaPoints`** — Konçina (çifte mars) puanı. `3` (varsayılan) klasik sayımdır; `2`
   seçilirse konçina da mars gibi 2 puan sayılır.
 

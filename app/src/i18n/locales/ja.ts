@@ -366,4 +366,6 @@ export const ja: Dict = {
   tavlaThisGame: 'This game',
   tavlaNextGame: 'Next game',
   tavlaScoreFinal: 'Score {n}',
+  tavlaMatchLength: 'Match length',
+  tavlaMatchPoints: '{n} points',
 };

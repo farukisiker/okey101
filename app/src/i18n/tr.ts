@@ -381,6 +381,8 @@ export const tr = {
   tavlaThisGame: 'Bu oyun',
   tavlaNextGame: 'Sonraki oyun',
   tavlaScoreFinal: 'Skor {n}',
+  tavlaMatchLength: 'Maç kaç sayı olsun?',
+  tavlaMatchPoints: '{n} sayı',
 };
 
 export type Key = keyof typeof tr;

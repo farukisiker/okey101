@@ -110,6 +110,8 @@ Koordinatör tam maç oynadı, işlevsel PASS. Bulunan 4 sorun:
 - D: uiautomator ekranın dökümünü alamıyordu. Döngüye giren bir animasyon bulunamadı; tek sürekli iş saniyelik saat. Tahta, panel ve oyuncu çubuğu artık saat her saniye işlediğinde yeniden çizilmiyor (useMemo). Kök nedenin bu olduğu doğrulanmadı; tablette tekrar `uiautomator dump` denenecek. 11cac77 tablette A ve B PASS, D düzelmedi. Koordinatörün tahmini: saatin erişilebilirlik etiketi her saniye değişiyor; sorun Batak'ta da var. Ortak GameShell saatinde etiket artık 10 sn'de bir değişiyor, işleyen rakamlar erişilebilirlikten gizli (TalkBack de saati her saniye okumaz). 88a76b6 de çözmedi (Tavla 4/4, Batak 3/3 hâlâ "could not get idle state"); kök neden saat değil. D düşük öncelikle bırakıldı: oyun çalışıyor, testte ekran görüntüsü yeterli. 88a76b6 TalkBack için faydalı olduğundan kaldı.
 - Yeni 5 i18n anahtarı tr dışında İngilizce (diğer Tavla anahtarları gibi).
 
+- Kullanıcı kararı (18.11): maç uzunluğu seçilebilir, odayı kuran seçer. Lobide 1/3/5/7 sayı düğmeleri (varsayılan 5, cihazda hatırlanır); `targetScore` olarak gider.
+
 ## Sonraya bırakılanlar (backlog)
 - **UI/UX geçişi (oyunlar işlevsel olarak bitince):** Tavla tahtası ve pullar için daha güzel görsel, zar atışına üç boyutlu hava.
   Kullanıcı (17.11.2026): "Daha güzel görsel kullana mıyız tavla ve pullar için. Zar atılması içinde üç boyutlu havası katacak bişiler. Gerçi sen önce genel oyunu bitir fonksiyonel olarak hazır olsun UI UX kısmına detaylı tekrar bakarız".

@@ -7,7 +7,7 @@ import { CATALOG, gamesInGroup } from '@kahve/catalog';
 import { Button } from '../components/Button';
 import { loadName } from '../feedback';
 import { type Key, t, tErr } from '../i18n';
-import { type TableSetup, normalizeSetup, setupKey, setupOptions } from '../net/tableSetup';
+import { MATCH_POINT_CHOICES, type TableSetup, normalizeSetup, setupKey, setupOptions } from '../net/tableSetup';
 import type { KahveClient } from '../net/useKahveGame';
 import { colors, font } from '../theme';
 import { Salon } from './Salon';
@@ -70,7 +70,7 @@ export function GameLobby({ gameId, client, serverUrl, onServerUrlChange, onBack
         onServerUrlChange={onServerUrlChange}
         onBack={() => setFriends(false)}
         game={gameId}
-        options={setupOptions(setup)}
+        options={setupOptions(setup, gameId)}
       />
     );
   }
@@ -79,7 +79,7 @@ export function GameLobby({ gameId, client, serverUrl, onServerUrlChange, onBack
     setBusy(true);
     setError(null);
     onStart?.(gameId);
-    const res = await client.playOffline(player, setupOptions(setup));
+    const res = await client.playOffline(player, setupOptions(setup, gameId));
     setBusy(false);
     if (!res.ok) setError(tErr(res.error));
   };
@@ -113,6 +113,22 @@ export function GameLobby({ gameId, client, serverUrl, onServerUrlChange, onBack
           ))}
         </View>
       )}
+      {gameId === 'tavla' && (
+        <>
+          <Text style={styles.label}>{t('tavlaMatchLength')}</Text>
+          <View style={styles.row}>
+            {MATCH_POINT_CHOICES.map((n) => (
+              <Button
+                key={n}
+                title={t('tavlaMatchPoints', { n })}
+                variant={setup.matchPoints === n ? 'primary' : 'secondary'}
+                onPress={() => choose({ ...setup, matchPoints: n })}
+                style={styles.pointChoice}
+              />
+            ))}
+          </View>
+        </>
+      )}
       <View style={styles.row}>
         <Button title={t('cardPlayNow')} subtitle={t('cardPlayNowSub')} size="large" onPress={() => void playNow()} disabled={busy} />
         <Button
@@ -138,5 +154,7 @@ const styles = StyleSheet.create({
   title: { color: colors.accent, fontSize: 40, fontWeight: '900' },
   row: { flexDirection: 'row', gap: 16, flexWrap: 'wrap', justifyContent: 'center' },
   choice: { minWidth: 150 },
+  pointChoice: { minWidth: 110 },
+  label: { color: colors.text, fontSize: font.body, fontWeight: '800' },
   warn: { color: '#ffb4a8', fontSize: font.body, textAlign: 'center', fontWeight: '600' },
 });
