@@ -136,6 +136,8 @@ Aşağıdaki varsayılanlar UYGULANIR (genel kabul / KURALLAR_argon "Seçenek A"
   `C2-AGY.md` (ekran), `C3-OPUS.md` (entegrasyon), `C4-CLINE-OC.md` (sim, sızıntı, tavla.md). İlk sürüm yalnız Klasik; Gülbara/Tapa ve zarlama küpü yok. Varsayılan 5 sayı, konçina 3.
 - D (her adım onayla): 15 dilde mağaza metni (kullanıcı kuralı: en-US birincil), UI çevirileri, "Demli Kahve" adı, ikon, 1.1.0,
   önce Pi sunucusu, canlıda v1 istemci kontrolü, en son `feat/okey101-app` merge.
+  **Başladı 18.11.2026** (kullanıcı: "sonraki fazlara geç"). Yerel ve geri alınabilir adımlar önce: D1 UI çevirileri, D2 Demli Kahve mağaza metni taslağı
+  (`tasks/D1-D2-SONNET.md`, `docs/store/kahve-listing-i18n.json`). Ad/ikon/sürüm, Pi güncellemesi, mağaza yüklemesi ve merge ayrı ayrı onay bekler.
 
 ## 6. Riskler ve açık sorular
 1. **Çift açma canlıda yok.** `feat/okey101-app`'e ayrıca alınıp alınmayacağı kullanıcı kararı.
