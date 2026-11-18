@@ -124,3 +124,13 @@ Koordinatör tam maç oynadı, işlevsel PASS. Bulunan 4 sorun:
 - **UI/UX geçişi (oyunlar işlevsel olarak bitince):** Tavla tahtası ve pullar için daha güzel görsel, zar atışına üç boyutlu hava.
   Kullanıcı (17.11.2026): "Daha güzel görsel kullana mıyız tavla ve pullar için. Zar atılması içinde üç boyutlu havası katacak bişiler. Gerçi sen önce genel oyunu bitir fonksiyonel olarak hazır olsun UI UX kısmına detaylı tekrar bakarız".
   Sınır: yeni native modül yok (reanimated ile sahte 3B dönüş/gölge, hazır görsel varlıklar).
+
+## Faz E1a: hesap + profil fotoğrafı (18.11.2026)
+Kullanıcı onayı: gerçek para kuralı değişikliği + expo-image-picker/manipulator + LiveKit. Görev: `tasks/E1-OPUS-SONNET.md`.
+| Parça | Durum |
+|---|---|
+| `packages/accounts` (misafir hesap, foto, 2 katmanlı moderasyon, yönetim sayfası, hesap silme; node:sqlite, yeni npm paketi yok) | Bitti, 160 test (`reports/E1-OPUS.md`) |
+| Uygulama: Profilim ekranı, rıza penceresi, galeri/kamera, 13 dil (36 `prof*` anahtarı) | Bitti, 140 test (`reports/E1-SONNET.md`) |
+| Uçtan uca (uygulama istemcisi → gerçek sunucu): rıza yoksa 403, yükleme → anahtarsız inceleme sırası, onaysız 404, yönetici onayı, EXIF sökülmüş, silince 404 | Geçti (yerel betik) |
+| Tablette deneme | Bekliyor: yeni native derleme + `EXPO_PUBLIC_ACCOUNTS_URL` (PC'de `tsx packages/accounts/src/main.ts`, yerel ağ) |
+Açık: Apple/Google giriş modülleri onaysız; sunucunun çalışacağı yer (VPS) kararsız; gerçek OpenAI/Anthropic yanıtları sadece sahte testlerle denendi; çeviriler ana dilde denetlenmedi.

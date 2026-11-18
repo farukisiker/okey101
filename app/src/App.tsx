@@ -19,6 +19,8 @@ import { isOkeyGame } from '@okey/shared';
 import { GameScreen } from './screens/GameScreen';
 import { Intro } from './screens/Intro';
 import { KahveSalonu } from './screens/KahveSalonu';
+import { ProfileScreen } from './screens/ProfileScreen';
+import { accountsEnabled } from './net/accounts';
 import { Lobby } from './screens/Lobby';
 import { OyunSecimi } from './screens/OyunSecimi';
 import { loadLastGame, saveLastGame } from './screens/kahveGames';
@@ -48,7 +50,7 @@ export default function App() {
   }, []);
   // intro -> salon -> (secim -> cardLobi | okeyLobi). A first-time player has no name yet: the
   // Lobby asks for it (and calls onNameReady), so they go there before the salon.
-  const [nav, setNav] = useState<'intro' | 'salon' | 'secim' | 'okeyLobi' | 'cardLobi'>('intro');
+  const [nav, setNav] = useState<'intro' | 'salon' | 'secim' | 'okeyLobi' | 'cardLobi' | 'profil'>('intro');
   /** The card game whose lobby (and table) is open; its socket lives only while this is set. */
   const [cardGame, setCardGame] = useState<GameId | null>(null);
   const [group, setGroup] = useState<TableGroup>('kagit');
@@ -127,7 +129,7 @@ export default function App() {
 
   // Android back: secim -> salon. The Lobby steps back by itself (onExit -> salon);
   // on the salon the default applies. Games and the waiting room keep their own behaviour.
-  const inSecim = nav === 'secim' && !client.session;
+  const inSecim = (nav === 'secim' || nav === 'profil') && !client.session;
   useEffect(() => {
     if (!inSecim) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -215,8 +217,11 @@ export default function App() {
           }
         }}
         onResume={() => (last ? openGame(last) : setNav('okeyLobi'))}
+        onOpenProfile={accountsEnabled() ? () => setNav('profil') : undefined}
       />
     );
+  } else if (!client.session && nav === 'profil') {
+    screen = <ProfileScreen onBack={toSalon} />;
   } else if (!client.session && nav === 'secim') {
     screen = <OyunSecimi group={group} onBack={toSalon} onPick={openGame} />;
   } else if (!client.session) {

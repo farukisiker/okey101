@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { GameId, TableGroup } from '@kahve/core';
+import { Button } from '../components/Button';
 import type { Key } from '../i18n';
 import { t } from '../i18n';
 import { colors, font } from '../theme';
@@ -25,14 +26,17 @@ interface Props {
   last: GameId | null;
   onOpenGroup(group: TableGroup): void;
   onResume(): void;
+  /** Own profile; the button shows only when the accounts feature is on. */
+  onOpenProfile?(): void;
 }
 
 /** The coffeehouse: four big table groups, and a one-tap way back to the last game. */
-export function KahveSalonu({ last, onOpenGroup, onResume }: Props) {
+export function KahveSalonu({ last, onOpenGroup, onResume, onOpenProfile }: Props) {
   const lastMeta = last ? KAHVE_GAMES.find((g) => g.id === last) : undefined;
   return (
     <ScrollView contentContainerStyle={styles.root}>
       <Text style={styles.title}>{t('salonTitle')}</Text>
+      {onOpenProfile && <Button title={t('profTitle')} variant="secondary" onPress={onOpenProfile} />}
       {lastMeta && (
         <Pressable
           style={({ pressed }) => [styles.resume, pressed && styles.pressed]}

@@ -83,6 +83,14 @@
         { "userTrackingPermission": "We ask for permission to show you more relevant ads." }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose a profile photo from your gallery.",
+          "cameraPermission": "Take a profile photo with the camera.",
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-audio",
         {
           "microphonePermission": false,
