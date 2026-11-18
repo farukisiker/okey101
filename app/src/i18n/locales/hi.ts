@@ -311,7 +311,7 @@ export const hi: Dict = {
   cardsTotal: 'कुल: {n}',
   partnerTag: 'आपका साथी',
   batakTrump: 'तुरुप: {suit}',
-  batakTrumpNone: 'तुरुप अभी चुना नहीं गया',
+  batakTrumpNone: 'अभी नहीं चुना',
   batakContract: 'बोली: {name} ({n})',
   batakContractNone: 'बोली का चरण',
   batakTricksWon: 'जीती चालें: {n}',
@@ -367,5 +367,4 @@ export const hi: Dict = {
   tavlaNextGame: 'अगला खेल',
   tavlaScoreFinal: 'स्कोर {n}',
   tavlaMatchLength: 'मैच कितने अंक का हो?',
-  tavlaMatchPoints: '{n} अंक',
 };

@@ -311,7 +311,7 @@ export const id: Dict = {
   cardsTotal: 'Total: {n}',
   partnerTag: 'Pasanganmu',
   batakTrump: 'Truf: {suit}',
-  batakTrumpNone: 'Truf belum dipilih',
+  batakTrumpNone: 'belum dipilih',
   batakContract: 'Tawaran: {name} ({n})',
   batakContractNone: 'Tahap penawaran',
   batakTricksWon: 'Trik: {n}',
@@ -367,5 +367,4 @@ export const id: Dict = {
   tavlaNextGame: 'Permainan berikutnya',
   tavlaScoreFinal: 'Skor {n}',
   tavlaMatchLength: 'Pertandingan berapa poin?',
-  tavlaMatchPoints: '{n} poin',
 };

@@ -311,7 +311,7 @@ export const ko: Dict = {
   cardsTotal: '합계: {n}',
   partnerTag: '내 파트너',
   batakTrump: '으뜸패: {suit}',
-  batakTrumpNone: '으뜸패가 아직 정해지지 않음',
+  batakTrumpNone: '아직 정해지지 않음',
   batakContract: '입찰: {name} ({n})',
   batakContractNone: '입찰 단계',
   batakTricksWon: '획득 트릭: {n}',
@@ -367,5 +367,4 @@ export const ko: Dict = {
   tavlaNextGame: '다음 게임',
   tavlaScoreFinal: '점수 {n}',
   tavlaMatchLength: '몇 점 경기로 할까요?',
-  tavlaMatchPoints: '{n}점',
 };

@@ -311,7 +311,7 @@ export const es: Dict = {
   cardsTotal: 'Total: {n}',
   partnerTag: 'Tu pareja',
   batakTrump: 'Triunfo: {suit}',
-  batakTrumpNone: 'Triunfo aún sin elegir',
+  batakTrumpNone: 'aún sin elegir',
   batakContract: 'Apuesta: {name} ({n})',
   batakContractNone: 'Fase de apuestas',
   batakTricksWon: 'Bazas: {n}',
@@ -367,5 +367,4 @@ export const es: Dict = {
   tavlaNextGame: 'Siguiente partida',
   tavlaScoreFinal: 'Marcador {n}',
   tavlaMatchLength: '¿A cuántos puntos es la partida?',
-  tavlaMatchPoints: '{n} puntos',
 };

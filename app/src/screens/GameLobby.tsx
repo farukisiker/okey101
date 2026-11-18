@@ -120,7 +120,7 @@ export function GameLobby({ gameId, client, serverUrl, onServerUrlChange, onBack
             {MATCH_POINT_CHOICES.map((n) => (
               <Button
                 key={n}
-                title={t('tavlaMatchPoints', { n })}
+                title={String(n)}
                 variant={setup.matchPoints === n ? 'primary' : 'secondary'}
                 onPress={() => choose({ ...setup, matchPoints: n })}
                 style={styles.pointChoice}
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   title: { color: colors.accent, fontSize: 40, fontWeight: '900' },
   row: { flexDirection: 'row', gap: 16, flexWrap: 'wrap', justifyContent: 'center' },
   choice: { minWidth: 150 },
-  pointChoice: { minWidth: 110 },
+  pointChoice: { minWidth: 88 },
   label: { color: colors.text, fontSize: font.body, fontWeight: '800' },
   warn: { color: '#ffb4a8', fontSize: font.body, textAlign: 'center', fontWeight: '600' },
 });

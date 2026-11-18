@@ -326,7 +326,7 @@ export const tr = {
   cardsTotal: 'Toplam: {n}',
   partnerTag: 'Eşin',
   batakTrump: 'Koz: {suit}',
-  batakTrumpNone: 'Koz henüz seçilmedi',
+  batakTrumpNone: 'henüz seçilmedi',
   batakContract: 'İhale: {name} ({n})',
   batakContractNone: 'İhale aşaması',
   batakTricksWon: 'Aldığı: {n}',
@@ -382,7 +382,6 @@ export const tr = {
   tavlaNextGame: 'Sonraki oyun',
   tavlaScoreFinal: 'Skor {n}',
   tavlaMatchLength: 'Maç kaç sayı olsun?',
-  tavlaMatchPoints: '{n} sayı',
 };
 
 export type Key = keyof typeof tr;

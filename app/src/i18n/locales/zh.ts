@@ -311,7 +311,7 @@ export const zh: Dict = {
   cardsTotal: '总计：{n}',
   partnerTag: '你的搭档',
   batakTrump: '将牌：{suit}',
-  batakTrumpNone: '将牌尚未选定',
+  batakTrumpNone: '尚未选定',
   batakContract: '叫牌：{name}（{n}）',
   batakContractNone: '叫牌阶段',
   batakTricksWon: '已赢墩数：{n}',
@@ -367,5 +367,4 @@ export const zh: Dict = {
   tavlaNextGame: '下一局',
   tavlaScoreFinal: '比分 {n}',
   tavlaMatchLength: '一场比赛打几分？',
-  tavlaMatchPoints: '{n}分',
 };

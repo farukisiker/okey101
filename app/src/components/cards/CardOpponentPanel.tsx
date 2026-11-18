@@ -63,29 +63,14 @@ export function CardOpponentPanel({
     else if (bid != null && bid > 0) metaParts.push(t('batakContractBid', { n: bid }));
     if (totalScore != null) metaParts.push(t('cardsTotal', { n: totalScore }));
   } else {
+    // Most important first: the line is cut with "…" on narrow panels, and the hand size is the least needed.
+    if (totalScore != null) metaParts.push(t('cardsTotal', { n: totalScore }));
+    if (tricksWon != null) metaParts.push(t('batakTricksWon', { n: tricksWon }));
+    if (passed) metaParts.push(t('batakPassed'));
+    else if (bid != null && bid > 0) metaParts.push(t('batakContractBid', { n: bid }));
+    if (pistiCount != null && pistiCount > 0) metaParts.push(t('pistiCount', { n: pistiCount }));
+    if (capturedCount != null) metaParts.push(t('pistiCapturedCount', { n: capturedCount }));
     metaParts.push(t('cardsCardsCount', { n: handCount }));
-
-    if (capturedCount != null) {
-      metaParts.push(t('pistiCapturedCount', { n: capturedCount }));
-    }
-
-    if (pistiCount != null && pistiCount > 0) {
-      metaParts.push(t('pistiCount', { n: pistiCount }));
-    }
-
-    if (tricksWon != null) {
-      metaParts.push(t('batakTricksWon', { n: tricksWon }));
-    }
-
-    if (passed) {
-      metaParts.push(t('batakPassed'));
-    } else if (bid != null && bid > 0) {
-      metaParts.push(t('batakContractBid', { n: bid }));
-    }
-
-    if (totalScore != null) {
-      metaParts.push(t('cardsTotal', { n: totalScore }));
-    }
   }
 
   const metaText = metaParts.join(' · ');
@@ -135,11 +120,6 @@ export function CardOpponentPanel({
           {active ? '▶ ' : ''}
           {name}
         </Text>
-        {isPartner && (
-          <View style={styles.partnerChip}>
-            <Text style={styles.partnerChipText}>{t('partnerTag')}</Text>
-          </View>
-        )}
         {isDeclarer && (
           <View style={styles.declarerChip}>
             <Text style={styles.declarerChipText}>★</Text>
@@ -147,14 +127,22 @@ export function CardOpponentPanel({
         )}
       </View>
 
-      <Text style={styles.meta} numberOfLines={1}>
-        {secondsLeft != null && (
-          <Text style={[styles.clock, secondsLeft <= 5 && styles.clockUrgent]}>
-            {`⏱ ${secondsLeft}  `}
-          </Text>
+      {/* The partner tag sits on the second line so it never squeezes the name. */}
+      <View style={styles.metaRow}>
+        {isPartner && (
+          <View style={styles.partnerChip}>
+            <Text style={styles.partnerChipText} numberOfLines={1}>{t('partnerTag')}</Text>
+          </View>
         )}
-        {metaText}
-      </Text>
+        <Text style={[styles.meta, styles.metaFlex]} numberOfLines={1}>
+          {secondsLeft != null && (
+            <Text style={[styles.clock, secondsLeft <= 5 && styles.clockUrgent]}>
+              {`⏱ ${secondsLeft}  `}
+            </Text>
+          )}
+          {metaText}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -226,6 +214,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '900',
   },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  metaFlex: { flexShrink: 1 },
   meta: {
     color: colors.muted,
     fontSize: font.small,

@@ -311,7 +311,7 @@ export const ja: Dict = {
   cardsTotal: '合計：{n}',
   partnerTag: 'あなたのパートナー',
   batakTrump: '切り札：{suit}',
-  batakTrumpNone: '切り札はまだ決まっていません',
+  batakTrumpNone: 'まだ決まっていません',
   batakContract: '宣言：{name}（{n}）',
   batakContractNone: '宣言フェーズ',
   batakTricksWon: 'トリック：{n}',
@@ -367,5 +367,4 @@ export const ja: Dict = {
   tavlaNextGame: '次のゲーム',
   tavlaScoreFinal: 'スコア {n}',
   tavlaMatchLength: 'マッチは何点にしますか？',
-  tavlaMatchPoints: '{n}点',
 };

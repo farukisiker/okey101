@@ -311,7 +311,7 @@ export const ru: Dict = {
   cardsTotal: 'Итого: {n}',
   partnerTag: 'Ваш партнёр',
   batakTrump: 'Козырь: {suit}',
-  batakTrumpNone: 'Козырь ещё не выбран',
+  batakTrumpNone: 'ещё не выбран',
   batakContract: 'Заказ: {name} ({n})',
   batakContractNone: 'Торги',
   batakTricksWon: 'Взяток: {n}',
@@ -367,5 +367,4 @@ export const ru: Dict = {
   tavlaNextGame: 'Следующая игра',
   tavlaScoreFinal: 'Счёт {n}',
   tavlaMatchLength: 'До скольких очков играем матч?',
-  tavlaMatchPoints: '{n} очков',
 };
