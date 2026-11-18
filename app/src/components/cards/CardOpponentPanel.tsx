@@ -1,9 +1,12 @@
 import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
 import { colors, font } from '../../theme';
 import { t } from '../../i18n';
+import { SeatBubble } from '../TableSocialUI';
 
 export interface CardOpponentPanelProps {
   name: string;
+  /** Seat number: the player's saying bubble is drawn under this panel (online tables). */
+  seat?: number;
   active: boolean;
   handCount: number;
   /** Match total (not this hand's points). */
@@ -33,6 +36,7 @@ export interface CardOpponentPanelProps {
  */
 export function CardOpponentPanel({
   name,
+  seat,
   active,
   handCount,
   totalScore,
@@ -101,6 +105,7 @@ export function CardOpponentPanel({
           )}
           {metaText}
         </Text>
+        {seat != null && <SeatBubble seat={seat} />}
       </View>
     );
   }
@@ -143,6 +148,7 @@ export function CardOpponentPanel({
           {metaText}
         </Text>
       </View>
+      {seat != null && <SeatBubble seat={seat} />}
     </View>
   );
 }

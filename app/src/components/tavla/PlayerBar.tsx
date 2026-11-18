@@ -3,6 +3,7 @@ import type { TavlaView } from '@kahve/tavla';
 import { colors, font } from '../../theme';
 import { Checker } from './Checker';
 import { t } from '../../i18n';
+import { SeatBubble } from '../TableSocialUI';
 
 export interface PlayerBarProps {
   view: Pick<TavlaView, 'players' | 'board' | 'turn' | 'options'>;
@@ -41,6 +42,7 @@ export function PlayerBar({ view, mySeat, totals, compact }: PlayerBarProps) {
             {compact ? (
               <Text style={styles.sub} numberOfLines={1}>{[pips, score].filter(Boolean).join(' · ')}</Text>
             ) : null}
+            <SeatBubble seat={p.seat} />
           </View>
         );
       })}

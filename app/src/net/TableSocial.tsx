@@ -52,6 +52,10 @@ export interface TableSocialValue {
   unblock(seat: number): Promise<string>;
   /** Returns the text to show: success or the reason it did not work. */
   report(seat: number, reason: ReportReason, context?: ReportContext): Promise<string>;
+  /** Seats whose bubble is drawn next to their own chip (SeatBubble); the corner stack skips them. */
+  anchored: ReadonlySet<number>;
+  /** SeatBubble registers its seat on mount; returns the unregister function. */
+  anchor(seat: number): () => void;
 }
 
 const Ctx = createContext<TableSocialValue | null>(null);
@@ -230,6 +234,17 @@ export function TableSocialProvider({ client, children }: { client: KahveClient;
     [seatOf],
   );
   const nameOf = useCallback((seat: number) => seatOf(seat)?.name ?? '', [seatOf]);
+  const [anchored, setAnchored] = useState<ReadonlySet<number>>(new Set());
+  const anchor = useCallback((seat: number) => {
+    setAnchored((cur) => (cur.has(seat) ? cur : new Set(cur).add(seat)));
+    return () =>
+      setAnchored((cur) => {
+        if (!cur.has(seat)) return cur;
+        const next = new Set(cur);
+        next.delete(seat);
+        return next;
+      });
+  }, []);
 
   const value = useMemo<TableSocialValue | null>(
     () =>
@@ -252,9 +267,11 @@ export function TableSocialProvider({ client, children }: { client: KahveClient;
             block,
             unblock,
             report,
+            anchored,
+            anchor,
           }
         : null,
-    [online, mySeat, others, bubbles, nameOf, blocked, muted, voiceOn, voice, explained, markExplained, toggleMic, sayWaitMs, say, toggleMute, block, unblock, report],
+    [online, mySeat, others, bubbles, nameOf, blocked, muted, voiceOn, voice, explained, markExplained, toggleMic, sayWaitMs, say, toggleMute, block, unblock, report, anchored, anchor],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -239,6 +239,7 @@ export function PistiScreen({ view, viewAt, room, seat, summary: summaryProp, hu
               return (
                 <CardOpponentPanel
                   key={opp.seat}
+                  seat={opp.seat}
                   name={opp.name}
                   active={view.turn === opp.seat}
                   handCount={opp.handCount}

@@ -1,6 +1,6 @@
 // E2 (Claude Sonnet): what the player sees of the table's chat. GameShell draws <TableSocialBar/> in its top bar
 // and <TableSocialLayer/> over the game. Both render nothing when there is nothing to talk to (offline, okey, bots only).
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { t } from '../i18n';
@@ -57,7 +57,7 @@ function TableSocialLayer({ social: s, sheet, onClose }: { social: TableSocialVa
     <View style={styles.layer} pointerEvents="box-none">
       {/* Bubbles and who is speaking: top right, under the bar. */}
       <View style={styles.stack} pointerEvents="none">
-        {s.bubbles.map((b) => (
+        {s.bubbles.filter((b) => !s.anchored.has(b.seat)).map((b) => (
           <View key={b.id} style={styles.bubble} accessibilityLiveRegion="polite">
             <Text style={styles.bubbleName} numberOfLines={1}>{s.nameOf(b.seat)}</Text>
             <Text style={[styles.bubbleText, b.emoji ? styles.bubbleEmoji : null]} numberOfLines={2}>{b.emoji ?? (b.saying ? t(SAYING_KEYS[b.saying]) : '')}</Text>
@@ -119,6 +119,25 @@ function TableSocialLayer({ social: s, sheet, onClose }: { social: TableSocialVa
           <Text style={styles.toastText} accessibilityLiveRegion="polite">{toast}</Text>
         </View>
       )}
+    </View>
+  );
+}
+
+/**
+ * The saying bubble of one seat, drawn just under that player's chip (the chip must not clip: overflow visible).
+ * While mounted, the corner stack leaves this seat out. Renders nothing off an online table.
+ */
+export function SeatBubble({ seat }: { seat: number }) {
+  const s = useTableSocial();
+  const anchor = s?.anchor;
+  useEffect(() => (anchor ? anchor(seat) : undefined), [anchor, seat]);
+  const b = s?.bubbles.find((x) => x.seat === seat);
+  if (!b) return null;
+  return (
+    <View style={styles.seatBubble} pointerEvents="none" accessibilityLiveRegion="polite">
+      <View style={styles.bubble}>
+        <Text style={[styles.bubbleText, b.emoji ? styles.bubbleEmoji : null]} numberOfLines={2}>{b.emoji ?? (b.saying ? t(SAYING_KEYS[b.saying]) : '')}</Text>
+      </View>
     </View>
   );
 }
@@ -241,6 +260,7 @@ const styles = StyleSheet.create({
   bubbleName: { color: '#5a4a2a', fontSize: font.small, fontWeight: '800' },
   bubbleText: { color: '#1d1d1d', fontSize: 20, fontWeight: '800' },
   bubbleEmoji: { fontSize: 40, lineHeight: 48 },
+  seatBubble: { position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, alignItems: 'center', zIndex: 800, elevation: 40 },
   speaking: { backgroundColor: colors.panel, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 2, borderColor: colors.ok },
   speakingText: { color: colors.text, fontSize: font.small, fontWeight: '800' },
   micWrap: { position: 'absolute', right: 10, bottom: 10, alignItems: 'flex-end', gap: 6 },
