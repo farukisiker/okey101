@@ -38,10 +38,10 @@ const ME = 0;
 const BOT_DELAY_MS = 1300;
 const OFFLINE_ROOM = 'YEREL';
 
-/** The account id sent with room:create / join / quickPlay (unverified, only a target for report/block); null if unavailable. */
-async function myAccountId(): Promise<string | null> {
+/** E2b: the signed table pass sent with room:create / join / quickPlay / handshake; null if unavailable (then I sit as a guest). */
+async function myTablePass(): Promise<string | null> {
   if (!accountsEnabled()) return null;
-  return Promise.race([accounts.myAccountId(), new Promise<null>((r) => setTimeout(() => r(null), 1500))]).catch(() => null);
+  return Promise.race([accounts.tablePass(), new Promise<null>((r) => setTimeout(() => r(null), 1500))]).catch(() => null);
 }
 
 const isEnvelope = (p: PlayerView | GameViewEnvelope): p is GameViewEnvelope =>
@@ -88,7 +88,6 @@ export function useKahveGame<V = unknown, A = unknown>(gameId: GameId | null, se
   const sessionRef = useRef<Session | null>(null);
   const roomRef = useRef<RoomInfo | null>(null);
   const watchingSalon = useRef(false);
-  const accountIdRef = useRef<string | null>(null);
   const saidListeners = useRef(new Set<(m: SaidMsg) => void>());
   const gameRef = useRef(gameId);
   gameRef.current = gameId;
@@ -100,18 +99,26 @@ export function useKahveGame<V = unknown, A = unknown>(gameId: GameId | null, se
 
   useEffect(() => {
     if (!gameId) return;
-    const socket: KahveSocket = io(serverUrl, { transports: ['websocket'], reconnection: true, auth: { v: PROTOCOL_VERSION } });
+    const socket: KahveSocket = io(serverUrl, { transports: ['websocket'], reconnection: true, auth: (cb) => {
+        // E2b: the pass is asked for on every (re)connect; a v1/no-pass server just ignores the extra key.
+        void myTablePass().then((tablePass) => cb({ v: PROTOCOL_VERSION, ...(tablePass ? { tablePass } : {}) }));
+      },
+    });
     socketRef.current = socket;
     socket.on('connect', () => {
       setConnected(true);
       if (watchingSalon.current) socket.emit('salon:watch', true, { games: [gameId] });
       const s = sessionRef.current;
       if (s)
-        socket.emit('room:join', { roomId: s.roomId, name: s.name, password: s.password, game: gameId, ...(accountIdRef.current ? { accountId: accountIdRef.current } : {}) }, (res) => {
-          if (res.ok && res.seat !== s.seat) {
-            sessionRef.current = { ...s, seat: res.seat };
-            setSession(sessionRef.current);
-          }
+        // E2b: seat again with a fresh table pass (cached, so usually no network).
+        void myTablePass().then((tablePass) => {
+          if (socketRef.current !== socket || !socket.connected) return;
+          socket.emit('room:join', { roomId: s.roomId, name: s.name, password: s.password, game: gameId, ...(tablePass ? { tablePass } : {}) }, (res) => {
+            if (res.ok && res.seat !== s.seat) {
+              sessionRef.current = { ...s, seat: res.seat };
+              setSession(sessionRef.current);
+            }
+          });
         });
     });
     socket.on('disconnect', () => setConnected(false));
@@ -150,10 +157,10 @@ export function useKahveGame<V = unknown, A = unknown>(gameId: GameId | null, se
       const game = gameRef.current;
       if (!socket?.connected || !game) return { ok: false, error: t('cantReachServer') };
       const extra = p.options === undefined ? {} : { options: p.options };
-      // E2: `accountId` (a report/block target) and `voice` (host's choice) are extra fields; a v1 server ignores them.
-      const accountId = await myAccountId();
-      accountIdRef.current = accountId;
-      const who = accountId ? { accountId } : {};
+      // E2b: `tablePass` (signed proof of my account, replaces the bare accountId) and `voice` (host's choice)
+      // are extra fields; a v1 server ignores them.
+      const tablePass = await myTablePass();
+      const who = tablePass ? { tablePass } : {};
       let res;
       try {
         res =

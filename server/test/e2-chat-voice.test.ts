@@ -11,6 +11,7 @@ import {
 } from '@okey/shared';
 import { SayLimiter } from '../src/chat';
 import { createOkeyServer, type OkeyServer } from '../src/server';
+import { signTablePass } from '../src/tablePass';
 import { VOICE_TOKEN_TTL_SEC, liveKitConfigFromEnv, liveKitToken } from '../src/voice';
 
 /*
@@ -22,6 +23,9 @@ type V2Client = Socket<KahveServerToClientEvents, KahveClientToServerEvents>;
 const LK = { url: 'wss://livekit.example.test', apiKey: 'APItestkey', apiSecret: 'test-secret-not-a-real-key-0123456789' };
 const ACC_A = '11111111-2222-4333-8444-555555555555';
 const ACC_B = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+/** E2b: accountIds now come from a signed table pass (fake secret, tests only). */
+const PASS_SECRET = 'e2-test-table-pass-secret-not-real-0123456789';
+const pass = (sub: string) => signTablePass(PASS_SECRET, { sub });
 const WAIT_MS = 1500;
 
 /** Verifies an HS256 JWT with `secret` and returns its header and claims (throws on a bad signature). */
@@ -120,9 +124,9 @@ describe('E2 over the socket', () => {
   const sockets: Socket[] = [];
 
   beforeAll(async () => {
-    server = createOkeyServer({ botDelayMs: 1, turnTimeoutMs: 0 }, 120_000, { livekit: LK });
+    server = createOkeyServer({ botDelayMs: 1, turnTimeoutMs: 0 }, 120_000, { livekit: LK, tablePassSecret: PASS_SECRET });
     url = `http://localhost:${await server.listen(0)}`;
-    noVoice = createOkeyServer({ botDelayMs: 1, turnTimeoutMs: 0 }, 120_000, { livekit: null });
+    noVoice = createOkeyServer({ botDelayMs: 1, turnTimeoutMs: 0 }, 120_000, { livekit: null, tablePassSecret: PASS_SECRET });
     noVoiceUrl = `http://localhost:${await noVoice.listen(0)}`;
   });
   afterEach(() => {
@@ -164,14 +168,14 @@ describe('E2 over the socket', () => {
 
   it('say reaches every v2 socket at the table (sender too), never a v1 socket; RoomInfo v2 has voice + accountId, v1 does not', async () => {
     const a = v2();
-    const b = v2({ accountId: ACC_B.toUpperCase() }); // from the handshake, normalized to lower case
+    const b = v2({ tablePass: pass(ACC_B) }); // from the handshake
     const old = v1();
     const stA = stateOf(a);
     const stOld = stateOf(old);
     const saidA = saidOf(a);
     const saidB = saidOf(b);
     const saidOld = saidOf(old);
-    const { roomId } = await create(a, { name: 'A', password: '123456', accountId: ACC_A });
+    const { roomId } = await create(a, { name: 'A', password: '123456', tablePass: pass(ACC_A) });
     expect(await within(b.emitWithAck('room:join', { roomId, name: 'B', password: '123456' }))).toMatchObject({ ok: true, seat: 1 });
     const joinOld = (await within((old as V2Client).emitWithAck('room:join', { roomId, name: 'Eski', password: '123456' }))) as {
       ok: boolean;
@@ -321,10 +325,10 @@ describe('E2 over the socket', () => {
     expect(ra.ok && ra.identity).not.toBe(r.identity);
   });
 
-  it('accountId: payload wins over handshake, junk is dropped, bots have none', async () => {
-    const a = v2({ accountId: ACC_B });
+  it('accountId: payload pass wins over handshake pass, junk is dropped, bots have none', async () => {
+    const a = v2({ tablePass: pass(ACC_B) });
     const st = stateOf(a);
-    await create(a, { name: 'A', accountId: ACC_A });
+    await create(a, { name: 'A', tablePass: pass(ACC_A) });
     expect(await within(a.emitWithAck('room:start'))).toEqual({ ok: true });
     await settle();
     const seats = st()!.seats;
@@ -334,9 +338,9 @@ describe('E2 over the socket', () => {
       expect(s).not.toHaveProperty('accountId');
     }
 
-    const junk = v2({ accountId: 'x'.repeat(5000) });
+    const junk = v2({ tablePass: 'x'.repeat(5000) });
     const stJ = stateOf(junk);
-    await create(junk, { name: 'J', accountId: '<script>' });
+    await create(junk, { name: 'J', tablePass: '<script>' });
     await settle(40);
     expect(stJ()!.seats[0]).not.toHaveProperty('accountId');
   });

@@ -5,6 +5,7 @@ import { AuthService, type AuthOptions } from './auth';
 import { InvalidTokenError, JwksUnavailableError } from './jwt';
 import { BadJpegError, cleanJpeg } from './jpeg';
 import { runModeration, type ModerationLayer, type ModerationResult } from './moderation';
+import { signTablePass, TABLE_PASS_MIN_SECRET, TABLE_PASS_TTL_MS } from './tablePass';
 import type { AccountRecord, AccountStore, ReportRecord } from './store';
 import {
   isReasonCode,
@@ -64,6 +65,8 @@ export interface AccountsAppOptions {
   trustProxy?: boolean | number | string;
   /** Apple / Google sign-in. Missing audiences -> that provider answers 503 not_configured. */
   auth?: AuthOptions;
+  /** E2b: secret shared with the game server for table passes. Missing or shorter than 32 chars -> GET /v1/me/table-pass answers 503 not_configured. */
+  tablePassSecret?: string;
   /** Called after an account is deleted. Errors are logged, not returned. */
   onAccountDeleted?: (accountId: string) => void | Promise<void>;
   log?: (msg: string, err?: unknown) => void;
@@ -102,6 +105,7 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
   const jobs = new Set<Promise<void>>();
   const guestHits = new Map<string, number[]>();
   const auth = new AuthService(opts.auth ?? {}, { now, log: (m) => log(m) });
+  const passSecret = opts.tablePassSecret && opts.tablePassSecret.length >= TABLE_PASS_MIN_SECRET ? opts.tablePassSecret : null;
 
   const app = express() as AccountsApp;
   app.disable('x-powered-by');
@@ -286,6 +290,17 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
   });
 
   app.get('/v1/me', requireUser, (req, res) => sendMe(req, res));
+
+  // E2b: a short-lived signed pass the game server checks locally (seat accountId + voice ban). Not cached anywhere.
+  app.get('/v1/me/table-pass', requireUser, async (req: AuthedReq, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    if (!passSecret) return fail(res, 503, 'not_configured');
+    const t = now();
+    const ban = await store.getVoiceBan(req.account!.id);
+    const exp = t + TABLE_PASS_TTL_MS;
+    const pass = signTablePass(passSecret, { sub: req.account!.id, vb: ban !== null && ban > t ? ban : 0, iat: t, exp });
+    res.json({ pass, expiresAt: exp });
+  });
 
   app.patch('/v1/me', requireUser, json, async (req: AuthedReq, res) => {
     const body = req.body as unknown;

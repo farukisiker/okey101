@@ -28,8 +28,16 @@ export interface Seat {
   isBot: boolean;
   /** Socket id of the human in this seat, null when disconnected. */
   socketId: string | null;
-  /** E2: accounts id the player's app sent (unverified; report/block target only). */
+  /** E2b: accounts id from the player's verified table pass (report/block target, say-limit key). */
   accountId?: string | null;
+  /** E2b: voice ban end (epoch ms) from the table pass; 0 / missing = none. */
+  voiceBannedUntil?: number;
+}
+
+/** E2b: who the verified table pass says the player is. */
+export interface SeatAccount {
+  accountId: string;
+  voiceBannedUntil: number;
 }
 
 export interface RoomOptions {
@@ -212,13 +220,20 @@ export class Room<S = GameState, A = Action, V = PlayerView> {
     return this.log;
   }
 
-  /** `accountId`: E2, what the app claims (unverified), kept only to name a report/block target. */
-  join(name: string, socketId: string, accountId: string | null = null): number | string {
+  /**
+   * `account`: E2b, from the verified table pass (null = guest / no valid pass). An account already holding another
+   * seat at this table does not get its id on a second one (the voice ban still applies there).
+   */
+  join(name: string, socketId: string, account: SeatAccount | null = null): number | string {
+    const idFor = (seat: number) =>
+      account && !this.seats.some((s, i) => i !== seat && s && !s.isBot && s.accountId === account.accountId) ? account.accountId : null;
+    const ban = account?.voiceBannedUntil ?? 0;
     // Reclaim a disconnected seat with the same name (reconnect).
     const back = this.seats.findIndex((s) => s && !s.isBot && s.socketId === null && s.name === name);
     if (back >= 0) {
       this.seats[back]!.socketId = socketId;
-      this.seats[back]!.accountId = accountId;
+      this.seats[back]!.accountId = idFor(back);
+      this.seats[back]!.voiceBannedUntil = ban;
       this.changed();
       this.schedule();
       return back;
@@ -228,7 +243,7 @@ export class Room<S = GameState, A = Action, V = PlayerView> {
     if (seat < 0) seat = this.seats.findIndex((s) => s?.isBot);
     if (seat < 0) return 'Oda dolu';
     if (this.seats.every((s) => s === null || s.isBot)) this.hostSeat = seat;
-    this.seats[seat] = { name, isBot: false, socketId, accountId };
+    this.seats[seat] = { name, isBot: false, socketId, accountId: idFor(seat), voiceBannedUntil: ban };
     this.rename(seat, name);
     this.changed();
     this.schedule();

@@ -12,6 +12,10 @@ import {
   type TableSummary,
 } from '@okey/shared';
 import { createOkeyServer, type OkeyServer } from '../src/server';
+import { signTablePass } from '../src/tablePass';
+
+/** E2b: the seat accountId comes from a signed table pass (fake secret, tests only). */
+const PASS_SECRET = 'compat-v2-table-pass-secret-not-real-0123';
 
 /*
  * Contract tests for the v2 (Demli Kahve) client. Written in A3 as `it.fails` against the
@@ -31,7 +35,7 @@ let url: string;
 const sockets: (V1Client | V2Client)[] = [];
 
 beforeAll(async () => {
-  server = createOkeyServer({ botDelayMs: 1, turnTimeoutMs: 0 });
+  server = createOkeyServer({ botDelayMs: 1, turnTimeoutMs: 0 }, undefined, { tablePassSecret: PASS_SECRET });
   url = `http://localhost:${await server.listen(0)}`;
 });
 afterEach(() => {
@@ -164,7 +168,7 @@ describe('compat v2 (Demli Kahve client)', () => {
     async () => {
       const c = v2();
       const state = waitFor<RoomInfo>(c, 'room:state', () => true);
-      const ack = await within(c.emitWithAck('room:create', { name: 'Ali', game: 'okey101', accountId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee' }));
+      const ack = await within(c.emitWithAck('room:create', { name: 'Ali', game: 'okey101', tablePass: signTablePass(PASS_SECRET, { sub: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee' }) }));
       expect(ack).toMatchObject({ ok: true });
       const room = await within(state);
       expect(room.voice).toBe(true);

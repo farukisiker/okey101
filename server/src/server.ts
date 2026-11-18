@@ -23,7 +23,8 @@ import {
 import { isGameId } from '@kahve/core';
 import { getDefinition } from '@kahve/catalog';
 import { SayLimiter } from './chat';
-import { type AnyRoom, Room, type RoomOptions } from './room';
+import { type AnyRoom, Room, type RoomOptions, type SeatAccount } from './room';
+import { tablePassSecret, verifyTablePass } from './tablePass';
 import { type LiveKitConfig, identitySuffix, liveKitConfigFromEnv, liveKitToken } from './voice';
 
 type IO = Server<KahveClientToServerEvents, KahveServerToClientEvents>;
@@ -54,11 +55,12 @@ function v1Summary({ game: _game, ...table }: TableSummary): TableSummary {
   return table;
 }
 
-/** Accounts ids are UUIDs; anything else is dropped (the id is unverified anyway, see SeatInfo.accountId). */
-const ACCOUNT_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const cleanAccountId = (v: unknown): string | null => (typeof v === 'string' && ACCOUNT_ID_RE.test(v) ? v.toLowerCase() : null);
-
 export interface ServerExtras {
+  /**
+   * E2b table pass secret (shared with the accounts server). Missing = read TABLE_PASS_SECRET; null, or shorter than
+   * 32 chars = not configured: passes are ignored and no seat gets an accountId.
+   */
+  tablePassSecret?: string | null;
   /** E2 voice: LiveKit address and keys. Missing = read LIVEKIT_URL / LIVEKIT_API_KEY / LIVEKIT_API_SECRET; null = not configured. */
   livekit?: LiveKitConfig | null;
   /** E2 'table:say' limits (tests). Defaults: SAY_MIN_GAP_MS, SAY_PER_MINUTE. */
@@ -68,6 +70,7 @@ export interface ServerExtras {
 
 export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 120_000, extras: ServerExtras = {}): OkeyServer {
   const livekit = extras.livekit === undefined ? liveKitConfigFromEnv() : extras.livekit;
+  const passSecret = tablePassSecret(extras.tablePassSecret === undefined ? process.env.TABLE_PASS_SECRET : extras.tablePassSecret);
   const sayLimiter = new SayLimiter(extras.sayMinGapMs, extras.sayPerMinute);
   /** socket id -> random part of its LiveKit identity (stable per socket, so a re-requested token replaces the old participant) */
   const voiceIds = new Map<string, string>();
@@ -164,15 +167,22 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
     }
   };
 
-  /** v2 only: the accounts id from the payload, else from the handshake. v1 apps never send one. */
-  const accountIdOf = (socket: ClientSocket, fromPayload: unknown): string | null =>
-    isV1(socket.id)
-      ? null
-      : (cleanAccountId(fromPayload) ?? cleanAccountId((socket.handshake.auth as { accountId?: unknown } | null)?.accountId));
+  /**
+   * E2b, v2 only: who the table pass says the player is (payload pass, else the handshake one). A bad, expired or
+   * missing pass (or no secret) is not an error: the player sits down as a guest. v1 apps never send one.
+   */
+  const accountOf = (socket: ClientSocket, fromPayload: unknown): SeatAccount | null => {
+    if (isV1(socket.id) || !passSecret) return null;
+    const now = Date.now();
+    const claims =
+      verifyTablePass(fromPayload, passSecret, now) ??
+      verifyTablePass((socket.handshake.auth as { tablePass?: unknown } | null)?.tablePass, passSecret, now);
+    return claims ? { accountId: claims.sub, voiceBannedUntil: claims.vb } : null;
+  };
 
-  const enter = (socket: ClientSocket, room: AnyRoom, name: string, accountId: string | null = null) => {
+  const enter = (socket: ClientSocket, room: AnyRoom, name: string, account: SeatAccount | null = null) => {
     leave(socket);
-    const seat = room.join(name.trim().slice(0, 20) || 'Oyuncu', socket.id, accountId);
+    const seat = room.join(name.trim().slice(0, 20) || 'Oyuncu', socket.id, account);
     if (typeof seat === 'string') return seat;
     membership.set(socket.id, room.id);
     socket.join(room.id);
@@ -201,7 +211,7 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
   io.on('connection', (socket) => {
     protocols.set(socket.id, clientProtocol(socket.handshake.auth));
 
-    socket.on('room:create', ({ name, mode, game, options, isPublic, password, voice, accountId }, ack) => {
+    socket.on('room:create', ({ name, mode, game, options, isPublic, password, voice, tablePass }, ack) => {
       if (password !== undefined && !isTablePassword(password)) return ack({ ok: false, error: 'Şifre 6 rakam olmalı' });
       const g = gameFor(socket, { mode, game });
       if (typeof g !== 'string') return ack({ ok: false, error: g.error });
@@ -219,12 +229,12 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
         voice: withVoice,
       });
       rooms.set(room.id, room);
-      const seat = enter(socket, room, name, accountIdOf(socket, accountId));
+      const seat = enter(socket, room, name, accountOf(socket, tablePass));
       if (typeof seat === 'string') return ack({ ok: false, error: seat });
       ack({ ok: true, roomId: room.id, seat });
     });
 
-    socket.on('room:join', ({ roomId, name, password, game, accountId }, ack) => {
+    socket.on('room:join', ({ roomId, name, password, game, tablePass }, ack) => {
       const room = rooms.get(String(roomId).trim().toUpperCase());
       if (!room) return ack({ ok: false, error: 'Masa bulunamadı' });
       if (isV1(socket.id) && !isOkeyGame(room.gameId)) return ack({ ok: false, error: ERR_UPDATE_APP });
@@ -240,18 +250,18 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
         }
         wrongPasswords.delete(socket.id);
       }
-      const seat = enter(socket, room, name, accountIdOf(socket, accountId));
+      const seat = enter(socket, room, name, accountOf(socket, tablePass));
       if (typeof seat === 'string') return ack({ ok: false, error: seat });
       ack({ ok: true, roomId: room.id, seat });
       room.startIfFull();
     });
 
-    socket.on('room:quickPlay', ({ name, mode, game, options, accountId }, ack) => {
+    socket.on('room:quickPlay', ({ name, mode, game, options, tablePass }, ack) => {
       const g = gameFor(socket, { mode, game });
       if (typeof g !== 'string') return ack({ ok: false, error: g.error });
       const room = new Room(newRoomId(), broadcast, { ...roomOpts, game: g, options });
       rooms.set(room.id, room);
-      const seat = enter(socket, room, name, accountIdOf(socket, accountId));
+      const seat = enter(socket, room, name, accountOf(socket, tablePass));
       if (typeof seat === 'string') return ack({ ok: false, error: seat });
       ack({ ok: true, roomId: room.id, seat });
       room.start();
@@ -281,7 +291,7 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
       ack(err ? { ok: false, error: err } : { ok: true });
     });
 
-    // E2: quick sayings / emoji (no free text). Seated humans on v2 apps only, rate limited per socket.
+    // E2: quick sayings / emoji (no free text). Seated humans on v2 apps only, rate limited per account (else per socket).
     socket.on('table:say', (msg, ack) => {
       if (typeof ack !== 'function') return;
       const r = roomOf(socket);
@@ -292,7 +302,9 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
       if (saying === null || emoji === null || (saying === undefined) === (emoji === undefined)) {
         return ack({ ok: false, error: 'invalid' });
       }
-      if (!sayLimiter.allow(socket.id)) return ack({ ok: false, error: 'rate_limited' });
+      // E2b: a verified account is limited as itself, so reconnecting does not reset its counter.
+      const accountId = r.room.seats[r.seat]?.accountId;
+      if (!sayLimiter.allow(accountId ? `a:${accountId}` : socket.id)) return ack({ ok: false, error: 'rate_limited' });
       const said: TableSaid = saying ? { seat: r.seat, saying, at: Date.now() } : { seat: r.seat, emoji: emoji!, at: Date.now() };
       // v1 apps (Demli Okey <= 1.0.1) never get this event.
       for (const id of io.sockets.adapter.rooms.get(r.room.id) ?? []) if (!isV1(id)) io.to(id).emit('table:said', said);
@@ -308,6 +320,8 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
       const seat = r && r.seat >= 0 ? r.room.seats[r.seat] : null;
       if (!r || !seat || seat.isBot || isV1(socket.id)) return answer({ ok: false, error: 'not_seated' });
       if (!r.room.voice) return answer({ ok: false, error: 'voice_off' });
+      // E2b: the voice ban carried by the seat's table pass (set by the accounts server after reports).
+      if ((seat.voiceBannedUntil ?? 0) > Date.now()) return answer({ ok: false, error: 'banned' });
       if (!livekit) return answer({ ok: false, error: 'not_configured' });
       let suffix = voiceIds.get(socket.id);
       if (!suffix) voiceIds.set(socket.id, (suffix = identitySuffix()));
@@ -335,6 +349,7 @@ export function createOkeyServer(roomOpts: RoomOptions = {}, emptyRoomTtlMs = 12
       protocols.delete(socket.id);
       salonFilters.delete(socket.id);
       sayLimiter.forget(socket.id);
+      sayLimiter.sweep();
       voiceIds.delete(socket.id);
     });
   });

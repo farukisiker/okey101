@@ -60,7 +60,7 @@ function TableSocialLayer({ social: s, sheet, onClose }: { social: TableSocialVa
         {s.bubbles.map((b) => (
           <View key={b.id} style={styles.bubble} accessibilityLiveRegion="polite">
             <Text style={styles.bubbleName} numberOfLines={1}>{s.nameOf(b.seat)}</Text>
-            <Text style={styles.bubbleText} numberOfLines={2}>{b.emoji ?? (b.saying ? t(SAYING_KEYS[b.saying]) : '')}</Text>
+            <Text style={[styles.bubbleText, b.emoji ? styles.bubbleEmoji : null]} numberOfLines={2}>{b.emoji ?? (b.saying ? t(SAYING_KEYS[b.saying]) : '')}</Text>
           </View>
         ))}
         {s.voice.speaking
@@ -240,6 +240,7 @@ const styles = StyleSheet.create({
   bubble: { backgroundColor: colors.tile, borderRadius: 14, borderBottomRightRadius: 3, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 2, borderColor: colors.accent },
   bubbleName: { color: '#5a4a2a', fontSize: font.small, fontWeight: '800' },
   bubbleText: { color: '#1d1d1d', fontSize: 20, fontWeight: '800' },
+  bubbleEmoji: { fontSize: 40, lineHeight: 48 },
   speaking: { backgroundColor: colors.panel, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 2, borderColor: colors.ok },
   speakingText: { color: colors.text, fontSize: font.small, fontWeight: '800' },
   micWrap: { position: 'absolute', right: 10, bottom: 10, alignItems: 'flex-end', gap: 6 },

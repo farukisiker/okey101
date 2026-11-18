@@ -81,12 +81,16 @@ export interface AccountsDeps {
   fetchImpl?: typeof fetch;
   /** Reads a local image file as a request body. Default: fetch(uri).blob(). */
   readFile?(uri: string): Promise<Blob>;
+  /** Clock, for the table pass cache (tests). Default Date.now. */
+  now?(): number;
 }
 
 export const TOKEN_KEY = 'accounts.token';
 export const NAME_MIN = 2;
 export const NAME_MAX = 16;
 export const PHOTO_CONSENT_VERSION = 1;
+/** E2b: a cached table pass is replaced once it has less than this left (the pass lives 6 h). */
+export const TABLE_PASS_REFRESH_MS = 10 * 60 * 1000;
 
 /** Name rule from the contract: 2 to 16 characters after trimming. */
 export function validName(name: string): boolean {
@@ -101,6 +105,9 @@ export function createAccountsClient(deps: AccountsDeps) {
   let token: string | null = null;
   let guestInFlight: Promise<string> | null = null;
   let myId: string | null = null;
+  let passCache: { pass: string; expiresAt: number } | null = null;
+  let passInFlight: Promise<string | null> | null = null;
+  const now = () => (deps.now ? deps.now() : Date.now());
 
   const enabled = () => base.length > 0;
 
@@ -135,6 +142,7 @@ export function createAccountsClient(deps: AccountsDeps) {
         if (!j.token) throw new AccountsError('unknown', res.status);
         token = j.token;
         myId = null;
+        passCache = null;
         await deps.storage.setItem(TOKEN_KEY, j.token).catch(() => {});
         return j.token;
       })().finally(() => {
@@ -189,6 +197,7 @@ export function createAccountsClient(deps: AccountsDeps) {
     if (!j.token || !j.accountId) throw new AccountsError('unknown', res.status);
     token = j.token;
     myId = j.accountId;
+    passCache = null;
     await deps.storage.setItem(TOKEN_KEY, j.token).catch(() => {});
     return { accountId: j.accountId, token: j.token, switched: j.switched === true };
   }
@@ -244,6 +253,30 @@ export function createAccountsClient(deps: AccountsDeps) {
       }
       return myId;
     },
+    /**
+     * E2b: a short-lived signed table pass that proves to a game server who is sitting. Cached until 10 minutes
+     * before it expires. 503 (server has no secret), any error, or a malformed answer -> null, silently: the
+     * person still sits, just as a guest without report/block/voice-ban identity.
+     */
+    async tablePass(): Promise<string | null> {
+      if (!enabled()) return null;
+      if (passCache && passCache.expiresAt - now() > TABLE_PASS_REFRESH_MS) return passCache.pass;
+      if (!passInFlight) {
+        passInFlight = (async () => {
+          try {
+            const j = (await (await call('GET', '/v1/me/table-pass')).json()) as { pass?: unknown; expiresAt?: unknown };
+            if (typeof j.pass !== 'string' || !j.pass || typeof j.expiresAt !== 'number') return null;
+            passCache = { pass: j.pass, expiresAt: j.expiresAt };
+            return j.pass;
+          } catch {
+            return null;
+          }
+        })().finally(() => {
+          passInFlight = null;
+        });
+      }
+      return passInFlight;
+    },
     /** E2: reports another account (204). Own account -> bad_request, over the daily limit -> rate_limited. */
     async report(targetAccountId: string, reason: ReportReason, context?: ReportContext): Promise<void> {
       const body: Record<string, string> = { targetAccountId, reason };
@@ -266,6 +299,7 @@ export function createAccountsClient(deps: AccountsDeps) {
       await call('DELETE', '/v1/me');
       token = null;
       myId = null;
+      passCache = null;
       await deps.storage.removeItem(TOKEN_KEY).catch(() => {});
     },
   };

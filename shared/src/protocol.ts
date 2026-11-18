@@ -16,11 +16,26 @@ export const PROTOCOL_VERSION = 2;
 export interface HandshakeAuth {
   v?: number;
   /**
-   * E2, v2 only: the accounts-server id of the player (UNVERIFIED; used only as a report/block target).
-   * Same as `accountId` on room:create / room:join / room:quickPlay; the payload wins when both are sent.
+   * E2b, v2 only: the table pass from the accounts server (GET /v1/me/table-pass). Same as `tablePass` on
+   * room:create / room:join / room:quickPlay; the payload wins when both are sent. The bare E2 `accountId` field is ignored.
    */
-  accountId?: string;
+  tablePass?: string;
 }
+
+/*
+ * E2b table pass: the accounts server signs it, the game server checks it locally with the shared TABLE_PASS_SECRET.
+ * Opaque to the app (never verified client-side): fetch it, cache it, send it. A missing / bad / expired pass never
+ * stops anyone sitting down; the seat just gets no accountId (like a guest).
+ */
+/** GET /v1/me/table-pass answer (200). `expiresAt` is epoch milliseconds. 503 { error: 'not_configured' } when the server has no secret. */
+export interface TablePassResponse {
+  pass: string;
+  expiresAt: number;
+}
+/** Lifetime of a pass (6 h). */
+export const TABLE_PASS_TTL_MS = 60 * 60 * 1000; // 1 h: a new voice ban reaches the game server within the hour
+/** Clock slack the game server allows on exp / iat. */
+export const TABLE_PASS_TOLERANCE_MS = 60_000;
 
 /** The client's protocol version from `socket.handshake.auth`: missing or junk = 1. */
 export function clientProtocol(auth: unknown): number {
@@ -64,8 +79,8 @@ export interface SeatInfo {
   isBot: boolean;
   connected: boolean;
   /**
-   * E2, v2 sockets only (never sent to v1): the accounts id the player's app sent with hello/join.
-   * UNVERIFIED (the game server does not check it): only a target for report/block. Missing for bots and guests without one.
+   * E2/E2b, v2 sockets only (never sent to v1): the accounts id from the player's verified table pass.
+   * Only a target for report/block. Missing for bots, players without a valid pass, and a second seat of the same account at a table.
    */
   accountId?: string;
 }
@@ -146,16 +161,20 @@ export type TableSayError = 'not_seated' | 'invalid' | 'rate_limited';
 export const SAY_MIN_GAP_MS = 2000;
 export const SAY_PER_MINUTE = 15;
 
-/** 'voice:token' answer: a LiveKit access token for the table's audio room. */
+/**
+ * 'voice:token' answer: a LiveKit access token for the table's audio room.
+ * E2b `banned`: the seat's table pass carries a voice ban that has not ended yet.
+ */
 export type VoiceTokenResult =
   | { ok: true; url: string; token: string; room: string; identity: string }
-  | { ok: false; error: 'voice_off' | 'not_seated' | 'not_configured' };
+  | { ok: false; error: VoiceTokenError };
+export type VoiceTokenError = 'voice_off' | 'not_seated' | 'not_configured' | 'banned';
 
 export type Ack<T = object> = (res: ({ ok: true } & T) | { ok: false; error: string }) => void;
 
 export interface ClientToServerEvents {
   /** `isPublic`: list the table in the salon. `password` (6 digits): listed, locked with it. */
-  /** E2 (v2): `voice` = voice chat at this table (missing: on for a friends table, off for an open listed one); `accountId` see SeatInfo. */
+  /** E2 (v2): `voice` = voice chat at this table (missing: on for a friends table, off for an open listed one); E2b `tablePass` see HandshakeAuth. */
   'room:create': (
     p: {
       name: string;
@@ -165,15 +184,15 @@ export interface ClientToServerEvents {
       isPublic?: boolean;
       password?: string;
       voice?: boolean;
-      accountId?: string;
+      tablePass?: string;
     },
     ack: Ack<{ roomId: string; seat: number }>,
   ) => void;
   /** `password`: needed for a locked table. */
   /** `game` (v2): what the client expects to find; a mismatch is an error, not a silent okey table. */
-  'room:join': (p: { roomId: string; name: string; password?: string; game?: GameId; accountId?: string }, ack: Ack<{ roomId: string; seat: number }>) => void;
+  'room:join': (p: { roomId: string; name: string; password?: string; game?: GameId; tablePass?: string }, ack: Ack<{ roomId: string; seat: number }>) => void;
   /** Creates a room, fills empty seats with bots and starts immediately. */
-  'room:quickPlay': (p: { name: string; mode?: GameMode; game?: GameId; options?: unknown; accountId?: string }, ack: Ack<{ roomId: string; seat: number }>) => void;
+  'room:quickPlay': (p: { name: string; mode?: GameMode; game?: GameId; options?: unknown; tablePass?: string }, ack: Ack<{ roomId: string; seat: number }>) => void;
   /** Host only: fill empty seats with bots and start. */
   'room:start': (ack: Ack) => void;
   'room:nextRound': (ack: Ack) => void;

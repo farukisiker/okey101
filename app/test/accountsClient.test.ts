@@ -299,3 +299,64 @@ describe('E2: reports, blocks, own account id', () => {
     expect(await off.myAccountId()).toBeNull();
   });
 });
+
+describe('E2b: table pass', () => {
+  const T0 = 1_000_000_000;
+  const passReply = (pass: string, expiresAt: number) => ({ status: 200, json: { pass, expiresAt } });
+
+  it('fetches with the bearer token and reuses the pass until 10 minutes before it expires', async () => {
+    let clock = T0;
+    let n = 0;
+    const { calls, fetchImpl } = fakeFetch(() => passReply(`p${++n}`, T0 + 6 * 3600_000));
+    const c = createAccountsClient({ baseUrl: 'https://x', storage: memStorage('tok'), fetchImpl, now: () => clock });
+    expect(await c.tablePass()).toBe('p1');
+    clock = T0 + 6 * 3600_000 - 11 * 60_000;
+    expect(await c.tablePass()).toBe('p1');
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({ method: 'GET', url: 'https://x/v1/me/table-pass', auth: 'Bearer tok' });
+    clock = T0 + 6 * 3600_000 - 9 * 60_000;
+    expect(await c.tablePass()).toBe('p2');
+    expect(calls).toHaveLength(2);
+  });
+
+  it('shares one request between simultaneous callers', async () => {
+    const { calls, fetchImpl } = fakeFetch(() => passReply('p', T0 + 3600_000 * 6));
+    const c = createAccountsClient({ baseUrl: 'https://x', storage: memStorage('tok'), fetchImpl, now: () => T0 });
+    expect(await Promise.all([c.tablePass(), c.tablePass()])).toEqual(['p', 'p']);
+    expect(calls).toHaveLength(1);
+  });
+
+  it('503 not_configured, network failure, a malformed answer and a disabled client all give null, never throw', async () => {
+    const off = createAccountsClient({ baseUrl: undefined, storage: memStorage() });
+    expect(await off.tablePass()).toBeNull();
+    const a = fakeFetch(() => ({ status: 503, json: { error: 'not_configured' } }));
+    expect(await createAccountsClient({ baseUrl: 'https://x', storage: memStorage('t'), fetchImpl: a.fetchImpl }).tablePass()).toBeNull();
+    const net = (async () => {
+      throw new Error('down');
+    }) as unknown as typeof fetch;
+    expect(await createAccountsClient({ baseUrl: 'https://x', storage: memStorage('t'), fetchImpl: net }).tablePass()).toBeNull();
+    const bad = fakeFetch(() => ({ status: 200, json: { pass: 5 } }));
+    expect(await createAccountsClient({ baseUrl: 'https://x', storage: memStorage('t'), fetchImpl: bad.fetchImpl }).tablePass()).toBeNull();
+  });
+
+  it('a failure is not cached: the next call asks again', async () => {
+    let n = 0;
+    const { calls, fetchImpl } = fakeFetch(() => (++n === 1 ? { status: 503, json: { error: 'not_configured' } } : passReply('ok', T0 + 6 * 3600_000)));
+    const c = createAccountsClient({ baseUrl: 'https://x', storage: memStorage('t'), fetchImpl, now: () => T0 });
+    expect(await c.tablePass()).toBeNull();
+    expect(await c.tablePass()).toBe('ok');
+    expect(calls).toHaveLength(2);
+  });
+
+  it('signing in as another account drops the cached pass', async () => {
+    let n = 0;
+    const { calls, fetchImpl } = fakeFetch((call) =>
+      call.url.endsWith('/v1/auth/google') ? { status: 200, json: { accountId: 'b', token: 'tb', switched: true } } : passReply(`p${++n}`, T0 + 6 * 3600_000),
+    );
+    const c = createAccountsClient({ baseUrl: 'https://x', storage: memStorage('t'), fetchImpl, now: () => T0 });
+    expect(await c.tablePass()).toBe('p1');
+    await c.signInGoogle('id');
+    expect(await c.tablePass()).toBe('p2');
+    expect(calls.at(-1)?.auth).toBe('Bearer tb');
+  });
+});

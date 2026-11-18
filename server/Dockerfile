@@ -5,6 +5,7 @@
 # (socket.io keeps state in the process).
 # Env (names only, values are set at deploy time): PORT (Cloud Run sets it), BOT_DELAY_MS, TURN_TIMEOUT_MS,
 # LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET (missing -> voice:token answers not_configured).
+# TABLE_PASS_SECRET (E2b, >= 32 chars, same value as the accounts server; missing -> no seat gets an accountId, no voice ban).
 FROM node:24-slim
 WORKDIR /srv
 # The only third-party runtime packages (same versions as pnpm-lock.yaml); the workspace packages are plain TS run by tsx.

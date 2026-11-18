@@ -127,14 +127,17 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack, matc
             ))}
           </View>)}
           {showVoice && (
+            <View style={styles.voiceBox}>
             <Button
               // Friend tables are locked, so "not touched" means on: always show the state the table will get.
               title={`${(voiceChoice ?? true) ? '✓' : '✕'} 🎤 ${t('voiceSwitch')}: ${(voiceChoice ?? true) ? t('voiceOn') : t('voiceOff')}`}
-              subtitle={t('voiceSwitchSub')}
               variant={(voiceChoice ?? true) ? 'success' : 'secondary'}
               onPress={() => setVoiceChoice(!(voiceChoice ?? true))}
               disabled={busy}
             />
+            {/* Own line at the normal small size: a button subtitle shrinks to ~11 px, too small for 60+. */}
+            <Text style={styles.voiceNote}>{t('voiceSwitchSub')}</Text>
+            </View>
           )}
           <Button
             title={t('openTable')}
@@ -308,6 +311,8 @@ function TableRow({ table, label, disabled, onSit }: { table: TableSummary; labe
 }
 
 const styles = StyleSheet.create({
+  voiceBox: { gap: 4, alignItems: 'stretch' },
+  voiceNote: { color: colors.muted, fontSize: font.small, textAlign: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingTop: 8 },
   heading: { color: colors.accent, fontSize: font.title, fontWeight: '900' },
   body: { flex: 1, flexDirection: 'row', gap: 12, padding: 12 },

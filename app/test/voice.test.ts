@@ -147,6 +147,12 @@ describe('VoiceController', () => {
     expect(v.isBanned()).toBe(false);
   });
 
+  it('E2b: a server answer of banned shows the 24 h closed state and leaves the mic off', async () => {
+    const v = new VoiceController({ lk: mock().lk, fetchToken: async () => ({ ok: false, error: 'banned' }) as unknown as TokenReply });
+    await v.join();
+    expect(v.snapshot).toMatchObject({ status: 'failed', micOn: false, error: 'banned' });
+  });
+
   it('silences chosen seats at once and for people who join later', async () => {
     const m = mock();
     const v = new VoiceController({ lk: m.lk, fetchToken: async () => OK });

@@ -36,6 +36,7 @@ if (env.APPLE_TEAM_ID && env.APPLE_KEY_ID && env.APPLE_PRIVATE_KEY_PATH) {
 } else {
   console.warn('[accounts] APPLE_TEAM_ID / APPLE_KEY_ID / APPLE_PRIVATE_KEY_PATH missing: Apple token revocation disabled');
 }
+if (!env.TABLE_PASS_SECRET || env.TABLE_PASS_SECRET.length < 32) console.warn('[accounts] TABLE_PASS_SECRET missing or short: GET /v1/me/table-pass answers 503');
 if (!env.ACCOUNTS_SECRET) console.warn('[accounts] ACCOUNTS_SECRET missing: Apple refresh tokens will not be stored');
 
 const trust = env.TRUST_PROXY;
@@ -43,6 +44,7 @@ const app = createAccountsApp({
   store,
   moderation: [openaiModeration({ apiKey: env.OPENAI_API_KEY }), claudeVision({ apiKey: env.ANTHROPIC_API_KEY })],
   adminToken: env.ADMIN_TOKEN,
+  tablePassSecret: env.TABLE_PASS_SECRET,
   auth: { appleAudiences, googleAudiences, appleRevoke, secret: env.ACCOUNTS_SECRET },
   trustProxy: trust === undefined ? undefined : /^\d+$/.test(trust) ? Number(trust) : trust === 'true' ? true : trust,
 });

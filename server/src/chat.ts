@@ -1,7 +1,7 @@
 import { SAY_MIN_GAP_MS, SAY_PER_MINUTE } from '@okey/shared';
 
 /**
- * E2 'table:say' limit, per key (socket id): at most one saying per `minGapMs` and `perMinute` in any
+ * E2 'table:say' limit, per key (E2b: `a:<accountId>` for a verified account, so a reconnect does not reset it; else the socket id): at most one saying per `minGapMs` and `perMinute` in any
  * sliding minute. Refused attempts don't count, so a spamming client is simply ignored until it slows down.
  */
 export class SayLimiter {
@@ -28,5 +28,16 @@ export class SayLimiter {
 
   forget(key: string): void {
     this.hits.delete(key);
+  }
+
+  /** Drops keys with nothing in the last minute (account keys outlive their sockets; call this now and then). */
+  sweep(): void {
+    const cutoff = this.now() - 60_000;
+    for (const [key, hits] of this.hits) if (!hits.length || hits[hits.length - 1]! <= cutoff) this.hits.delete(key);
+  }
+
+  /** Keys currently tracked (tests). */
+  get size(): number {
+    return this.hits.size;
   }
 }

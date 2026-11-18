@@ -14,6 +14,7 @@ export {
   type IdTokenClaims,
 } from './jwt';
 export { SecretBox } from './secretBox';
+export { signTablePass, TABLE_PASS_CONTEXT, TABLE_PASS_MIN_SECRET, TABLE_PASS_TTL_MS, type TablePassClaims } from './tablePass';
 export { MemoryStore } from './memoryStore';
 export { SqliteStore } from './sqliteStore';
 export { BadJpegError, cleanJpeg, type CleanJpeg } from './jpeg';
