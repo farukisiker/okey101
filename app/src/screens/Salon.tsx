@@ -128,10 +128,11 @@ export function Salon({ client, name, serverUrl, onServerUrlChange, onBack, matc
           </View>)}
           {showVoice && (
             <Button
-              title={voiceChoice === null ? `🎤 ${t('voiceSwitch')}` : `${voiceChoice ? '✓' : '✕'} 🎤 ${t('voiceSwitch')}: ${voiceChoice ? t('voiceOn') : t('voiceOff')}`}
-              subtitle={voiceChoice === null ? t('voiceSwitchAuto') : t('voiceSwitchSub')}
-              variant={voiceChoice === true ? 'success' : 'secondary'}
-              onPress={() => setVoiceChoice((v) => (v === null ? true : !v))}
+              // Friend tables are locked, so "not touched" means on: always show the state the table will get.
+              title={`${(voiceChoice ?? true) ? '✓' : '✕'} 🎤 ${t('voiceSwitch')}: ${(voiceChoice ?? true) ? t('voiceOn') : t('voiceOff')}`}
+              subtitle={t('voiceSwitchSub')}
+              variant={(voiceChoice ?? true) ? 'success' : 'secondary'}
+              onPress={() => setVoiceChoice(!(voiceChoice ?? true))}
               disabled={busy}
             />
           )}

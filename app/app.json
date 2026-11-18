@@ -87,8 +87,7 @@
         "expo-image-picker",
         {
           "photosPermission": "Choose a profile photo from your gallery.",
-          "cameraPermission": "Take a profile photo with the camera.",
-          "microphonePermission": false
+          "cameraPermission": "Take a profile photo with the camera."
         }
       ],
       "@livekit/react-native-expo-plugin",

@@ -105,7 +105,7 @@ export function TableSocialProvider({ client, children }: { client: KahveClient;
   useEffect(() => {
     if (!online) return;
     return client.subscribeSaid((m: SaidMsg) => {
-      if (m.seat === mySeat) return; // my own saying is not echoed back at me
+      // My own saying shows too: the server echoes it, and seeing it is the confirmation that it went out.
       setBubbles((list) => addBubble(list, m, Date.now(), blockedRef.current, nextId.current++));
     });
   }, [online, client, mySeat]);

@@ -2,6 +2,7 @@
 // and <TableSocialLayer/> over the game. Both render nothing when there is nothing to talk to (offline, okey, bots only).
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { t } from '../i18n';
 import { TableSocialValue, useTableSocial, voiceStatusKey } from '../net/TableSocial';
 import { QUICK_EMOJI, QUICK_SAYINGS, REPORT_KEYS, REPORT_REASONS, SAYING_KEYS } from '../net/social';
@@ -46,7 +47,10 @@ function TableSocialLayer({ social: s, sheet, onClose }: { social: TableSocialVa
     if (!s.voice.micOn && !s.explained) setAskMic(true);
     else s.toggleMic();
   };
+  const insets = useSafeAreaInsets();
   const status = voiceStatusKey(s.voice);
+  // A server without LiveKit (or a table without voice) is not an error the player should see: no mic at all.
+  const voiceUsable = s.voice.error !== 'not_configured' && s.voice.error !== 'voice_off';
   const banned = s.voice.bannedUntil > Date.now();
 
   return (
@@ -69,8 +73,8 @@ function TableSocialLayer({ social: s, sheet, onClose }: { social: TableSocialVa
       </View>
 
       {/* Microphone: bottom right. ● on green = open, ✕ on red outline = closed. */}
-      {s.voiceOn && s.others.length > 0 && (
-        <View style={styles.micWrap} pointerEvents="box-none">
+      {s.voiceOn && voiceUsable && s.others.length > 0 && (
+        <View style={[styles.micWrap, { right: 10 + insets.right, bottom: 12 + insets.bottom }]} pointerEvents="box-none">
           {status && <Text style={[styles.micStatus, (banned || s.voice.status === 'failed' || s.voice.error === 'permission') && styles.micStatusBad]}>{t(status)}</Text>}
           <View style={styles.micRow} pointerEvents="box-none">
             <Text style={styles.micLabel}>{s.voice.micOn ? t('voiceOnLabel') : t('voiceOffLabel')}</Text>
@@ -85,12 +89,6 @@ function TableSocialLayer({ social: s, sheet, onClose }: { social: TableSocialVa
               <Text style={[styles.micMark, { color: s.voice.micOn ? colors.felt : colors.danger }]}>{s.voice.micOn ? '●' : '✕'}</Text>
             </Pressable>
           </View>
-        </View>
-      )}
-
-      {toast && (
-        <View style={styles.toast} pointerEvents="none">
-          <Text style={styles.toastText} accessibilityLiveRegion="polite">{toast}</Text>
         </View>
       )}
 
@@ -113,6 +111,13 @@ function TableSocialLayer({ social: s, sheet, onClose }: { social: TableSocialVa
             <Button title={t('voiceAskCancel')} variant="secondary" onPress={() => setAskMic(false)} style={styles.wide} />
           </View>
         </Sheet>
+      )}
+
+      {/* Last, so a message about a sheet action is drawn above the sheet's dim background. */}
+      {toast && (
+        <View style={[styles.toast, { bottom: 84 + insets.bottom }]} pointerEvents="none">
+          <Text style={styles.toastText} accessibilityLiveRegion="polite">{toast}</Text>
+        </View>
       )}
     </View>
   );
@@ -229,7 +234,8 @@ function PlayersSheet({ s, onClose, onToast }: { s: TableSocialValue; onClose():
 
 const styles = StyleSheet.create({
   barBtn: { minHeight: 56, minWidth: 56 },
-  layer: { ...StyleSheet.absoluteFill, zIndex: 700 },
+  // Android draws views with elevation (cards have 3-8) above a zIndex-only sibling: the layer needs a higher elevation.
+  layer: { ...StyleSheet.absoluteFill, zIndex: 700, elevation: 40 },
   stack: { position: 'absolute', top: 76, right: 10, gap: 6, alignItems: 'flex-end', maxWidth: '55%' },
   bubble: { backgroundColor: colors.tile, borderRadius: 14, borderBottomRightRadius: 3, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 2, borderColor: colors.accent },
   bubbleName: { color: '#5a4a2a', fontSize: font.small, fontWeight: '800' },
