@@ -1,0 +1,123 @@
+{
+  "_note": "Demli Kahve 1.1.0 store listing DRAFT in every store language (not live, not uploaded). Same keys as listing-i18n.json plus 'short' (Play, max 80). Limits: name 30, subtitle 30, keywords 100, promo 170, short 80, description 4000. Turkish is the source; other languages are adapted, not word-for-word. Play title = name, Play full = description.",
+  "en-US": {
+    "name": "Demli Kahve: Okey & Backgammon",
+    "subtitle": "Okey, Backgammon & Cards",
+    "keywords": "okey,101,rummikub,batak,pishti,tavla,turkish,coffeehouse,card games,tile,offline,bots,friends,domino",
+    "promo": "Brew your tea and pull up a chair. 101 Okey, Classic Okey, Pishti, Batak and Backgammon in one app: offline against bots or at a table with friends.",
+    "short": "Okey, 101, Pishti, Batak & Backgammon: Turkish games, offline or with friends",
+    "description": "Brew your tea and welcome to the coffeehouse! Demli Kahve brings the Turkish coffeehouse table to your phone and tablet: 101 Okey, Classic Okey, Pishti, Batak and Backgammon in one app.\n\n• Five games in one: 101 Okey, Classic Okey, Pishti, Batak and Backgammon\n• Play offline: computer opponents are always at the table, no waiting\n• Play with friends: set up your own table and invite only the people you choose\n• No chips, no coins, no gambling: just the game\n• Easy controls: drag and drop tiles and cards, or tap to move them\n• Color-blind friendly: every color has its own mark\n• In Okey the game shows the indicator, the okey and the sets you can open\n• Large text and clean screens, easy to read at any age\n\nThe games\n▶ 101 Okey and Classic Okey: line up your rack, open your sets, use the okey wisely\n▶ Pishti: for 2 or 4 players, with a partner option at four\n▶ Batak: with bidding, one player per seat; win the bid, pick trumps, take your hand\n▶ Backgammon: classic rules; matches to 1, 3, 5 or 7 points, with gammon (mars) and koncina\n\nPlay ad-free\nShort ads appear between hands. A one-time purchase removes them for good.\n\nDemli Kahve does not offer real-money gambling and has no prizes of any value."
+  },
+  "en-GB": {
+    "name": "Demli Kahve: Okey & Backgammon",
+    "subtitle": "Okey, Backgammon & Cards",
+    "keywords": "okey,101,rummikub,batak,pishti,tavla,turkish,coffeehouse,card games,tile,offline,bots,friends,domino",
+    "promo": "Brew your tea and pull up a chair. 101 Okey, Classic Okey, Pishti, Batak and Backgammon in one app: offline against bots or at a table with friends.",
+    "short": "Okey, 101, Pishti, Batak & Backgammon: Turkish games, offline or with friends",
+    "description": "Brew your tea and welcome to the coffeehouse! Demli Kahve brings the Turkish coffeehouse table to your phone and tablet: 101 Okey, Classic Okey, Pishti, Batak and Backgammon in one app.\n\n• Five games in one: 101 Okey, Classic Okey, Pishti, Batak and Backgammon\n• Play offline: computer opponents are always at the table, no waiting\n• Play with friends: set up your own table and invite only the people you choose\n• No chips, no coins, no gambling: just the game\n• Easy controls: drag and drop tiles and cards, or tap to move them\n• Colour-blind friendly: every colour has its own mark\n• In Okey the game shows the indicator, the okey and the sets you can open\n• Large text and clean screens, easy to read at any age\n\nThe games\n▶ 101 Okey and Classic Okey: line up your rack, open your sets, use the okey wisely\n▶ Pishti: for 2 or 4 players, with a partner option at four\n▶ Batak: with bidding, one player per seat; win the bid, pick trumps, take your hand\n▶ Backgammon: classic rules; matches to 1, 3, 5 or 7 points, with gammon (mars) and koncina\n\nPlay ad-free\nShort ads appear between hands. A one-time purchase removes them for good.\n\nDemli Kahve does not offer real-money gambling and has no prizes of any value."
+  },
+  "tr": {
+    "name": "Demli Kahve: Okey Pişti Tavla",
+    "subtitle": "Kahvehane, internetsiz oyun",
+    "keywords": "okey,101,düz okey,batak,kağıt,iskambil,zar,internetsiz,çevrimdışı,bot,arkadaş,masa,kahvehane,eşli",
+    "promo": "Kahvehanenin bütün oyunları cebinde: 101 Okey, Düz Okey, Pişti, Batak ve Tavla. İnternetsiz botlarla ya da arkadaşlarınla masa kur.",
+    "short": "Okey, 101, Pişti, Batak, Tavla: botlarla internetsiz ya da arkadaşlarla",
+    "description": "Çayını koy, kahvehaneye hoş geldin! Demli Kahve, mahallenin kahvehane masasını telefonuna ve tabletine getirir: 101 Okey, Düz Okey, Pişti, Batak ve Tavla tek uygulamada.\n\n• Beş oyun bir arada: 101 Okey, Düz Okey, Pişti, Batak ve Tavla\n• İnternetsiz oyna: bilgisayar rakipler (botlar) her an masada, beklemek yok\n• Arkadaşlarınla oyna: kendi masanı kur, sadece istediğin kişiler katılsın\n• Sanal para, çip ya da kumar yok: sadece oyunun keyfi\n• Rahat kontrol: taşları ve kartları sürükleyip bırak ya da dokunarak oynat\n• Renk körlüğüne uygun: her rengin kendine ait işareti var\n• Okeyde göstergeyi, okeyi ve açılabilecek perleri oyun senin için gösterir\n• Büyük yazılar ve sade ekranlar: her yaştan oyuncu için rahat okunur\n\nOyunlar\n▶ 101 Okey ve Düz Okey: ıstakanı diz, perlerini aç, okeyi akıllıca kullan\n▶ Pişti: 2 ya da 4 kişiyle; dört kişide eşli oynama seçeneği\n▶ Batak: ihaleli, tekli oyun; ihaleyi al, kozunu seç, elini kazan\n▶ Tavla: klasik kurallar; maç 1, 3, 5 ya da 7 sayı, mars ve konçina dahil\n\nReklamsız Oyna\nEl aralarında kısa reklamlar gösterilir. Tek seferlik satın alma ile reklamlar tamamen kalkar.\n\nDemli Kahve gerçek parayla kumar sunmaz ve değeri olan hiçbir ödül vermez."
+  },
+  "es-ES": {
+    "name": "Demli Kahve: Okey y Tavla",
+    "subtitle": "Juegos de mesa turcos, sin red",
+    "keywords": "okey,101,rummikub,batak,pishti,tavla,backgammon,turco,cartas,fichas,sin conexion,bots,amigos,mesa",
+    "promo": "Prepara el té y siéntate a la mesa. 101 Okey, Okey clásico, Pishti, Batak y Backgammon en una app: sin conexión contra bots o con amigos.",
+    "short": "Okey, 101, Pishti, Batak y Backgammon: sin conexión o con amigos",
+    "description": "Prepara el té y bienvenido a la cafetería turca. Demli Kahve trae la mesa de siempre a tu móvil y tu tableta: 101 Okey, Okey clásico, Pishti, Batak y Backgammon en una sola app.\n\n• Cinco juegos en uno: 101 Okey, Okey clásico, Pishti, Batak y Backgammon\n• Juega sin conexión: los rivales del ordenador (bots) siempre están en la mesa, sin esperas\n• Juega con amigos: crea tu propia mesa e invita solo a quien tú quieras\n• Sin fichas, monedas ni apuestas: solo el placer de jugar\n• Controles sencillos: arrastra y suelta fichas y cartas, o tócalas para moverlas\n• Apto para daltonismo: cada color tiene su propia marca\n• En el Okey, el juego te muestra el indicador, el okey y las combinaciones que puedes abrir\n• Letras grandes y pantallas limpias, fáciles de leer a cualquier edad\n\nLos juegos\n▶ 101 Okey y Okey clásico: ordena tu atril, abre tus combinaciones y usa bien el okey\n▶ Pishti: para 2 o 4 jugadores, con opción de parejas con cuatro\n▶ Batak: con subasta, un jugador por asiento; gana la puja, elige el triunfo y juega tu mano\n▶ Backgammon: reglas clásicas; partidas a 1, 3, 5 o 7 puntos, con mars (gammon) y koncina\n\nJuega sin anuncios\nEntre mano y mano aparecen anuncios breves. Con una compra única desaparecen para siempre.\n\nDemli Kahve no ofrece juegos de azar con dinero real ni premios de ningún valor."
+  },
+  "es-MX": {
+    "name": "Demli Kahve: Okey y Backgammon",
+    "subtitle": "Juegos turcos, sin internet",
+    "keywords": "okey,101,rummikub,batak,pishti,tavla,backgammon,turco,cartas,fichas,sin conexion,bots,amigos,mesa",
+    "promo": "Prepara el té y siéntate a la mesa. 101 Okey, Okey clásico, Pishti, Batak y Backgammon en una app: sin conexión contra bots o con amigos.",
+    "short": "Okey, 101, Pishti, Batak y Backgammon: sin conexión o con amigos",
+    "description": "Prepara el té y bienvenido a la cafetería turca. Demli Kahve trae la mesa de siempre a tu celular y tu tableta: 101 Okey, Okey clásico, Pishti, Batak y Backgammon en una sola app.\n\n• Cinco juegos en uno: 101 Okey, Okey clásico, Pishti, Batak y Backgammon\n• Juega sin conexión: los rivales de la computadora (bots) siempre están en la mesa, sin esperas\n• Juega con amigos: crea tu propia mesa e invita solo a quien tú quieras\n• Sin fichas, monedas ni apuestas: solo el placer de jugar\n• Controles sencillos: arrastra y suelta fichas y cartas, o tócalas para moverlas\n• Apto para daltonismo: cada color tiene su propia marca\n• En el Okey, el juego te muestra el indicador, el okey y las combinaciones que puedes abrir\n• Letras grandes y pantallas limpias, fáciles de leer a cualquier edad\n\nLos juegos\n▶ 101 Okey y Okey clásico: ordena tu atril, abre tus combinaciones y usa bien el okey\n▶ Pishti: para 2 o 4 jugadores, con opción de parejas con cuatro\n▶ Batak: con subasta, un jugador por asiento; gana la puja, elige el triunfo y juega tu mano\n▶ Backgammon: reglas clásicas; partidas a 1, 3, 5 o 7 puntos, con mars (gammon) y koncina\n\nJuega sin anuncios\nEntre mano y mano aparecen anuncios breves. Con una compra única desaparecen para siempre.\n\nDemli Kahve no ofrece juegos de azar con dinero real ni premios de ningún valor."
+  },
+  "pt-BR": {
+    "name": "Demli Kahve: Okey e Gamão",
+    "subtitle": "Jogos turcos de mesa, offline",
+    "keywords": "okey,101,rummikub,batak,pishti,tavla,gamao,turco,cartas,peças,sem internet,bots,amigos,mesa,dominó",
+    "promo": "Faça seu chá e sente-se à mesa. 101 Okey, Okey clássico, Pishti, Batak e Gamão em um só app: offline contra bots ou com amigos.",
+    "short": "Okey, 101, Pishti, Batak e Gamão: offline contra bots ou com amigos",
+    "description": "Faça seu chá e seja bem-vindo ao café turco! O Demli Kahve traz a mesa do café para o seu celular e tablet: 101 Okey, Okey clássico, Pishti, Batak e Gamão em um só app.\n\n• Cinco jogos em um: 101 Okey, Okey clássico, Pishti, Batak e Gamão\n• Jogue offline: os adversários do computador (bots) estão sempre à mesa, sem espera\n• Jogue com amigos: monte sua própria mesa e convide só quem você quiser\n• Sem fichas, moedas nem apostas: só a diversão do jogo\n• Controles fáceis: arraste e solte peças e cartas, ou toque para movê-las\n• Amigável para daltonismo: cada cor tem sua própria marca\n• No Okey, o jogo mostra o indicador, o okey e as combinações que você pode abrir\n• Letras grandes e telas limpas, fáceis de ler em qualquer idade\n\nOs jogos\n▶ 101 Okey e Okey clássico: organize seu suporte, abra suas combinações e use o okey com sabedoria\n▶ Pishti: para 2 ou 4 jogadores, com opção de duplas com quatro\n▶ Batak: com leilão, um jogador por lugar; vença o lance, escolha o trunfo e jogue sua mão\n▶ Gamão: regras clássicas; partidas de 1, 3, 5 ou 7 pontos, com mars (gammon) e koncina\n\nJogue sem anúncios\nAnúncios curtos aparecem entre as rodadas. Uma compra única remove todos para sempre.\n\nO Demli Kahve não oferece jogos de azar com dinheiro real nem prêmios de qualquer valor."
+  },
+  "fr-FR": {
+    "name": "Demli Kahve : Okey et Tavla",
+    "subtitle": "Jeux de café turc, hors ligne",
+    "keywords": "okey,101,rummikub,batak,pishti,tavla,backgammon,turc,cartes,tuiles,sans internet,bots,amis,table",
+    "promo": "Préparez le thé et installez-vous. 101 Okey, Okey classique, Pishti, Batak et Backgammon en une appli : hors ligne contre des bots ou entre amis.",
+    "short": "Okey, 101, Pishti, Batak, Backgammon : hors ligne ou entre amis",
+    "description": "Préparez le thé et bienvenue au café turc ! Demli Kahve apporte la table du café sur votre téléphone et votre tablette : 101 Okey, Okey classique, Pishti, Batak et Backgammon dans une seule appli.\n\n• Cinq jeux en un : 101 Okey, Okey classique, Pishti, Batak et Backgammon\n• Jouez hors ligne : les adversaires de l'ordinateur (bots) sont toujours à table, sans attente\n• Jouez entre amis : créez votre table et invitez uniquement qui vous voulez\n• Ni jetons, ni pièces, ni paris : juste le plaisir de jouer\n• Commandes simples : glissez-déposez les tuiles et les cartes, ou touchez pour les déplacer\n• Adapté au daltonisme : chaque couleur a son propre repère\n• À l'Okey, le jeu affiche l'indicateur, l'okey et les combinaisons que vous pouvez poser\n• Grands caractères et écrans épurés, faciles à lire à tout âge\n\nLes jeux\n▶ 101 Okey et Okey classique : rangez votre chevalet, posez vos combinaisons, utilisez l'okey avec malice\n▶ Pishti : à 2 ou 4 joueurs, avec option en équipes à quatre\n▶ Batak : avec enchères, un joueur par place ; remportez l'enchère, choisissez l'atout et jouez votre main\n▶ Backgammon : règles classiques ; parties en 1, 3, 5 ou 7 points, avec mars (gammon) et koncina\n\nJouez sans publicité\nDe courtes publicités s'affichent entre les manches. Un achat unique les supprime définitivement.\n\nDemli Kahve ne propose aucun jeu d'argent réel et n'offre aucun gain ayant une valeur."
+  },
+  "de-DE": {
+    "name": "Demli Kahve: Okey & Backgammon",
+    "subtitle": "Türkische Spiele, offline",
+    "keywords": "okey,101,rummikub,batak,pishti,tavla,türkisch,karten,spielsteine,ohne internet,bots,freunde,tisch",
+    "promo": "Tee aufgießen, Platz nehmen. 101 Okey, Okey, Pishti, Batak und Backgammon in einer App: offline gegen Bots oder mit Freunden am Tisch.",
+    "short": "Okey, 101, Pishti, Batak, Backgammon: offline oder mit Freunden",
+    "description": "Tee aufgießen und willkommen im Kaffeehaus! Demli Kahve bringt den Tisch aus dem türkischen Kaffeehaus auf Handy und Tablet: 101 Okey, Okey, Pishti, Batak und Backgammon in einer App.\n\n• Fünf Spiele in einer App: 101 Okey, Okey, Pishti, Batak und Backgammon\n• Offline spielen: Computergegner (Bots) sitzen immer am Tisch, kein Warten\n• Mit Freunden spielen: eigenen Tisch einrichten und nur einladen, wen Sie möchten\n• Keine Chips, keine Münzen, kein Glücksspiel: nur Spielspaß\n• Einfache Bedienung: Steine und Karten ziehen und ablegen oder antippen\n• Für Farbenblinde geeignet: jede Farbe hat ihr eigenes Zeichen\n• Bei Okey zeigt das Spiel den Indikator, den Okey und die Reihen, die Sie auslegen können\n• Große Schrift und aufgeräumte Bildschirme, in jedem Alter gut lesbar\n\nDie Spiele\n▶ 101 Okey und Okey: Ständer ordnen, Reihen auslegen, den Okey klug einsetzen\n▶ Pishti: für 2 oder 4 Spieler, zu viert auch mit Partner\n▶ Batak: mit Reizen, ein Spieler pro Platz; Reizen gewinnen, Trumpf wählen, die Runde spielen\n▶ Backgammon: klassische Regeln; Partien bis 1, 3, 5 oder 7 Punkte, mit Mars (Gammon) und Koncina\n\nOhne Werbung spielen\nZwischen den Runden erscheint kurze Werbung. Ein einmaliger Kauf entfernt sie dauerhaft.\n\nDemli Kahve bietet kein Glücksspiel um echtes Geld und keine Preise von Wert."
+  },
+  "it": {
+    "name": "Demli Kahve: Okey e Tavla",
+    "subtitle": "Giochi turchi, senza internet",
+    "keywords": "okey,101,rummikub,batak,pishti,tavla,backgammon,turco,carte,tessere,offline,bot,amici,tavolo,domino",
+    "promo": "Prepara il tè e siediti al tavolo. 101 Okey, Okey classico, Pishti, Batak e Backgammon in una sola app: offline contro i bot o con gli amici.",
+    "short": "Okey, 101, Pishti, Batak, Backgammon: offline o con gli amici",
+    "description": "Prepara il tè e benvenuto al caffè turco! Demli Kahve porta il tavolo del caffè su telefono e tablet: 101 Okey, Okey classico, Pishti, Batak e Backgammon in una sola app.\n\n• Cinque giochi in uno: 101 Okey, Okey classico, Pishti, Batak e Backgammon\n• Gioca offline: gli avversari del computer (bot) sono sempre al tavolo, senza attese\n• Gioca con gli amici: crea il tuo tavolo e invita solo chi vuoi\n• Niente gettoni, monete o scommesse: solo il piacere di giocare\n• Comandi semplici: trascina e rilascia tessere e carte, oppure toccale per spostarle\n• Adatto a chi ha il daltonismo: ogni colore ha il suo segno\n• All'Okey il gioco mostra l'indicatore, l'okey e le combinazioni che puoi aprire\n• Caratteri grandi e schermate pulite, facili da leggere a ogni età\n\nI giochi\n▶ 101 Okey e Okey classico: ordina il tuo leggio, apri le combinazioni, usa l'okey con astuzia\n▶ Pishti: per 2 o 4 giocatori, con opzione a coppie in quattro\n▶ Batak: con asta, un giocatore per posto; vinci l'asta, scegli la briscola e gioca la mano\n▶ Backgammon: regole classiche; partite a 1, 3, 5 o 7 punti, con mars (gammon) e koncina\n\nGioca senza pubblicità\nTra una mano e l'altra compaiono brevi annunci. Con un acquisto singolo spariscono per sempre.\n\nDemli Kahve non offre gioco d'azzardo con denaro reale né premi di alcun valore."
+  },
+  "ru": {
+    "name": "Demli Kahve: Окей и нарды",
+    "subtitle": "Турецкие игры без интернета",
+    "keywords": "окей,101,рамми,батак,пишти,тавла,нарды,карты,фишки,офлайн,без интернета,боты,друзья,стол,домино",
+    "promo": "Заварите чай и садитесь за стол. 101 Окей, Окей, Пишти, Батак и нарды в одном приложении: офлайн с ботами или с друзьями.",
+    "short": "Окей, 101, Пишти, Батак, нарды: офлайн с ботами или с друзьями",
+    "description": "Заварите чай и добро пожаловать в кофейню! Demli Kahve переносит стол турецкой кофейни на ваш телефон и планшет: 101 Окей, Окей, Пишти, Батак и нарды в одном приложении.\n\n• Пять игр в одном: 101 Окей, Окей, Пишти, Батак и нарды\n• Играйте офлайн: соперники-боты всегда за столом, ждать не нужно\n• Играйте с друзьями: создайте свой стол и приглашайте только тех, кого хотите\n• Никаких фишек, монет и азартных игр: только удовольствие от игры\n• Удобное управление: перетаскивайте фишки и карты или переносите касанием\n• Подходит при дальтонизме: у каждого цвета свой значок\n• В Окей игра показывает индикатор, окей и комбинации, которые можно выложить\n• Крупный шрифт и простые экраны: удобно читать в любом возрасте\n\nИгры\n▶ 101 Окей и Окей: расставьте фишки на стойке, выкладывайте комбинации, умело используйте окей\n▶ Пишти: для 2 или 4 игроков, вчетвером можно играть парами\n▶ Батак: с торгами, один игрок на место; выиграйте торги, выберите козырь и сыграйте раздачу\n▶ Нарды: классические правила; матч до 1, 3, 5 или 7 очков, с марсом (гаммоном) и кончиной\n\nИграйте без рекламы\nМежду раздачами показывается короткая реклама. Разовая покупка отключает её навсегда.\n\nDemli Kahve не предлагает азартных игр на реальные деньги и не выдаёт призов, имеющих ценность."
+  },
+  "ja": {
+    "name": "Demli Kahve：オケイとバックギャモン",
+    "subtitle": "トルコの卓上ゲーム、オフライン",
+    "keywords": "オケイ,101,ラミー,バタク,ピシュティ,タヴラ,トルコ,カード,牌,オフライン,ボット,友達,テーブル,ドミノ",
+    "promo": "お茶を淹れて、席についてください。101オケイ、オケイ、ピシュティ、バタク、バックギャモンを1つのアプリで。ボットとオフラインで、または友達と。",
+    "short": "トルコの喫茶店ゲーム：オケイ、101、ピシュティ、バタク、バックギャモン。オフラインOK",
+    "description": "お茶を淹れて、トルコの喫茶店へようこそ。Demli Kahveは、喫茶店のテーブルをスマートフォンとタブレットに。101オケイ、オケイ、ピシュティ、バタク、バックギャモンが1つのアプリで遊べます。\n\n• 5つのゲームを1つに：101オケイ、オケイ、ピシュティ、バタク、バックギャモン\n• オフラインで遊べます：コンピューターの相手（ボット）がいつでも卓に着いているので、待つ必要はありません\n• 友達と遊べます：自分のテーブルを作り、招待したい人だけを呼べます\n• チップもコインも賭けもありません：ゲームそのものを楽しめます\n• かんたん操作：牌やカードをドラッグ＆ドロップ、またはタップで移動\n• 色覚に配慮：すべての色に専用のマークがあります\n• オケイでは、インジケーター、オケイ、出せる組み合わせをゲームが教えてくれます\n• 大きな文字とすっきりした画面で、どなたでも読みやすい\n\n遊べるゲーム\n▶ 101オケイとオケイ：牌を並べ、組み合わせを出し、オケイを上手に使いましょう\n▶ ピシュティ：2人または4人で。4人のときはペア戦も選べます\n▶ バタク：入札あり、1席に1人でプレイ。入札に勝ち、切り札を選んで勝負します\n▶ バックギャモン：クラシックルール。1、3、5、7ポイントのマッチ、マース（ギャモン）とコンチナにも対応\n\n広告なしで遊ぶ\nハンドの合間に短い広告が表示されます。1回の購入で広告はずっと表示されなくなります。\n\nDemli Kahveは、現金を賭けるギャンブルを提供せず、価値のある賞品もありません。"
+  },
+  "ko": {
+    "name": "Demli Kahve: 오케이와 백개먼",
+    "subtitle": "터키 보드게임, 오프라인 지원",
+    "keywords": "오케이,101,러미,바탁,피슈티,타블라,터키,카드,타일,오프라인,봇,친구,테이블,도미노",
+    "promo": "차를 우리고 자리에 앉으세요. 101 오케이, 오케이, 피슈티, 바탁, 백개먼을 한 앱에서. 봇과 오프라인으로, 또는 친구와 함께.",
+    "short": "터키 찻집 게임: 오케이, 101, 피슈티, 바탁, 백개먼. 오프라인 또는 친구와 함께",
+    "description": "차를 우리고 터키 찻집에 오신 것을 환영합니다! Demli Kahve는 찻집의 테이블을 휴대폰과 태블릿으로 가져옵니다. 101 오케이, 오케이, 피슈티, 바탁, 백개먼을 하나의 앱에서 즐기세요.\n\n• 다섯 가지 게임을 하나로: 101 오케이, 오케이, 피슈티, 바탁, 백개먼\n• 오프라인 플레이: 컴퓨터 상대(봇)가 항상 테이블에 있어 기다릴 필요가 없습니다\n• 친구와 플레이: 나만의 테이블을 만들고 원하는 사람만 초대하세요\n• 칩도 코인도 도박도 없습니다: 오직 게임의 즐거움\n• 쉬운 조작: 타일과 카드를 끌어다 놓거나 탭해서 이동\n• 색각 이상 사용자도 편하게: 모든 색에 고유한 표시가 있습니다\n• 오케이에서는 인디케이터, 오케이, 낼 수 있는 조합을 게임이 알려 줍니다\n• 큰 글씨와 깔끔한 화면으로 누구나 읽기 편합니다\n\n게임 소개\n▶ 101 오케이와 오케이: 타일을 정리하고, 조합을 내고, 오케이를 현명하게 사용하세요\n▶ 피슈티: 2인 또는 4인, 4인일 때는 팀전 선택 가능\n▶ 바탁: 입찰 방식, 한 자리에 한 명씩 플레이. 입찰에 이기고 으뜸패를 골라 승부하세요\n▶ 백개먼: 클래식 규칙. 1, 3, 5, 7점 매치, 마스(개먼)와 콘치나 포함\n\n광고 없이 즐기기\n판과 판 사이에 짧은 광고가 나옵니다. 한 번 구매하면 광고가 영구적으로 사라집니다.\n\nDemli Kahve는 실제 돈을 거는 도박을 제공하지 않으며 가치 있는 상품도 없습니다."
+  },
+  "zh-Hans": {
+    "name": "Demli Kahve：奥克伊与双陆棋",
+    "subtitle": "土耳其棋牌游戏，可离线玩",
+    "keywords": "奥克伊,101,拉米,巴塔克,皮什提,双陆棋,土耳其,纸牌,麻将牌,离线,机器人,好友,牌桌,多米诺",
+    "promo": "泡上一杯茶，入座吧。101 奥克伊、奥克伊、皮什提、巴塔克和双陆棋，一个应用全搞定：离线对战机器人，或与好友同桌。",
+    "short": "土耳其茶馆游戏：奥克伊、101、皮什提、巴塔克、双陆棋。可离线，也可与好友同玩",
+    "description": "泡上一杯茶，欢迎来到土耳其茶馆！Demli Kahve 把茶馆的牌桌搬到你的手机和平板上：101 奥克伊、奥克伊、皮什提、巴塔克和双陆棋，一个应用全都有。\n\n• 五款游戏合一：101 奥克伊、奥克伊、皮什提、巴塔克、双陆棋\n• 离线游玩：电脑对手（机器人）随时在座，无需等待\n• 与好友同玩：自建牌桌，只邀请你想邀请的人\n• 没有筹码、没有金币、没有赌博：只有游戏的乐趣\n• 操作简单：可拖放牌，也可轻点移动\n• 色觉友好：每种颜色都有专属标记\n• 玩奥克伊时，游戏会为你显示指示牌、奥克伊以及可以打出的牌组\n• 大字体、简洁界面，各年龄段都易于阅读\n\n游戏介绍\n▶ 101 奥克伊与奥克伊：整理牌架，打出牌组，巧用奥克伊\n▶ 皮什提：2 人或 4 人，4 人时可选择组队\n▶ 巴塔克：带叫牌，每个座位一名玩家；赢得叫牌，选定主牌，打好这一手\n▶ 双陆棋：经典规则；1、3、5 或 7 分赛制，含马斯（双倍胜）和孔奇纳\n\n无广告畅玩\n每局之间会显示简短广告。一次性购买即可永久去除广告。\n\nDemli Kahve 不提供真钱赌博，也没有任何有价值的奖品。"
+  },
+  "hi": {
+    "name": "Demli Kahve: ओके और बैकगैमन",
+    "subtitle": "तुर्की बोर्ड गेम, ऑफ़लाइन",
+    "keywords": "ओके,101,रमी,बटक,पिश्ती,तावला,तुर्की,ताश,टाइल,ऑफ़लाइन,बॉट,दोस्त,टेबल,डोमिनो,okey",
+    "promo": "चाय बनाइए और मेज़ पर बैठिए। 101 ओके, ओके, पिश्ती, बटक और बैकगैमन एक ही ऐप में: बॉट के साथ ऑफ़लाइन या दोस्तों के साथ।",
+    "short": "तुर्की कॉफ़ीहाउस गेम: ओके, 101, पिश्ती, बटक, बैकगैमन। ऑफ़लाइन या दोस्तों के साथ",
+    "description": "चाय बनाइए और तुर्की कॉफ़ीहाउस में आपका स्वागत है! Demli Kahve कॉफ़ीहाउस की मेज़ को आपके फ़ोन और टैबलेट पर ले आता है: 101 ओके, ओके, पिश्ती, बटक और बैकगैमन एक ही ऐप में।\n\n• एक ऐप में पाँच खेल: 101 ओके, ओके, पिश्ती, बटक और बैकगैमन\n• ऑफ़लाइन खेलें: कंप्यूटर विरोधी (बॉट) हमेशा मेज़ पर होते हैं, इंतज़ार नहीं\n• दोस्तों के साथ खेलें: अपनी मेज़ बनाइए और सिर्फ़ अपनी पसंद के लोगों को बुलाइए\n• कोई चिप, सिक्के या जुआ नहीं: बस खेल का मज़ा\n• आसान नियंत्रण: टाइल और पत्ते खींचकर छोड़ें या छूकर ले जाएँ\n• रंग-अंधता के अनुकूल: हर रंग का अपना निशान है\n• ओके में खेल आपको संकेतक, ओके और खोले जा सकने वाले सेट दिखाता है\n• बड़े अक्षर और साफ़ स्क्रीन, हर उम्र के लिए पढ़ने में आसान\n\nखेल\n▶ 101 ओके और ओके: अपना रैक सजाइए, सेट खोलिए, ओके का समझदारी से उपयोग कीजिए\n▶ पिश्ती: 2 या 4 खिलाड़ियों के लिए, चार खिलाड़ियों में जोड़ी में खेलने का विकल्प\n▶ बटक: बोली के साथ, हर सीट पर एक खिलाड़ी; बोली जीतिए, तुरुप चुनिए और अपना हाथ खेलिए\n▶ बैकगैमन: क्लासिक नियम; 1, 3, 5 या 7 अंक के मैच, मार्स (गैमन) और कोंचिना सहित\n\nबिना विज्ञापन के खेलें\nहाथों के बीच छोटे विज्ञापन दिखते हैं। एक बार की खरीद से वे हमेशा के लिए हट जाते हैं।\n\nDemli Kahve असली पैसे का जुआ नहीं कराता और इसमें किसी भी मूल्य के इनाम नहीं हैं।"
+  },
+  "id": {
+    "name": "Demli Kahve: Okey & Tavla",
+    "subtitle": "Game Turki, tanpa internet",
+    "keywords": "okey,101,rummikub,batak,pishti,backgammon,turki,kartu,ubin,offline,bot,teman,meja,tanpa internet",
+    "promo": "Seduh tehmu dan duduklah di meja. 101 Okey, Okey, Pishti, Batak, dan Tavla dalam satu aplikasi: offline lawan bot atau bersama teman.",
+    "short": "Okey, 101, Pishti, Batak, Tavla: offline lawan bot atau bersama teman",
+    "description": "Seduh tehmu, selamat datang di kedai kopi Turki! Demli Kahve membawa meja kedai kopi ke ponsel dan tabletmu: 101 Okey, Okey, Pishti, Batak, dan Tavla (backgammon) dalam satu aplikasi.\n\n• Lima game dalam satu: 101 Okey, Okey, Pishti, Batak, dan Tavla\n• Main offline: lawan komputer (bot) selalu ada di meja, tanpa menunggu\n• Main bersama teman: buat mejamu sendiri dan undang hanya orang yang kamu pilih\n• Tanpa chip, koin, atau judi: murni keseruan bermain\n• Kontrol mudah: seret dan lepas ubin serta kartu, atau ketuk untuk memindahkan\n• Ramah buta warna: setiap warna punya tandanya sendiri\n• Di Okey, game menampilkan indikator, okey, dan susunan yang bisa dibuka\n• Huruf besar dan layar sederhana, mudah dibaca di segala usia\n\nDaftar game\n▶ 101 Okey dan Okey: susun rak, buka susunanmu, gunakan okey dengan cerdik\n▶ Pishti: untuk 2 atau 4 pemain, ada opsi berpasangan untuk empat pemain\n▶ Batak: dengan lelang, satu pemain per kursi; menangkan lelang, pilih kartu truf, dan mainkan\n▶ Tavla (backgammon): aturan klasik; pertandingan 1, 3, 5, atau 7 poin, termasuk mars (gammon) dan koncina\n\nMain tanpa iklan\nIklan singkat muncul di sela putaran. Sekali beli, iklan hilang selamanya.\n\nDemli Kahve tidak menawarkan judi dengan uang sungguhan dan tidak ada hadiah bernilai."
+  }
+}

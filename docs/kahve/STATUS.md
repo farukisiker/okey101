@@ -112,6 +112,13 @@ Koordinatör tam maç oynadı, işlevsel PASS. Bulunan 4 sorun:
 
 - Kullanıcı kararı (18.11): maç uzunluğu seçilebilir, odayı kuran seçer. Lobide 1/3/5/7 sayı düğmeleri (varsayılan 5, cihazda hatırlanır); `targetScore` olarak gider.
 
+## Faz D (başladı 18.11.2026)
+| Görev | Durum |
+|---|---|
+| D1 UI çevirileri (Sonnet) | Bitti: 11 dilde 140'ar anahtar çevrildi; özel adlar (Pişti, Batak, Konçina) Latin harfle. ja/ko/zh/hi/ru kart terimleri için ana dili konuşan kontrolü önerilir. Rapor reports/D1-SONNET.md |
+| D2 Demli Kahve mağaza metni taslağı (Sonnet) | Bitti: docs/store/kahve-listing-i18n.json, 15 dil, sınır/UTF-8 doğrulaması PASS. Yüklenmedi. Rapor reports/D2-SONNET.md |
+| Ad/ikon/1.1.0, Pi güncellemesi, mağaza yüklemesi, merge | Kullanıcı onayı bekliyor |
+
 ## Sonraya bırakılanlar (backlog)
 - **UI/UX geçişi (oyunlar işlevsel olarak bitince):** Tavla tahtası ve pullar için daha güzel görsel, zar atışına üç boyutlu hava.
   Kullanıcı (17.11.2026): "Daha güzel görsel kullana mıyız tavla ve pullar için. Zar atılması içinde üç boyutlu havası katacak bişiler. Gerçi sen önce genel oyunu bitir fonksiyonel olarak hazır olsun UI UX kısmına detaylı tekrar bakarız".
