@@ -47,7 +47,9 @@ docs/     tasarim/TASARIM.md (60+ yaş için ekran tasarımı) · ux-raporu.md �
    Tüm iş `feat/kahve` dalında yapılacak. Ben onaylamadan `feat/okey101-app`'e merge ve push yok.
 5. **Hedef kitle 60+ yaş.** Büyük kontroller, yazı en az 15pt, renk körü işaretleri (●▲■◆), sade akış.
    `TASARIM.md`'deki ilkeler yeni oyunlara da uygulanacak.
-6. **Gerçek parayla kumar yok.** Sadece sanal puan.
+6. **Gerçek parayla kumar yok.** Oyun puanı sanaldır; satın alınamaz, jetona ya da paraya çevrilemez.
+   Kullanıcı 18.11.2026 onayıyla Faz E'de gerçek parayla jeton ve hediye satılabilir (hediye oyun sonucuna asla bağlanmaz,
+   oyunda avantaj sağlamaz; ayrıntı `docs/kahve/arastirma/SOSYAL_HEDIYE_claude.md` §1).
 
 ### Çalışma kuralları
 - Küçük adımlar at, her adımı test et, sonra commit et. Commit mesajları kısa olsun; mevcut geçmişte olduğu gibi İngilizce olabilir.

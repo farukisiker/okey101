@@ -267,7 +267,8 @@ okey oyuncusu için tek fark "Okey Masaları" adımı. **Fable durur, özet veri
    Yeni istemci okey dışı masaya eski sunucuda girmeye çalışırsa anlaşılır bir "Uygulamayı güncelle / sunucu güncelleniyor" mesajı görür.
 6. **Gizli bilgi:** `viewFor` sızıntı testi her oyun için zorunlu (rakip eli, deste sırası, seed asla gönderilmez).
 7. **Hamle doğrulama:** sunucu her aksiyonu `apply` ile doğrular. İstemcinin "geçerli hamleler" listesi sadece görsel ipucudur.
-8. **Puan ve istatistik:** sadece sanal puan. Oyun başına yerel istatistik (oynanan, kazanılan) mevcut depolama yöntemiyle tutulur; para birimi veya satın alınabilir puan yok.
+8. **Puan ve istatistik:** oyun puanı sanaldır; satın alınamaz, jetona ya da paraya çevrilemez. Oyun başına yerel istatistik (oynanan, kazanılan) mevcut depolama yöntemiyle tutulur.
+   **Değişiklik (kullanıcı onayı 18.11.2026):** Faz E'de gerçek parayla jeton ve hediye satılabilir. Şartlar: hediye oyun sonucuna bağlanmaz, bahis/havuz yok, hediye oyunda avantaj sağlamaz, jeton oyun puanına dönmez (SOSYAL_HEDIYE §1).
 9. **Reklam kuralları:** el sonu geçiş reklamının bekleme süresi tüm oyunlarda ortak sayaçla ve kalıcı tutulur. Açılışta reklam yok. "Reklamsız" tüm oyunları kapsar.
 10. **Boyut bütçesi:** her faz sonunda Android paket boyutu ölçülür (`npx expo export` çıktısı veya APK), bütçe +10 MB.
     `react-native-svg` zaten var mı önce kontrol edilir; yoksa eklemeden önce kullanıcıya sorulur.
