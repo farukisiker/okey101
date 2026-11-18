@@ -138,6 +138,9 @@ Aşağıdaki varsayılanlar UYGULANIR (genel kabul / KURALLAR_argon "Seçenek A"
   önce Pi sunucusu, canlıda v1 istemci kontrolü, en son `feat/okey101-app` merge.
   **Başladı 18.11.2026** (kullanıcı: "sonraki fazlara geç"). Yerel ve geri alınabilir adımlar önce: D1 UI çevirileri, D2 Demli Kahve mağaza metni taslağı
   (`tasks/D1-D2-SONNET.md`, `docs/store/kahve-listing-i18n.json`). Ad/ikon/sürüm, Pi güncellemesi, mağaza yüklemesi ve merge ayrı ayrı onay bekler.
+  **Kullanıcı kararı 18.11.2026: "Demli okey ayrı bir dalda kalsın şimdilik App Store da".** Canlı Demli Okey (`feat/okey101-app`, App Store/Play) olduğu gibi kalır:
+  adı değişmez, `feat/kahve` oraya merge EDİLMEZ, Demli Okey'in mağaza metinlerine/kimliklerine dokunulmaz. Demli Kahve ayrı ürün olarak ilerler; ayrı uygulama
+  kimliği (bundle/package id), mağaza kaydı ve Pi'de canlı Okey'i bozmayacak sunucu düzeni ayrıca kararlaştırılır.
 
 ## 6. Riskler ve açık sorular
 1. **Çift açma canlıda yok.** `feat/okey101-app`'e ayrıca alınıp alınmayacağı kullanıcı kararı.

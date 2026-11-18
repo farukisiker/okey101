@@ -117,7 +117,8 @@ Koordinatör tam maç oynadı, işlevsel PASS. Bulunan 4 sorun:
 |---|---|
 | D1 UI çevirileri (Sonnet) | Bitti: 11 dilde 140'ar anahtar çevrildi; özel adlar (Pişti, Batak, Konçina) Latin harfle. ja/ko/zh/hi/ru kart terimleri için ana dili konuşan kontrolü önerilir. Rapor reports/D1-SONNET.md |
 | D2 Demli Kahve mağaza metni taslağı (Sonnet) | Bitti: docs/store/kahve-listing-i18n.json, 15 dil, sınır/UTF-8 doğrulaması PASS. Yüklenmedi. Rapor reports/D2-SONNET.md |
-| Ad/ikon/1.1.0, Pi güncellemesi, mağaza yüklemesi, merge | Kullanıcı onayı bekliyor |
+| Demli Okey | Kullanıcı 18.11: ayrı dalda kalır (App Store'daki uygulama değişmez, merge yok) |
+| Demli Kahve kimliği (ayrı uygulama mı), ikon, sürüm, Pi düzeni, mağaza kaydı | Kullanıcı kararı bekliyor |
 
 ## Sonraya bırakılanlar (backlog)
 - **UI/UX geçişi (oyunlar işlevsel olarak bitince):** Tavla tahtası ve pullar için daha güzel görsel, zar atışına üç boyutlu hava.
