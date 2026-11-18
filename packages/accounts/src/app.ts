@@ -1,10 +1,12 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { ADMIN_STATUSES, renderAdminPage } from './admin';
+import { AuthService, type AuthOptions } from './auth';
+import { InvalidTokenError, JwksUnavailableError } from './jwt';
 import { BadJpegError, cleanJpeg } from './jpeg';
 import { runModeration, type ModerationLayer, type ModerationResult } from './moderation';
 import type { AccountRecord, AccountStore } from './store';
-import { isReasonCode, type ErrorCode, type Me, type PhotoStatus, type ReasonCode } from './types';
+import { isReasonCode, type AuthResult, type ErrorCode, type Me, type PhotoStatus, type Provider, type ReasonCode } from './types';
 
 export const PHOTO_CONSENT_VERSION = 1;
 export const DAILY_UPLOAD_LIMIT = 3;
@@ -22,7 +24,9 @@ export interface AccountsAppOptions {
   moderationTimeoutMs?: number;
   /** Express "trust proxy" setting; needed behind a reverse proxy so the per-IP guest limit sees the client IP. */
   trustProxy?: boolean | number | string;
-  /** Called after an account is deleted (place for Apple/Google token revocation). Errors are logged, not returned. */
+  /** Apple / Google sign-in. Missing audiences -> that provider answers 503 not_configured. */
+  auth?: AuthOptions;
+  /** Called after an account is deleted. Errors are logged, not returned. */
   onAccountDeleted?: (accountId: string) => void | Promise<void>;
   log?: (msg: string, err?: unknown) => void;
 }
@@ -59,6 +63,7 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
   const adminHash = opts.adminToken && opts.adminToken.length >= 16 ? sha256(opts.adminToken) : null;
   const jobs = new Set<Promise<void>>();
   const guestHits = new Map<string, number[]>();
+  const auth = new AuthService(opts.auth ?? {}, { now, log: (m) => log(m) });
 
   const app = express() as AccountsApp;
   app.disable('x-powered-by');
@@ -99,6 +104,7 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
 
   async function buildMe(acc: AccountRecord): Promise<Me> {
     const photo = await store.getPhotoMeta(acc.id);
+    const providers = (await store.listProviderLinks(acc.id)).map((l) => l.provider);
     const used = await store.getUploads(acc.id, utcDay(now()));
     return {
       accountId: acc.id,
@@ -112,6 +118,7 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
             url: photo.status === 'approved' ? `/v1/photos/${acc.id}.jpg?v=${photo.version}` : null,
           }
         : { status: 'none', reasons: [], url: null },
+      providers,
     };
   }
 
@@ -137,6 +144,11 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
     return true;
   }
 
+  function track(job: Promise<void>): void {
+    jobs.add(job);
+    void job.finally(() => jobs.delete(job));
+  }
+
   function startModeration(accountId: string, version: number, jpeg: Buffer, hash: string): void {
     const job = (async () => {
       let result: ModerationResult;
@@ -160,8 +172,51 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
       const applied = await store.setPhotoStatus(accountId, status, result.reasons, version);
       if (applied && status === 'rejected' && !fromBlocklist) await store.blockHash(hash, result.reasons, now());
     })().catch((err) => log('moderation job crashed', err));
-    jobs.add(job);
-    void job.finally(() => jobs.delete(job));
+    track(job);
+  }
+
+  /** Exchanges an Apple authorization code for a refresh token and stores it sealed. Never throws; tokens are never logged. */
+  function storeAppleRefresh(accountId: string, sub: string, clientId: string, code: string): void {
+    const blocker = auth.appleRefreshBlocker();
+    if (blocker) return log(`Apple refresh token not stored: ${blocker}`);
+    const apple = auth.apple!;
+    track(
+      (async () => {
+        let rt: string;
+        try {
+          rt = await apple.exchangeCode(code, clientId, sub);
+        } catch (err) {
+          return log(`Apple code exchange failed: ${(err as Error)?.message ?? 'error'}`);
+        }
+        const stored = await store.setAppleRefresh('apple', sub, accountId, auth.sealAppleRefresh(sub, rt, clientId));
+        if (!stored) {
+          // The account was deleted (or unlinked) while we were exchanging: revoke right away instead of keeping it.
+          await apple.revoke(rt, clientId).catch((err: unknown) => log(`Apple revoke failed: ${(err as Error)?.message ?? 'error'}`));
+        }
+      })().catch(() => log('Apple refresh job crashed')),
+    );
+  }
+
+  /** Revokes stored Apple refresh tokens after deletion (background, errors only logged). */
+  function revokeApple(links: { provider: Provider; sub: string; appleRefreshEnc: string | null }[]): void {
+    for (const l of links) {
+      if (l.provider !== 'apple') continue;
+      if (!l.appleRefreshEnc) {
+        log('Apple link without stored refresh token: revocation skipped');
+        continue;
+      }
+      if (!auth.apple) {
+        log('Apple revocation skipped: Apple key not configured');
+        continue;
+      }
+      const sealed = auth.openAppleRefresh(l.sub, l.appleRefreshEnc);
+      if (!sealed) {
+        log('Apple revocation skipped: refresh token cannot be decrypted (ACCOUNTS_SECRET changed or missing?)');
+        continue;
+      }
+      const apple = auth.apple;
+      track(apple.revoke(sealed.rt, sealed.cid).catch((err: unknown) => log(`Apple revoke failed: ${(err as Error)?.message ?? 'error'}`)));
+    }
   }
 
   // ------------------------------------------------------------ user routes
@@ -232,7 +287,13 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
 
   app.delete('/v1/me', requireUser, async (req: AuthedReq, res) => {
     const id = req.account!.id;
+    const links = await store.listProviderLinks(id);
     await store.deleteAccount(id);
+    try {
+      revokeApple(links);
+    } catch (err) {
+      log('Apple revocation failed', err);
+    }
     try {
       await opts.onAccountDeleted?.(id);
     } catch (err) {
@@ -253,6 +314,103 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
     res.setHeader('Content-Security-Policy', "default-src 'none'");
     res.end(photo.jpeg);
   });
+
+  // ------------------------------------------------------------ sign in with Apple / Google
+  const authJson = express.json({ limit: '16kb' });
+  const AUTH_CODE_RE = /^[A-Za-z0-9._~+/=-]{1,512}$/;
+
+  async function signIn(provider: Provider, req: Request, res: Response): Promise<void> {
+    if (!auth.configured(provider)) return fail(res, 503, 'not_configured');
+    const b = req.body as Record<string, unknown> | undefined;
+    if (!b || typeof b !== 'object' || Array.isArray(b)) return fail(res, 400, 'bad_request');
+    const idToken = provider === 'apple' ? b.identityToken : b.idToken;
+    if (typeof idToken !== 'string' || idToken.length === 0) return fail(res, 400, 'bad_request');
+    const code = provider === 'apple' ? b.authorizationCode : undefined;
+    if (code !== undefined && code !== null && (typeof code !== 'string' || !AUTH_CODE_RE.test(code))) return fail(res, 400, 'bad_request');
+    const fullName = provider === 'apple' ? b.fullName : undefined;
+    if (fullName !== undefined && fullName !== null && typeof fullName !== 'string') return fail(res, 400, 'bad_request');
+
+    // Optional bearer: when present it must be valid (never silently fall back to a new account).
+    const authz = req.get('authorization');
+    let current: AccountRecord | null = null;
+    let currentToken: string | null = null;
+    if (authz !== undefined) {
+      const m = TOKEN_RE.exec(authz);
+      current = m ? await store.accountByTokenHash(sha256hex(m[1])) : null;
+      if (!current) return fail(res, 401, 'unauthorized');
+      currentToken = m![1];
+    }
+
+    let identity: { sub: string; aud: string };
+    try {
+      identity = await auth.verify(provider, idToken);
+    } catch (err) {
+      if (err instanceof InvalidTokenError) {
+        log(`${provider} sign-in refused: ${err.reason}`);
+        return fail(res, 401, 'invalid_token');
+      }
+      if (err instanceof JwksUnavailableError) {
+        log(`${provider} sign-in unavailable: ${err.message}`);
+        return fail(res, 503, 'unavailable');
+      }
+      throw err;
+    }
+    const { sub } = identity;
+
+    let result: AuthResult | null = null;
+    let linkedHere = false;
+    const existing = await store.accountByProvider(provider, sub);
+    if (!existing && current) {
+      const r = await store.linkProvider(current.id, provider, sub, now());
+      if (r === 'provider_taken') return fail(res, 409, 'already_linked');
+      if (r === 'ok') {
+        result = { accountId: current.id, token: currentToken!, switched: false };
+        linkedHere = true;
+      }
+    } else if (!existing) {
+      const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown';
+      if (!guestAllowed(ip)) return fail(res, 429, 'rate_limited');
+      const accountId = randomUUID();
+      const token = randomBytes(32).toString('base64url');
+      await store.createAccount(accountId, sha256hex(token), now());
+      const r = await store.linkProvider(accountId, provider, sub, now());
+      if (r === 'ok') {
+        result = { accountId, token, switched: false };
+        linkedHere = true;
+      } else {
+        await store.deleteAccount(accountId); // lost a race with a parallel sign-in of the same identity
+      }
+    }
+    if (!result) {
+      // The identity belongs to an account (found up front or created by a parallel request).
+      const owner = existing ?? (await store.accountByProvider(provider, sub));
+      if (!owner) return fail(res, 500, 'internal');
+      if (current && owner === current.id) {
+        result = { accountId: owner, token: currentToken!, switched: false };
+      } else {
+        const token = randomBytes(32).toString('base64url');
+        await store.addSession(owner, sha256hex(token), now());
+        result = { accountId: owner, token, switched: true };
+      }
+    }
+
+    // Apple sends the name only on the first authorization; use it only when the account has no name yet.
+    const name = normalizeDisplayName(fullName);
+    if (name) {
+      const acc = await store.getAccount(result.accountId);
+      if (acc && acc.displayName === null) await store.setDisplayName(result.accountId, name);
+    }
+    if (provider === 'apple' && typeof code === 'string') {
+      const link = (await store.listProviderLinks(result.accountId)).find((l) => l.provider === 'apple' && l.sub === sub);
+      // Exchange on first link, or when no refresh token is stored yet (e.g. secret was configured later).
+      if (link && (linkedHere || !link.appleRefreshEnc)) storeAppleRefresh(result.accountId, sub, identity.aud, code);
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(result);
+  }
+
+  app.post('/v1/auth/apple', authJson, (req, res) => signIn('apple', req, res));
+  app.post('/v1/auth/google', authJson, (req, res) => signIn('google', req, res));
 
   // ------------------------------------------------------------ admin
   app.get('/admin', async (req, res) => {

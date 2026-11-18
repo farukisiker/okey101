@@ -48,6 +48,12 @@ export function errorKey(code: AccountsErrorCode | 'permission'): Key {
       return 'profErrImage';
     case 'permission':
       return 'profErrPerm';
+    case 'already_linked':
+      return 'profErrLinked';
+    case 'invalid_token':
+      return 'profErrToken';
+    case 'not_configured':
+      return 'profErrSignInOff';
     default:
       return 'profErrNet';
   }

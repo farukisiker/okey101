@@ -1,5 +1,19 @@
 export * from './types';
-export type { AccountRecord, AccountStore, PhotoMeta, PhotoRecord } from './store';
+export type { AccountRecord, AccountStore, LinkResult, PhotoMeta, PhotoRecord, ProviderLink } from './store';
+export { AuthService, parseList, type AuthOptions } from './auth';
+export { AppleApiError, AppleClient, appleClientSecret, loadApplePrivateKey, APPLE_REVOKE_URL, APPLE_TOKEN_URL, type AppleRevokeConfig } from './apple';
+export {
+  APPLE_ISSUERS,
+  APPLE_JWKS_URL,
+  GOOGLE_ISSUERS,
+  GOOGLE_JWKS_URL,
+  InvalidTokenError,
+  JwksCache,
+  JwksUnavailableError,
+  verifyIdToken,
+  type IdTokenClaims,
+} from './jwt';
+export { SecretBox } from './secretBox';
 export { MemoryStore } from './memoryStore';
 export { SqliteStore } from './sqliteStore';
 export { BadJpegError, cleanJpeg, type CleanJpeg } from './jpeg';

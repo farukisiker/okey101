@@ -404,4 +404,13 @@ export const fr: Dict = {
   profReasonOtherPerson: 'Choisissez une photo de vous, d\'une fleur, d\'un paysage ou d\'un animal',
   profReasonDocument: 'Pas de pièce d\'identité, de facture ni de capture d\'écran, choisissez une autre photo',
   profReasonOther: 'Cette photo n\'a pas été acceptée, choisissez-en une autre',
+  profKeepTitle: 'Protégez votre compte',
+  profKeepBody: 'Votre profil est conservé même si vous supprimez l\'application',
+  profGoogle: 'Se connecter avec Google',
+  profLinkedApple: 'Lié à Apple ✓',
+  profLinkedGoogle: 'Lié à Google ✓',
+  profSwitched: 'Vous êtes revenu dans votre compte précédent',
+  profErrLinked: 'Une autre connexion de ce type est déjà liée à ce compte.',
+  profErrToken: 'La connexion n\'a pas pu être vérifiée. Veuillez réessayer.',
+  profErrSignInOff: 'Cette méthode de connexion n\'est pas disponible pour le moment.',
 };

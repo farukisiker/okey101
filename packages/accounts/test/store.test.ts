@@ -1,4 +1,9 @@
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { SqliteStore } from '../src/sqliteStore';
 import type { AccountStore } from '../src/store';
 import { storeFactories } from './helpers';
 
@@ -108,5 +113,82 @@ describe.each(storeFactories)('AccountStore contract: $name', (factory) => {
     // a re-created account with the same id starts clean
     await store.createAccount('a1', 'h3', 2);
     expect((await store.getAccount('a1'))?.photoConsentVersion).toBe(0);
+  });
+
+  it('addSession gives an existing account a second token', async () => {
+    await store.createAccount('a1', 'h1', 1);
+    await store.addSession('a1', 'h2', 2);
+    expect((await store.accountByTokenHash('h1'))?.id).toBe('a1');
+    expect((await store.accountByTokenHash('h2'))?.id).toBe('a1');
+  });
+
+  it('links providers with UNIQUE(provider, sub) and UNIQUE(account, provider)', async () => {
+    await store.createAccount('a1', 'h1', 1);
+    await store.createAccount('a2', 'h2', 1);
+    expect(await store.accountByProvider('apple', 's1')).toBeNull();
+    expect(await store.linkProvider('a1', 'google', 'g1', 5)).toBe('ok');
+    expect(await store.linkProvider('a1', 'apple', 's1', 6)).toBe('ok');
+    expect(await store.accountByProvider('apple', 's1')).toBe('a1');
+    expect(await store.accountByProvider('google', 's1')).toBeNull(); // sub is per provider
+    expect(await store.linkProvider('a2', 'apple', 's1', 7)).toBe('sub_taken');
+    expect(await store.linkProvider('a1', 'apple', 's1', 7)).toBe('sub_taken');
+    expect(await store.linkProvider('a1', 'apple', 's2', 7)).toBe('provider_taken');
+    expect(await store.linkProvider('a2', 'apple', 's2', 7)).toBe('ok');
+    expect(await store.listProviderLinks('a1')).toEqual([
+      { provider: 'apple', sub: 's1', accountId: 'a1', createdAt: 6, appleRefreshEnc: null },
+      { provider: 'google', sub: 'g1', accountId: 'a1', createdAt: 5, appleRefreshEnc: null },
+    ]);
+    await expect(store.linkProvider('nobody', 'google', 'g9', 1)).rejects.toThrow();
+  });
+
+  it('stores the sealed Apple refresh token only on the matching link', async () => {
+    await store.createAccount('a1', 'h1', 1);
+    await store.linkProvider('a1', 'apple', 's1', 1);
+    expect(await store.setAppleRefresh('apple', 's1', 'a2', 'v1.x')).toBe(false);
+    expect(await store.setAppleRefresh('apple', 'nope', 'a1', 'v1.x')).toBe(false);
+    expect(await store.setAppleRefresh('apple', 's1', 'a1', 'v1.sealed')).toBe(true);
+    expect((await store.listProviderLinks('a1'))[0].appleRefreshEnc).toBe('v1.sealed');
+  });
+
+  it('deleteAccount removes provider links (identity can be linked again)', async () => {
+    await store.createAccount('a1', 'h1', 1);
+    await store.linkProvider('a1', 'apple', 's1', 1);
+    await store.addSession('a1', 'h9', 1);
+    await store.deleteAccount('a1');
+    expect(await store.accountByProvider('apple', 's1')).toBeNull();
+    expect(await store.listProviderLinks('a1')).toEqual([]);
+    expect(await store.accountByTokenHash('h9')).toBeNull();
+    await store.createAccount('a2', 'h2', 2);
+    expect(await store.linkProvider('a2', 'apple', 's1', 2)).toBe('ok');
+  });
+});
+
+describe('SqliteStore on an existing E1a database file', () => {
+  it('adds account_providers on open and keeps existing data', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'kahve-e1a-'));
+    const file = join(dir, 'accounts.db');
+    try {
+      // Build the E1a schema (everything before the E1b block) with one account in it.
+      const full = readFileSync(new URL('../src/schema.sql', import.meta.url), 'utf8');
+      const e1a = full.slice(0, full.indexOf('-- E1b'));
+      expect(e1a).not.toContain('account_providers');
+      const old = new DatabaseSync(file);
+      old.exec(e1a);
+      old.prepare('INSERT INTO accounts (id, display_name, created_at) VALUES (?, ?, ?)').run('old', 'Eski Hesap', 1);
+      old.prepare('INSERT INTO sessions (token_hash, account_id, created_at) VALUES (?, ?, ?)').run('hold', 'old', 1);
+      old.close();
+
+      const store = new SqliteStore(file);
+      expect((await store.accountByTokenHash('hold'))?.displayName).toBe('Eski Hesap');
+      expect(await store.linkProvider('old', 'apple', 's1', 2)).toBe('ok');
+      expect(await store.accountByProvider('apple', 's1')).toBe('old');
+      store.close();
+      // re-opening is idempotent and keeps the link
+      const again = new SqliteStore(file);
+      expect(await again.accountByProvider('apple', 's1')).toBe('old');
+      again.close();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

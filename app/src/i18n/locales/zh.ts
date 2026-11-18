@@ -404,4 +404,13 @@ export const zh: Dict = {
   profReasonOtherPerson: '请选择您本人、花、风景或动物的照片',
   profReasonDocument: '请不要使用证件、账单或截图，请换一张',
   profReasonOther: '这张照片未被接受，请换一张',
+  profKeepTitle: '保护您的账号',
+  profKeepBody: '即使删除应用，您的个人资料也不会丢失',
+  profGoogle: '使用 Google 登录',
+  profLinkedApple: '已关联 Apple ✓',
+  profLinkedGoogle: '已关联 Google ✓',
+  profSwitched: '已回到您之前的账号',
+  profErrLinked: '此账号已关联了同类型的另一个登录。',
+  profErrToken: '无法验证登录，请重试。',
+  profErrSignInOff: '此登录方式目前不可用。',
 };

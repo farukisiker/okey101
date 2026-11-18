@@ -1,5 +1,5 @@
-import type { AccountRecord, AccountStore, PhotoMeta, PhotoRecord } from './store';
-import type { AdminPhotoItem, PhotoStatus, ReasonCode } from './types';
+import type { AccountRecord, AccountStore, LinkResult, PhotoMeta, PhotoRecord, ProviderLink } from './store';
+import { PROVIDERS, type AdminPhotoItem, type PhotoStatus, type Provider, type ReasonCode } from './types';
 
 export class MemoryStore implements AccountStore {
   private accounts = new Map<string, AccountRecord>();
@@ -8,6 +8,7 @@ export class MemoryStore implements AccountStore {
   private photoSeq = new Map<string, number>();
   private uploads = new Map<string, number>(); // `${id}|${day}`
   private blocked = new Map<string, ReasonCode[]>();
+  private links = new Map<string, ProviderLink>(); // `${provider}|${sub}`
 
   async createAccount(id: string, tokenHash: string, now: number): Promise<void> {
     this.accounts.set(id, { id, displayName: null, createdAt: now, photoConsentVersion: 0 });
@@ -22,6 +23,37 @@ export class MemoryStore implements AccountStore {
   async getAccount(id: string): Promise<AccountRecord | null> {
     const a = this.accounts.get(id);
     return a ? { ...a } : null;
+  }
+
+  async addSession(accountId: string, tokenHash: string): Promise<void> {
+    if (!this.accounts.has(accountId)) throw new Error('account not found');
+    this.sessions.set(tokenHash, accountId);
+  }
+
+  async accountByProvider(provider: Provider, sub: string): Promise<string | null> {
+    return this.links.get(`${provider}|${sub}`)?.accountId ?? null;
+  }
+
+  async linkProvider(accountId: string, provider: Provider, sub: string, now: number): Promise<LinkResult> {
+    if (!this.accounts.has(accountId)) throw new Error('account not found');
+    if (this.links.has(`${provider}|${sub}`)) return 'sub_taken';
+    for (const l of this.links.values()) if (l.accountId === accountId && l.provider === provider) return 'provider_taken';
+    this.links.set(`${provider}|${sub}`, { provider, sub, accountId, createdAt: now, appleRefreshEnc: null });
+    return 'ok';
+  }
+
+  async listProviderLinks(accountId: string): Promise<ProviderLink[]> {
+    return [...this.links.values()]
+      .filter((l) => l.accountId === accountId)
+      .sort((a, b) => PROVIDERS.indexOf(a.provider) - PROVIDERS.indexOf(b.provider))
+      .map((l) => ({ ...l }));
+  }
+
+  async setAppleRefresh(provider: Provider, sub: string, accountId: string, enc: string | null): Promise<boolean> {
+    const l = this.links.get(`${provider}|${sub}`);
+    if (!l || l.accountId !== accountId) return false;
+    l.appleRefreshEnc = enc;
+    return true;
   }
 
   async setDisplayName(id: string, displayName: string): Promise<void> {
@@ -107,6 +139,7 @@ export class MemoryStore implements AccountStore {
     this.photos.delete(id);
     this.photoSeq.delete(id);
     for (const [h, a] of this.sessions) if (a === id) this.sessions.delete(h);
+    for (const [k, l] of this.links) if (l.accountId === id) this.links.delete(k);
     for (const k of this.uploads.keys()) if (k.startsWith(`${id}|`)) this.uploads.delete(k);
   }
 }

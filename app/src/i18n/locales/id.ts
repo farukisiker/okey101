@@ -404,4 +404,13 @@ export const id: Dict = {
   profReasonOtherPerson: 'Silakan pilih foto diri Anda, bunga, pemandangan, atau hewan',
   profReasonDocument: 'Jangan kartu identitas, tagihan, atau tangkapan layar, silakan pilih foto lain',
   profReasonOther: 'Foto ini tidak diterima, silakan pilih foto lain',
+  profKeepTitle: 'Amankan akun Anda',
+  profKeepBody: 'Profil Anda tetap ada meskipun aplikasi dihapus',
+  profGoogle: 'Masuk dengan Google',
+  profLinkedApple: 'Tertaut dengan Apple ✓',
+  profLinkedGoogle: 'Tertaut dengan Google ✓',
+  profSwitched: 'Anda kembali ke akun Anda sebelumnya',
+  profErrLinked: 'Akun ini sudah tertaut dengan login lain dari jenis yang sama.',
+  profErrToken: 'Login tidak dapat diverifikasi. Silakan coba lagi.',
+  profErrSignInOff: 'Metode login ini sedang tidak tersedia.',
 };

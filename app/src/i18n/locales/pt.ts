@@ -404,4 +404,13 @@ export const pt: Dict = {
   profReasonOtherPerson: 'Escolha uma foto sua, de uma flor, uma paisagem ou um animal',
   profReasonDocument: 'Sem documentos, contas ou capturas de tela, escolha outra foto',
   profReasonOther: 'Esta foto não foi aceita, escolha outra',
+  profKeepTitle: 'Proteja a sua conta',
+  profKeepBody: 'O seu perfil não se perde, mesmo que apague o aplicativo',
+  profGoogle: 'Entrar com o Google',
+  profLinkedApple: 'Vinculada à Apple ✓',
+  profLinkedGoogle: 'Vinculada ao Google ✓',
+  profSwitched: 'Você voltou para a sua conta anterior',
+  profErrLinked: 'Esta conta já tem outro login deste tipo vinculado.',
+  profErrToken: 'Não foi possível verificar o login. Tente novamente.',
+  profErrSignInOff: 'Este método de login não está disponível no momento.',
 };

@@ -404,4 +404,13 @@ export const es: Dict = {
   profReasonOtherPerson: 'Elija una foto suya, de una flor, un paisaje o un animal',
   profReasonDocument: 'Sin documentos de identidad, facturas ni capturas de pantalla, elija otra foto',
   profReasonOther: 'No se aceptó esta foto, elija otra',
+  profKeepTitle: 'Proteja su cuenta',
+  profKeepBody: 'Su perfil no se pierde aunque borre la aplicación',
+  profGoogle: 'Iniciar sesión con Google',
+  profLinkedApple: 'Vinculada con Apple ✓',
+  profLinkedGoogle: 'Vinculada con Google ✓',
+  profSwitched: 'Ha vuelto a su cuenta anterior',
+  profErrLinked: 'Esta cuenta ya tiene vinculado otro inicio de sesión de este tipo.',
+  profErrToken: 'No se pudo verificar el inicio de sesión. Inténtelo de nuevo.',
+  profErrSignInOff: 'Este método de inicio de sesión no está disponible ahora.',
 };

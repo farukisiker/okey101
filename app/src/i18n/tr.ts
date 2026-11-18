@@ -419,6 +419,15 @@ export const tr = {
   profReasonOtherPerson: 'Lütfen kendi fotoğrafınızı ya da çiçek, manzara, hayvan gibi bir fotoğraf seçin',
   profReasonDocument: 'Kimlik, fatura veya ekran görüntüsü olmasın, lütfen başka bir fotoğraf seçin',
   profReasonOther: 'Bu fotoğraf uygun bulunmadı, lütfen başka bir fotoğraf seçin',
+  profKeepTitle: 'Hesabınızı koruyun',
+  profKeepBody: 'Uygulamayı silseniz de profiliniz kaybolmasın',
+  profGoogle: 'Google ile giriş yap',
+  profLinkedApple: 'Apple ile bağlı ✓',
+  profLinkedGoogle: 'Google ile bağlı ✓',
+  profSwitched: 'Önceki hesabınıza girildi',
+  profErrLinked: 'Bu hesaba aynı türden başka bir giriş zaten bağlı.',
+  profErrToken: 'Giriş doğrulanamadı. Lütfen tekrar deneyin.',
+  profErrSignInOff: 'Bu giriş yöntemi şu an kullanılamıyor.',
 };
 
 export type Key = keyof typeof tr;

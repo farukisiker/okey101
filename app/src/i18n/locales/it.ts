@@ -404,4 +404,13 @@ export const it: Dict = {
   profReasonOtherPerson: 'Scegli una foto di te, di un fiore, di un paesaggio o di un animale',
   profReasonDocument: 'Niente documenti, bollette o schermate, scegli un\'altra foto',
   profReasonOther: 'Questa foto non è stata accettata, scegline un\'altra',
+  profKeepTitle: 'Proteggi il tuo account',
+  profKeepBody: 'Il tuo profilo resta anche se elimini l\'app',
+  profGoogle: 'Accedi con Google',
+  profLinkedApple: 'Collegato con Apple ✓',
+  profLinkedGoogle: 'Collegato con Google ✓',
+  profSwitched: 'Sei tornato nel tuo account precedente',
+  profErrLinked: 'A questo account è già collegato un altro accesso dello stesso tipo.',
+  profErrToken: 'Impossibile verificare l\'accesso. Riprova.',
+  profErrSignInOff: 'Questo metodo di accesso non è disponibile al momento.',
 };

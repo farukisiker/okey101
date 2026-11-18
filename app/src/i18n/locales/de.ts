@@ -404,4 +404,13 @@ export const de: Dict = {
   profReasonOtherPerson: 'Bitte wählen Sie ein Foto von sich selbst, einer Blume, einer Landschaft oder einem Tier',
   profReasonDocument: 'Bitte kein Ausweis, keine Rechnung und kein Bildschirmfoto, wählen Sie ein anderes',
   profReasonOther: 'Dieses Foto wurde nicht akzeptiert, bitte wählen Sie ein anderes',
+  profKeepTitle: 'Konto sichern',
+  profKeepBody: 'Ihr Profil bleibt erhalten, auch wenn Sie die App löschen',
+  profGoogle: 'Mit Google anmelden',
+  profLinkedApple: 'Mit Apple verbunden ✓',
+  profLinkedGoogle: 'Mit Google verbunden ✓',
+  profSwitched: 'Sie sind wieder in Ihrem früheren Konto',
+  profErrLinked: 'Mit diesem Konto ist bereits eine andere Anmeldung dieser Art verknüpft.',
+  profErrToken: 'Die Anmeldung konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.',
+  profErrSignInOff: 'Diese Anmeldeart ist im Moment nicht verfügbar.',
 };

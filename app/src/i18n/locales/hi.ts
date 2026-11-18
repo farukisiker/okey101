@@ -404,4 +404,13 @@ export const hi: Dict = {
   profReasonOtherPerson: 'कृपया अपनी फ़ोटो या फूल, प्राकृतिक दृश्य, जानवर की फ़ोटो चुनें',
   profReasonDocument: 'पहचान पत्र, बिल या स्क्रीनशॉट न हो, कृपया दूसरी फ़ोटो चुनें',
   profReasonOther: 'यह फ़ोटो स्वीकार नहीं हुई, कृपया दूसरी फ़ोटो चुनें',
+  profKeepTitle: 'अपना खाता सुरक्षित रखें',
+  profKeepBody: 'ऐप हटाने पर भी आपकी प्रोफ़ाइल बनी रहेगी',
+  profGoogle: 'Google से साइन इन करें',
+  profLinkedApple: 'Apple से जुड़ा हुआ ✓',
+  profLinkedGoogle: 'Google से जुड़ा हुआ ✓',
+  profSwitched: 'आप अपने पिछले खाते में वापस आ गए हैं',
+  profErrLinked: 'इस खाते से इसी प्रकार का दूसरा साइन-इन पहले से जुड़ा है।',
+  profErrToken: 'साइन-इन की पुष्टि नहीं हो सकी। कृपया फिर से कोशिश करें।',
+  profErrSignInOff: 'यह साइन-इन तरीका अभी उपलब्ध नहीं है।',
 };

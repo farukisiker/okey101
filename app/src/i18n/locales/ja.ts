@@ -404,4 +404,13 @@ export const ja: Dict = {
   profReasonOtherPerson: 'ご自身の写真、または花・風景・動物などの写真を選んでください',
   profReasonDocument: '身分証、請求書、スクリーンショットは避けて、別の写真を選んでください',
   profReasonOther: 'この写真は承認されませんでした。別の写真を選んでください',
+  profKeepTitle: 'アカウントを守りましょう',
+  profKeepBody: 'アプリを削除してもプロフィールは残ります',
+  profGoogle: 'Googleでサインイン',
+  profLinkedApple: 'Appleと連携済み ✓',
+  profLinkedGoogle: 'Googleと連携済み ✓',
+  profSwitched: '以前のアカウントに戻りました',
+  profErrLinked: 'このアカウントには、同じ種類の別のサインインがすでに連携されています。',
+  profErrToken: 'サインインを確認できませんでした。もう一度お試しください。',
+  profErrSignInOff: 'このサインイン方法は現在ご利用いただけません。',
 };

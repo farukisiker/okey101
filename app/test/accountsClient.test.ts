@@ -14,6 +14,7 @@ import { REASON_KEYS, errorKey, isWaiting, photoStatusKey, reasonKeys } from '..
 
 const me = (o: Partial<Me> = {}): Me => ({
   accountId: 'a1',
+  providers: [],
   displayName: null,
   photoConsent: false,
   uploadsLeftToday: 3,
@@ -188,5 +189,74 @@ describe('photo status texts', () => {
     expect(errorKey('bad_image')).toBe('profErrImage');
     expect(errorKey('permission')).toBe('profErrPerm');
     expect(errorKey('network')).toBe('profErrNet');
+    expect(errorKey('already_linked')).toBe('profErrLinked');
+    expect(errorKey('invalid_token')).toBe('profErrToken');
+    expect(errorKey('not_configured')).toBe('profErrSignInOff');
+  });
+});
+
+describe('sign-in calls', () => {
+  it('links Apple to the guest account: Bearer sent, token kept, empty fields left out', async () => {
+    const storage = memStorage('guest1');
+    const { calls, fetchImpl } = fakeFetch(() => ({ status: 200, json: { accountId: 'a1', token: 'guest1', switched: false } }));
+    const c = createAccountsClient({ baseUrl: 'https://x', storage, fetchImpl });
+    const r = await c.signInApple({ identityToken: 'idt', authorizationCode: 'code', fullName: '  Ayşe Y ' });
+    expect(r).toEqual({ accountId: 'a1', token: 'guest1', switched: false });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({ method: 'POST', url: 'https://x/v1/auth/apple', auth: 'Bearer guest1', type: 'application/json' });
+    expect(JSON.parse(calls[0].body as string)).toEqual({ identityToken: 'idt', authorizationCode: 'code', fullName: 'Ayşe Y' });
+    await c.signInApple({ identityToken: 'idt', authorizationCode: null, fullName: '  ' });
+    expect(JSON.parse(calls[1].body as string)).toEqual({ identityToken: 'idt' });
+  });
+
+  it('switched: stores the other account token and uses it afterwards', async () => {
+    const storage = memStorage('guest1');
+    const { calls, fetchImpl } = fakeFetch((c) =>
+      c.url.endsWith('/v1/auth/google') ? { status: 200, json: { accountId: 'old', token: 'oldTok', switched: true } } : { status: 200, json: me({ accountId: 'old' }) },
+    );
+    const c = createAccountsClient({ baseUrl: 'https://x', storage, fetchImpl });
+    const r = await c.signInGoogle('gid');
+    expect(r.switched).toBe(true);
+    expect(storage.data.get(TOKEN_KEY)).toBe('oldTok');
+    expect(JSON.parse(calls[0].body as string)).toEqual({ idToken: 'gid' });
+    await c.getMe();
+    expect(calls[1].auth).toBe('Bearer oldTok');
+  });
+
+  it('without a stored token it signs in with no Bearer and opens no guest', async () => {
+    const storage = memStorage();
+    const { calls, fetchImpl } = fakeFetch(() => ({ status: 200, json: { accountId: 'n', token: 'newTok', switched: false } }));
+    const c = createAccountsClient({ baseUrl: 'https://x', storage, fetchImpl });
+    await c.signInGoogle('gid');
+    expect(calls).toHaveLength(1);
+    expect(calls[0].auth).toBeNull();
+    expect(storage.data.get(TOKEN_KEY)).toBe('newTok');
+  });
+
+  it('a stale guest token (401) is dropped and the sign-in retried without it, once', async () => {
+    const storage = memStorage('stale');
+    const { calls, fetchImpl } = fakeFetch((c) =>
+      c.auth ? { status: 401, json: { error: 'unauthorized' } } : { status: 200, json: { accountId: 'n', token: 'fresh', switched: false } },
+    );
+    const c = createAccountsClient({ baseUrl: 'https://x', storage, fetchImpl });
+    await c.signInApple({ identityToken: 'i' });
+    expect(calls.map((x) => x.auth)).toEqual(['Bearer stale', null]);
+    expect(storage.data.get(TOKEN_KEY)).toBe('fresh');
+  });
+
+  it('maps the new error codes and keeps the old token on failure', async () => {
+    for (const code of ['invalid_token', 'already_linked', 'not_configured'] as const) {
+      const storage = memStorage('g');
+      const { fetchImpl } = fakeFetch(() => ({ status: code === 'already_linked' ? 409 : code === 'not_configured' ? 503 : 401, json: { error: code } }));
+      const c = createAccountsClient({ baseUrl: 'https://x', storage, fetchImpl });
+      await expect(c.signInGoogle('t')).rejects.toMatchObject({ code });
+      if (code !== 'invalid_token') expect(storage.data.get(TOKEN_KEY)).toBe('g');
+    }
+  });
+
+  it('rejects an answer without a token', async () => {
+    const { fetchImpl } = fakeFetch(() => ({ status: 200, json: { accountId: 'a' } }));
+    const c = createAccountsClient({ baseUrl: 'https://x', storage: memStorage(), fetchImpl });
+    await expect(c.signInGoogle('t')).rejects.toMatchObject({ code: 'unknown' });
   });
 });

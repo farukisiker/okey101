@@ -134,3 +134,10 @@ Kullanıcı onayı: gerçek para kuralı değişikliği + expo-image-picker/mani
 | Uçtan uca (uygulama istemcisi → gerçek sunucu): rıza yoksa 403, yükleme → anahtarsız inceleme sırası, onaysız 404, yönetici onayı, EXIF sökülmüş, silince 404 | Geçti (yerel betik) |
 | Tablette deneme | Bekliyor: yeni native derleme + `EXPO_PUBLIC_ACCOUNTS_URL` (PC'de `tsx packages/accounts/src/main.ts`, yerel ağ) |
 Açık: Apple/Google giriş modülleri onaysız; sunucunun çalışacağı yer (VPS) kararsız; gerçek OpenAI/Anthropic yanıtları sadece sahte testlerle denendi; çeviriler ana dilde denetlenmedi.
+
+## Faz E1b: Apple / Google ile giriş (18.11.2026)
+Kullanıcı onayı "Evet ekle". Görev: `tasks/E1b-OPUS-SONNET.md`. Sunucu 248 test (`reports/E1b-OPUS.md`), uygulama 157 test (`reports/E1b-SONNET.md`).
+Uçtan uca (uygulama istemcisi → gerçek sunucu, sahte Google anahtarı): misafir hesabı bağlanır, ikinci cihazda aynı hesaba dönülür, yanlış aud reddedilir, Apple ayarsızken not_configured, silinince yeni hesap. Geçti.
+Derleme: `app/app.config.js` giriş eklentilerini sadece ortam değişkeniyle ekler (ENABLE_APPLE_SIGNIN, GOOGLE_IOS_URL_SCHEME); değişkensiz yapı app.json ile aynı.
+Kullanıcı adımları (gerçek giriş için): Apple Developer'da App ID'ye "Sign In with Apple" + .p8 anahtar; Google Cloud'da Web/Android (SHA-1'ler)/iOS OAuth istemcileri.
+Açık: Apple nonce ve Google azp kontrolü yok; giriş sonrası sahipsiz kalan misafir hesapları temizlenmiyor; cihazda denenmedi.

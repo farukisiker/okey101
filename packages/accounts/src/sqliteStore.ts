@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import type { AccountRecord, AccountStore, PhotoMeta, PhotoRecord } from './store';
-import { isReasonCode, type AdminPhotoItem, type PhotoStatus, type ReasonCode } from './types';
+import type { AccountRecord, AccountStore, LinkResult, PhotoMeta, PhotoRecord, ProviderLink } from './store';
+import { isReasonCode, PROVIDERS, type AdminPhotoItem, type PhotoStatus, type Provider, type ReasonCode } from './types';
 
 const SCHEMA_URL = new URL('./schema.sql', import.meta.url);
 
@@ -76,6 +76,50 @@ export class SqliteStore implements AccountStore {
   async getAccount(id: string): Promise<AccountRecord | null> {
     const r = this.db.prepare('SELECT * FROM accounts WHERE id = ?').get(id);
     return r ? toAccount(r) : null;
+  }
+
+  async addSession(accountId: string, tokenHash: string, now: number): Promise<void> {
+    this.db.prepare('INSERT INTO sessions (token_hash, account_id, created_at) VALUES (?, ?, ?)').run(tokenHash, accountId, now);
+  }
+
+  async accountByProvider(provider: Provider, sub: string): Promise<string | null> {
+    const r = this.db.prepare('SELECT account_id FROM account_providers WHERE provider = ? AND sub = ?').get(provider, sub);
+    return r ? String(r.account_id) : null;
+  }
+
+  async linkProvider(accountId: string, provider: Provider, sub: string, now: number): Promise<LinkResult> {
+    return this.tx(() => {
+      if (!this.db.prepare('SELECT 1 FROM accounts WHERE id = ?').get(accountId)) throw new Error('account not found');
+      if (this.db.prepare('SELECT 1 FROM account_providers WHERE provider = ? AND sub = ?').get(provider, sub)) return 'sub_taken';
+      if (this.db.prepare('SELECT 1 FROM account_providers WHERE account_id = ? AND provider = ?').get(accountId, provider)) {
+        return 'provider_taken';
+      }
+      this.db
+        .prepare('INSERT INTO account_providers (provider, sub, account_id, created_at, apple_refresh_enc) VALUES (?, ?, ?, ?, NULL)')
+        .run(provider, sub, accountId, now);
+      return 'ok';
+    });
+  }
+
+  async listProviderLinks(accountId: string): Promise<ProviderLink[]> {
+    const rows = this.db.prepare('SELECT * FROM account_providers WHERE account_id = ?').all(accountId);
+    return rows
+      .map((r) => ({
+        provider: String(r.provider) as Provider,
+        sub: String(r.sub),
+        accountId: String(r.account_id),
+        createdAt: Number(r.created_at),
+        appleRefreshEnc: r.apple_refresh_enc == null ? null : String(r.apple_refresh_enc),
+      }))
+      .filter((l) => PROVIDERS.includes(l.provider))
+      .sort((a, b) => PROVIDERS.indexOf(a.provider) - PROVIDERS.indexOf(b.provider));
+  }
+
+  async setAppleRefresh(provider: Provider, sub: string, accountId: string, enc: string | null): Promise<boolean> {
+    const res = this.db
+      .prepare('UPDATE account_providers SET apple_refresh_enc = ? WHERE provider = ? AND sub = ? AND account_id = ?')
+      .run(enc, provider, sub, accountId);
+    return Number(res.changes) > 0;
   }
 
   async setDisplayName(id: string, displayName: string): Promise<void> {
@@ -195,7 +239,7 @@ export class SqliteStore implements AccountStore {
   async deleteAccount(id: string): Promise<void> {
     // Explicit deletes (do not rely on FK cascade being enabled in every database).
     this.tx(() => {
-      for (const t of ['sessions', 'consents', 'photos', 'upload_counts']) {
+      for (const t of ['sessions', 'account_providers', 'consents', 'photos', 'upload_counts']) {
         this.db.prepare(`DELETE FROM ${t} WHERE account_id = ?`).run(id);
       }
       this.db.prepare('DELETE FROM accounts WHERE id = ?').run(id);

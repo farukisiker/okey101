@@ -404,4 +404,13 @@ export const ru: Dict = {
   profReasonOtherPerson: 'Выберите своё фото, цветок, пейзаж или животное',
   profReasonDocument: 'Без документов, счетов и скриншотов, выберите другое фото',
   profReasonOther: 'Это фото не принято, выберите другое',
+  profKeepTitle: 'Сохраните свой аккаунт',
+  profKeepBody: 'Ваш профиль не пропадёт, даже если удалить приложение',
+  profGoogle: 'Войти через Google',
+  profLinkedApple: 'Привязано к Apple ✓',
+  profLinkedGoogle: 'Привязано к Google ✓',
+  profSwitched: 'Вы вернулись в свой прежний аккаунт',
+  profErrLinked: 'К этому аккаунту уже привязан другой вход этого типа.',
+  profErrToken: 'Не удалось подтвердить вход. Попробуйте ещё раз.',
+  profErrSignInOff: 'Этот способ входа сейчас недоступен.',
 };

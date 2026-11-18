@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { t } from '../i18n';
@@ -7,6 +7,8 @@ import { accounts } from '../net/accounts';
 import { AccountsError, type Me, validName } from '../net/accountsClient';
 import { errorKey, isWaiting, photoStatusKey, reasonKeys } from '../net/photoStatus';
 import { pickProfilePhoto } from '../net/photoPicker';
+import type { SignInOutcome } from '../net/signIn';
+import { signIn } from '../net/signInApp';
 import { colors, font } from '../theme';
 
 const POLL_MS = 5000;
@@ -21,6 +23,24 @@ function avatarColor(id: string): string {
 
 type Source = 'gallery' | 'camera';
 
+/** Apple's own button (required by their rules). Loaded lazily, iOS only. */
+function AppleButton({ onPress, disabled }: { onPress(): void; disabled: boolean }) {
+  if (Platform.OS !== 'ios') return null;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const A = require('expo-apple-authentication') as typeof import('expo-apple-authentication');
+  return (
+    <View style={disabled ? { opacity: 0.5 } : undefined} pointerEvents={disabled ? 'none' : 'auto'}>
+      <A.AppleAuthenticationButton
+        buttonType={A.AppleAuthenticationButtonType.SIGN_IN}
+        buttonStyle={A.AppleAuthenticationButtonStyle.WHITE}
+        cornerRadius={12}
+        style={styles.appleBtn}
+        onPress={onPress}
+      />
+    </View>
+  );
+}
+
 /** Own profile: name, round photo with its review status, and the photo / account actions. */
 export function ProfileScreen({ onBack }: { onBack(): void }) {
   const [me, setMe] = useState<Me | null>(null);
@@ -29,6 +49,8 @@ export function ProfileScreen({ onBack }: { onBack(): void }) {
   const [error, setError] = useState<string | null>(null);
   const [consentFor, setConsentFor] = useState<Source | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [avail, setAvail] = useState({ apple: false, google: false });
+  const [notice, setNotice] = useState<string | null>(null);
   const alive = useRef(true);
 
   useEffect(() => {
@@ -57,6 +79,10 @@ export function ProfileScreen({ onBack }: { onBack(): void }) {
       .catch(fail)
       .finally(() => alive.current && setBusy(false));
   }, [apply, fail]);
+
+  useEffect(() => {
+    void signIn.available().then((a) => alive.current && setAvail(a), () => {});
+  }, []);
 
   // While a photo waits for a decision, ask again every few seconds (only while this screen is open).
   const waiting = me ? isWaiting(me.photo.status) : false;
@@ -117,10 +143,23 @@ export function ProfileScreen({ onBack }: { onBack(): void }) {
 
   const removePhoto = () => run(async () => apply(await accounts.deletePhoto(), true));
 
+  /** Runs a sign-in; a cancelled one closes quietly. The server may answer with an older account (switched). */
+  const link = (job: () => Promise<SignInOutcome>) =>
+    run(async () => {
+      setNotice(null);
+      const r = await job();
+      if (r.kind === 'cancelled') return;
+      const m = await accounts.getMe();
+      apply(m);
+      if (r.result.switched && alive.current) setNotice(t('profSwitched'));
+    });
+
   const deleteAccount = () => {
+    const hadGoogle = !!me?.providers?.includes('google');
     setConfirmDelete(false);
     void run(async () => {
       await accounts.deleteAccount();
+      if (hadGoogle) await signIn.googleForget();
       onBack();
     });
   };
@@ -132,6 +171,8 @@ export function ProfileScreen({ onBack }: { onBack(): void }) {
   const dirty = !!me && name.trim() !== (me.displayName ?? '');
   const nameBad = name.trim().length > 0 && !validName(name);
   const hasPhoto = status !== 'none';
+  const providers = me?.providers ?? [];
+  const showKeep = !!me && providers.length === 0 && (avail.apple || avail.google);
 
   return (
     <View style={styles.fill}>
@@ -178,6 +219,11 @@ export function ProfileScreen({ onBack }: { onBack(): void }) {
           </View>
         </View>
 
+        {notice && (
+          <Text style={styles.notice} accessibilityLiveRegion="polite">
+            {notice}
+          </Text>
+        )}
         {error && (
           <Text style={styles.error} accessibilityLiveRegion="polite">
             {error}
@@ -189,6 +235,22 @@ export function ProfileScreen({ onBack }: { onBack(): void }) {
           <Button title={t('profCamera')} size="large" onPress={() => start('camera')} disabled={busy || !me} />
         </View>
         {me && <Text style={styles.hint}>{t('profUploadsLeft', { n: me.uploadsLeftToday })}</Text>}
+        {showKeep && (
+          <View style={styles.keep}>
+            <Text style={styles.keepTitle}>{t('profKeepTitle')}</Text>
+            <Text style={styles.keepBody}>{t('profKeepBody')}</Text>
+            <View style={styles.actions}>
+              {avail.apple && <AppleButton disabled={busy} onPress={() => link(() => signIn.apple(accounts))} />}
+              {avail.google && <Button title={t('profGoogle')} size="large" onPress={() => link(() => signIn.google(accounts))} disabled={busy} />}
+            </View>
+          </View>
+        )}
+        {providers.length > 0 && (
+          <View style={styles.actions}>
+            {providers.includes('apple') && <Text style={styles.linked}>{t('profLinkedApple')}</Text>}
+            {providers.includes('google') && <Text style={styles.linked}>{t('profLinkedGoogle')}</Text>}
+          </View>
+        )}
         {busy && <ActivityIndicator color={colors.accent} size="large" accessibilityLabel={t('profBusy')} />}
 
         <View style={styles.actions}>
@@ -258,6 +320,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   error: { color: colors.danger, fontSize: font.body, fontWeight: '700', textAlign: 'center', maxWidth: 560 },
+  notice: { color: colors.accent, fontSize: font.body, fontWeight: '700', textAlign: 'center', maxWidth: 560 },
+  keep: { alignItems: 'center', gap: 8, padding: 14, borderRadius: 14, backgroundColor: colors.panel, maxWidth: 560 },
+  keepTitle: { color: colors.accent, fontSize: font.status, fontWeight: '900', textAlign: 'center' },
+  keepBody: { color: colors.text, fontSize: font.body, textAlign: 'center' },
+  appleBtn: { width: 240, height: 56 },
+  linked: { color: colors.ok, fontSize: font.body, fontWeight: '700' },
   hint: { color: colors.muted, fontSize: font.small, textAlign: 'center' },
   actions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 14 },
   overlay: {

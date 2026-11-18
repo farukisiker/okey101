@@ -84,6 +84,7 @@ describe.each(storeFactories)('accounts HTTP API on $name', (factory) => {
       photoConsent: false,
       uploadsLeftToday: 3,
       photo: { status: 'none', reasons: [], url: null },
+      providers: [],
     });
   });
 

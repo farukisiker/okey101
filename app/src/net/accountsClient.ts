@@ -14,8 +14,19 @@ export type ReasonCode =
   | 'document'
   | 'other';
 
+export type Provider = 'apple' | 'google';
+
+/** `switched`: the sign-in belonged to an existing account, so this device now uses that one instead. */
+export interface AuthResult {
+  accountId: string;
+  token: string;
+  switched: boolean;
+}
+
 export interface Me {
   accountId: string;
+  /** Sign-in identities linked to the account; empty for a plain guest. */
+  providers: Provider[];
   displayName: string | null;
   photoConsent: boolean;
   uploadsLeftToday: number;
@@ -32,10 +43,14 @@ export type AccountsErrorCode =
   | 'rate_limited'
   | 'consent_required'
   | 'not_found'
+  | 'invalid_token'
+  | 'already_linked'
+  | 'not_configured'
+  | 'unavailable'
   | 'network'
   | 'unknown';
 
-const KNOWN: AccountsErrorCode[] = ['unauthorized', 'bad_request', 'too_large', 'bad_image', 'rate_limited', 'consent_required', 'not_found'];
+const KNOWN: AccountsErrorCode[] = ['unauthorized', 'bad_request', 'too_large', 'bad_image', 'rate_limited', 'consent_required', 'not_found', 'invalid_token', 'already_linked', 'not_configured', 'unavailable'];
 
 export class AccountsError extends Error {
   constructor(
@@ -146,6 +161,29 @@ export function createAccountsClient(deps: AccountsDeps) {
 
   const json = (data: unknown) => JSON.stringify(data);
 
+  /**
+   * Sign-in call. The guest token is optional on the server: with it the identity is linked to the guest account,
+   * without it a new account is opened (or the existing one returned). Never creates a guest just to sign in.
+   * The returned token replaces the stored one.
+   */
+  async function auth(path: string, body: Record<string, unknown>): Promise<AuthResult> {
+    if (!enabled()) throw new AccountsError('unknown');
+    const saved = token ?? (await deps.storage.getItem(TOKEN_KEY).catch(() => null));
+    let res = await send('POST', path, saved, json(body), 'application/json');
+    if (res.status === 401 && saved) {
+      // Stale guest token: drop it and sign in without it.
+      token = null;
+      await deps.storage.removeItem(TOKEN_KEY).catch(() => {});
+      res = await send('POST', path, null, json(body), 'application/json');
+    }
+    if (!res.ok) return fail(res);
+    const j = (await res.json()) as Partial<AuthResult>;
+    if (!j.token || !j.accountId) throw new AccountsError('unknown', res.status);
+    token = j.token;
+    await deps.storage.setItem(TOKEN_KEY, j.token).catch(() => {});
+    return { accountId: j.accountId, token: j.token, switched: j.switched === true };
+  }
+
   return {
     enabled,
     /** Absolute address of an approved photo, or null. */
@@ -175,6 +213,17 @@ export function createAccountsClient(deps: AccountsDeps) {
     },
     async deletePhoto(): Promise<Me> {
       return (await call('DELETE', '/v1/me/photo')).json() as Promise<Me>;
+    },
+    /** Links an Apple identity to this account (or returns to the account it already belongs to). */
+    async signInApple(p: { identityToken: string; authorizationCode?: string | null; fullName?: string | null }): Promise<AuthResult> {
+      const body: Record<string, unknown> = { identityToken: p.identityToken };
+      if (p.authorizationCode) body.authorizationCode = p.authorizationCode;
+      const name = p.fullName?.trim();
+      if (name) body.fullName = name;
+      return auth('/v1/auth/apple', body);
+    },
+    async signInGoogle(idToken: string): Promise<AuthResult> {
+      return auth('/v1/auth/google', { idToken });
     },
     /** Deletes the account on the server and forgets the token. */
     async deleteAccount(): Promise<void> {

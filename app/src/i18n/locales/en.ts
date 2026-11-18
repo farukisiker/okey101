@@ -405,4 +405,13 @@ export const en: Dict = {
   profReasonOtherPerson: 'Please choose a photo of yourself, or of a flower, a landscape or an animal',
   profReasonDocument: 'No ID, bill or screenshot please, choose another photo',
   profReasonOther: 'This photo was not accepted, please choose another one',
+  profKeepTitle: 'Keep your account safe',
+  profKeepBody: 'Your profile stays even if you delete the app',
+  profGoogle: 'Sign in with Google',
+  profLinkedApple: 'Linked with Apple ✓',
+  profLinkedGoogle: 'Linked with Google ✓',
+  profSwitched: 'You are back in your previous account',
+  profErrLinked: 'A different sign-in of this kind is already linked to this account.',
+  profErrToken: 'Sign-in could not be verified. Please try again.',
+  profErrSignInOff: 'This sign-in method is not available right now.',
 };

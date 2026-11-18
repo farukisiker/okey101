@@ -1,4 +1,4 @@
-import type { AdminPhotoItem, PhotoStatus, ReasonCode } from './types';
+import type { AdminPhotoItem, PhotoStatus, Provider, ReasonCode } from './types';
 
 export interface AccountRecord {
   id: string;
@@ -21,6 +21,18 @@ export interface PhotoRecord {
 
 export type PhotoMeta = Omit<PhotoRecord, 'jpeg'>;
 
+export interface ProviderLink {
+  provider: Provider;
+  sub: string;
+  accountId: string;
+  createdAt: number;
+  /** Apple refresh token sealed with AES-256-GCM (SecretBox), or null. Never plaintext. */
+  appleRefreshEnc: string | null;
+}
+
+/** Result of linkProvider: 'sub_taken' = this identity is linked to some account; 'provider_taken' = the account already has this provider. */
+export type LinkResult = 'ok' | 'sub_taken' | 'provider_taken';
+
 /**
  * Storage for accounts. Every method is async so a network database (Postgres) can implement it later.
  * Implementations: MemoryStore (tests/dev), SqliteStore (node:sqlite).
@@ -30,6 +42,16 @@ export interface AccountStore {
   /** Looks up the account owning a session token hash. */
   accountByTokenHash(tokenHash: string): Promise<AccountRecord | null>;
   getAccount(id: string): Promise<AccountRecord | null>;
+  /** Adds another session token for an existing account (sign-in on a new device). */
+  addSession(accountId: string, tokenHash: string, now: number): Promise<void>;
+
+  /** Account id linked to (provider, sub), or null. */
+  accountByProvider(provider: Provider, sub: string): Promise<string | null>;
+  /** Atomically links (provider, sub) to the account; UNIQUE(provider, sub) and UNIQUE(account_id, provider). */
+  linkProvider(accountId: string, provider: Provider, sub: string, now: number): Promise<LinkResult>;
+  listProviderLinks(accountId: string): Promise<ProviderLink[]>;
+  /** Stores the sealed Apple refresh token on an existing link. Returns false when the link no longer exists. */
+  setAppleRefresh(provider: Provider, sub: string, accountId: string, enc: string | null): Promise<boolean>;
   setDisplayName(id: string, displayName: string): Promise<void>;
   setConsent(id: string, kind: 'photo', version: number, now: number): Promise<void>;
 
@@ -50,7 +72,7 @@ export interface AccountStore {
   unblockHash(sha256: string): Promise<void>;
   blockedReasons(sha256: string): Promise<ReasonCode[] | null>;
 
-  /** Removes account, sessions, photo, consents and counters. */
+  /** Removes account, sessions, provider links, photo, consents and counters. */
   deleteAccount(id: string): Promise<void>;
   close?(): void;
 }

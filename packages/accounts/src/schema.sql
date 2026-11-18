@@ -48,3 +48,15 @@ CREATE TABLE IF NOT EXISTS blocked_hashes (
   reasons TEXT NOT NULL,
   created_at BIGINT NOT NULL
 );
+
+-- E1b: Apple / Google identities. Added with IF NOT EXISTS so an existing E1a database picks it up on start.
+-- apple_refresh_enc: Apple refresh token sealed with AES-256-GCM (never plaintext), used to revoke on deletion.
+CREATE TABLE IF NOT EXISTS account_providers (
+  provider TEXT NOT NULL,
+  sub TEXT NOT NULL,
+  account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  created_at BIGINT NOT NULL,
+  apple_refresh_enc TEXT,
+  PRIMARY KEY (provider, sub),
+  UNIQUE (account_id, provider)
+);

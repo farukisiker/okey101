@@ -404,4 +404,13 @@ export const ko: Dict = {
   profReasonOtherPerson: '본인, 꽃, 풍경, 동물 사진을 선택해 주세요',
   profReasonDocument: '신분증, 청구서, 화면 캡처는 안 됩니다. 다른 사진을 선택해 주세요',
   profReasonOther: '이 사진은 승인되지 않았습니다. 다른 사진을 선택해 주세요',
+  profKeepTitle: '계정을 지키세요',
+  profKeepBody: '앱을 삭제해도 프로필이 사라지지 않습니다',
+  profGoogle: 'Google로 로그인',
+  profLinkedApple: 'Apple과 연결됨 ✓',
+  profLinkedGoogle: 'Google과 연결됨 ✓',
+  profSwitched: '이전 계정으로 돌아왔습니다',
+  profErrLinked: '이 계정에는 같은 종류의 다른 로그인이 이미 연결되어 있습니다.',
+  profErrToken: '로그인을 확인하지 못했습니다. 다시 시도해 주세요.',
+  profErrSignInOff: '이 로그인 방법은 지금 사용할 수 없습니다.',
 };
