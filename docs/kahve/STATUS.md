@@ -141,3 +141,6 @@ Uçtan uca (uygulama istemcisi → gerçek sunucu, sahte Google anahtarı): misa
 Derleme: `app/app.config.js` giriş eklentilerini sadece ortam değişkeniyle ekler (ENABLE_APPLE_SIGNIN, GOOGLE_IOS_URL_SCHEME); değişkensiz yapı app.json ile aynı.
 Kullanıcı adımları (gerçek giriş için): Apple Developer'da App ID'ye "Sign In with Apple" + .p8 anahtar; Google Cloud'da Web/Android (SHA-1'ler)/iOS OAuth istemcileri.
 Açık: Apple nonce ve Google azp kontrolü yok; giriş sonrası sahipsiz kalan misafir hesapları temizlenmiyor; cihazda denenmedi.
+
+## E1 tablet sonucu (19.11.2026)
+a9e2cad + 8c14617 Cloud Run hesap sunucusuyla tablette PASS: Profilim, isim, rıza, galeri (izin penceresi yok, sistem seçici), kamera izni, yükleme → inceleme → yönetici onayı → foto görünür, hesap silme. Salon ızgarası gezinme çubuğunun üstünde. **E1 bitti; E2 kullanıcı onayı bekliyor.**
