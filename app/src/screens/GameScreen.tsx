@@ -444,7 +444,8 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   const duzHint2 = split('duzHint2', 'btn');
   const cellW = Math.floor((L.drawW - 12) / 2);
   // The two icon buttons take their width from the three opponent panels (only when they are drawn).
-  const oppW = social.active ? L.oppW - Math.ceil((2 * L.sesW + 12 * L.s) / 3) : L.oppW;
+  // Players button is 1.5x wide so "Oyuncular" keeps a readable size (tablet test 19.11).
+  const oppW = social.active ? L.oppW - Math.ceil((2.5 * L.sesW + 12 * L.s) / 3) : L.oppW;
   const emptyFrame = <View style={[styles.emptyFrame, { width: L.pileW - 2, height: L.pileH - 2 }]} />;
 
   return (
@@ -470,7 +471,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
           <>
             {/* Icon with its word under it: bare icons are not recognised by every 60+ player (tablet test 19.11). */}
             <HeadIconButton icon="💬" label={t('sayButton')} onPress={social.openSay} style={{ ...fixed(L.sesW, L.headH), marginRight: 6 * L.s }} />
-            <HeadIconButton icon="👥" label={t('tablePlayers')} onPress={social.openPlayers} style={{ ...fixed(L.sesW, L.headH), marginRight: 10 * L.s }} />
+            <HeadIconButton icon="👥" label={t('tablePlayers')} onPress={social.openPlayers} style={{ ...fixed(Math.round(1.5 * L.sesW), L.headH), marginRight: 10 * L.s }} />
           </>
         )}
         {[leftSeat, acrossSeat, rightSeat].map((seat, i) => (
@@ -503,7 +504,7 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
             <Text style={[styles.okeyLabel, canShow && { color: colors.felt, fontWeight: '900' }]} numberOfLines={1}>
               {canShow ? t('showIndicator') : t('okeyLabel')}
             </Text>
-            <Text style={[styles.okeyValue, canShow && { color: colors.felt }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+            <Text style={[styles.okeyValue, canShow && { color: colors.felt }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.9}>
               {okeyName}
             </Text>
           </View>
