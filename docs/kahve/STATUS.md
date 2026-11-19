@@ -149,3 +149,8 @@ a9e2cad + 8c14617 Cloud Run hesap sunucusuyla tablette PASS: Profilim, isim, rı
 65de693 → a58d0be → db10574 → 001e9ac tablette PASS (Cloud Run test sunucuları): sözler ve emoji (balon konuşanın kutusunun altında), oran sınırı, Oyuncular paneli
 (sustur, şikâyet), lobi "Sesli masa" anahtarı, masa geçişi, RECORD_AUDIO izni. Gerçek ses denemesi LiveKit makinesinin Tailscale onayını bekliyor (KULLANICI_YARIN.md).
 UI geçişine not: orta rakibin balonu 3 sn boyunca "Sıra … oyuncuda" satırını örtebiliyor; kabul edildi, UI/UX geçişinde balon konumu yeniden ele alınacak.
+
+## 19.11.2026 tablet turu (coordinator)
+001e9ac / 29a0a92 / b55fc53 PASS: Okey 101 eli, reklam arka plan/geri dönüş (fazladan geçiş reklamı yok), tam Pişti ve Batak elleri, Okey çevrimiçi sözler,
+sürükle-bırak (Pişti yığın, Batak löve, Tavla hane; geçersiz bırakma geri döner, dokunma akışı aynen). Denenmeyen: Tavla toplama alanına sürükleme, çevrimiçi sürükleme, konçina (motor testleri kapsıyor).
+Okey üst çubuğundaki 💬 / 👥 düğmelerinin altına "Söz" / "Oyuncular" yazısı eklendi.

@@ -468,20 +468,9 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
         />
         {social.active && (
           <>
-            <Button
-              title="💬"
-              accessibilityLabel={t('sayButton')}
-              variant="secondary"
-              onPress={social.openSay}
-              style={{ ...fixed(L.sesW, L.headH), marginRight: 6 * L.s }}
-            />
-            <Button
-              title="👥"
-              accessibilityLabel={t('tablePlayers')}
-              variant="secondary"
-              onPress={social.openPlayers}
-              style={{ ...fixed(L.sesW, L.headH), marginRight: 10 * L.s }}
-            />
+            {/* Icon with its word under it: bare icons are not recognised by every 60+ player (tablet test 19.11). */}
+            <HeadIconButton icon="💬" label={t('sayButton')} onPress={social.openSay} style={{ ...fixed(L.sesW, L.headH), marginRight: 6 * L.s }} />
+            <HeadIconButton icon="👥" label={t('tablePlayers')} onPress={social.openPlayers} style={{ ...fixed(L.sesW, L.headH), marginRight: 10 * L.s }} />
           </>
         )}
         {[leftSeat, acrossSeat, rightSeat].map((seat, i) => (
@@ -942,4 +931,27 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
   },
+});
+
+/** Small header button: icon on top, its word below (same look as a secondary Button). */
+function HeadIconButton({ icon, label, onPress, style }: { icon: string; label: string; onPress(): void; style: object }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [headBtn.btn, style, pressed && { opacity: 0.75 }]}
+    >
+      <Text style={headBtn.icon}>{icon}</Text>
+      <Text style={headBtn.label} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+const headBtn = StyleSheet.create({
+  btn: { alignItems: 'center', justifyContent: 'center', borderRadius: 14, borderWidth: 2, backgroundColor: 'rgba(0,0,0,0.2)', borderColor: colors.muted, paddingHorizontal: 2 },
+  icon: { fontSize: 20, lineHeight: 24 },
+  label: { color: colors.text, fontSize: 15, fontWeight: '800' },
 });
