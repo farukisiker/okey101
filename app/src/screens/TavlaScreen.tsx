@@ -17,6 +17,7 @@ import {
   checkerFeedback,
   computeTavlaGeom,
   diceFeedback,
+  dragPlan,
   movableFroms,
   nextStepOffered,
   planSteps,
@@ -102,6 +103,11 @@ export function TavlaScreen({ view, viewAt, room, seat, summary: summaryProp, hu
   const targets = useMemo(
     () => (canPlay && selected != null ? targetsFor(view.moves, selected) : new Map<To, CheckerMove>()),
     [canPlay, selected, view.moves],
+  );
+  // Drag-and-drop offers exactly what the taps offer (same moves, same targetsFor pick per target).
+  const drag = useMemo(
+    () => (canPlay ? dragPlan(geom, viewer, board, seat, view.moves) : []),
+    [canPlay, geom, viewer, board, seat, view.moves],
   );
 
   const clearBusy = useCallback(() => {
@@ -194,6 +200,17 @@ export function TavlaScreen({ view, viewAt, room, seat, summary: summaryProp, hu
     if (!canPlay || busy) return;
     const move = targets.get('off');
     if (move) playMove(move);
+  };
+  // Drag: picking a checker up selects it (its targets light up), a drop on a target plays the move the tap would.
+  const onDragStart = (from: From) => {
+    if (canPlay && !busy && movable.has(from)) setSelected(from);
+  };
+  const onDrop = (from: From, to: To): boolean => {
+    if (!canPlay || busy) return false;
+    const move = targetsFor(view.moves, from).get(to);
+    if (!move) return false;
+    playMove(move);
+    return true;
   };
 
   const players = view.players;
@@ -289,11 +306,14 @@ export function TavlaScreen({ view, viewAt, room, seat, summary: summaryProp, hu
         onPoint={onPoint}
         onBar={onBar}
         onOff={onOff}
+        drag={drag}
+        onDragStart={onDragStart}
+        onDrop={onDrop}
       />
     ),
-    // The handlers read only these values (and `view`/`seat` through planSteps and wouldHit).
+    // The handlers read only these values (and `view`/`seat` through planSteps, wouldHit and targetsFor).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [geom, viewer, board, seat, selected, movable, targets, canPlay, busy, anim.flying, view, send],
+    [geom, viewer, board, seat, selected, movable, targets, canPlay, busy, anim.flying, view, send, drag],
   );
   const opponents = useMemo(
     () => <PlayerBar view={view} mySeat={seat} totals={totals} compact={compact} />,

@@ -13,6 +13,7 @@ import { cardSummary } from '../net/cardSummary';
 import { type HostTimes, msLeftNow } from '../net/localHost';
 import {
   type Card,
+  CardDropZone,
   CardOpponentPanel,
   CompactCenterRow,
   opponentOrder,
@@ -20,7 +21,9 @@ import {
   PistiCenterPile,
   cardPlayFeedback,
   cardTakeFeedback,
+  pistiDropPad,
   sortCards,
+  useCardDropTarget,
   useCardLayout,
 } from '../components/cards';
 
@@ -144,6 +147,14 @@ export function PistiScreen({ view, viewAt, room, seat, summary: summaryProp, hu
     onAction({ type: 'play', cardId });
   };
 
+  // Drag-and-drop in addition to the taps: a playable card dropped on the pile plays like "Kartı Oyna".
+  const dropTarget = useCardDropTarget(pistiDropPad(layout.centerPileCardWidth));
+  const handleDropCard = (cardId: number) => {
+    if (!isMyTurn || !view.playableCardIds.includes(cardId)) return false;
+    handlePlayCard(cardId);
+    return true;
+  };
+
   const handleSort = () => {
     setHandOrder((prev) => sortCards(prev));
   };
@@ -205,14 +216,16 @@ export function PistiScreen({ view, viewAt, room, seat, summary: summaryProp, hu
     />
   );
   const centerPile = (
-    <PistiCenterPile
-      topCard={view.topCard}
-      centerCount={view.centerCount}
-      pistiChance={hasPistiChance(view.topCard, view.centerCount, handOrder)}
-      cardWidth={layout.centerPileCardWidth}
-      badgeBeside={layout.compact}
-      onPress={isSelectedPlayable ? () => handlePlayCard(selectedCardId!) : undefined}
-    />
+    <CardDropZone target={dropTarget}>
+      <PistiCenterPile
+        topCard={view.topCard}
+        centerCount={view.centerCount}
+        pistiChance={hasPistiChance(view.topCard, view.centerCount, handOrder)}
+        cardWidth={layout.centerPileCardWidth}
+        badgeBeside={layout.compact}
+        onPress={isSelectedPlayable ? () => handlePlayCard(selectedCardId!) : undefined}
+      />
+    </CardDropZone>
   );
 
   return (
@@ -304,6 +317,8 @@ export function PistiScreen({ view, viewAt, room, seat, summary: summaryProp, hu
             highlightedCardIds={highlightedCardIds}
             onSelectCard={setSelectedCardId}
             onPlayCard={handlePlayCard}
+            dropTarget={dropTarget}
+            onDropCard={handleDropCard}
             bleedLeft={layout.insets.left}
             bleedRight={layout.insets.right}
             bleedBottom={layout.insets.bottom}

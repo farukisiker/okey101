@@ -3,6 +3,7 @@ import type { ViewStyle } from 'react-native';
 // Card, Suit and Rank are the engine's (@kahve/cards, B1). Pişti's and Batak's view and action types come
 // from @kahve/catalog (B5). What is left here is UI-only: card helpers and component props.
 import type { Card, Rank, Suit } from '@kahve/cards';
+import type { CardDropTarget } from './CardDropZone';
 
 export type { Card, Rank, Suit };
 
@@ -108,6 +109,10 @@ export interface HandProps {
   highlightedCardIds?: readonly number[];
   onSelectCard(cardId: number | null): void;
   onPlayCard(cardId: number): void;
+  /** Drag-and-drop in addition to the taps: the table zone a playable card can be dropped on. */
+  dropTarget?: CardDropTarget;
+  /** A card dropped on `dropTarget`: play it and return true, or false to send it home. */
+  onDropCard?(cardId: number): boolean;
   bleedLeft?: number;
   bleedRight?: number;
   bleedBottom?: number;

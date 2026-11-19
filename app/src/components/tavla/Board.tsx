@@ -1,10 +1,12 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import type { Board as BoardData, CheckerMove, From, To } from '@kahve/tavla';
 import { colors } from '../../theme';
 import { countAt, moveLabel, moveLabelText, pointCell, stackShown } from './boardMath';
 import { Checker, CHECKER_COLORS } from './Checker';
+import { CheckerDrag } from './CheckerDrag';
+import { type DragEntry, type PlaceKey, PLACE_BAR, PLACE_NONE, fromOfKey, toOfKey } from './dragHit';
 import { FRAME, type TavlaGeom, barX, colX, rowY, slotCenter, trayX } from './tavlaGeometry';
 import { t } from '../../i18n';
 
@@ -32,7 +34,15 @@ export interface TavlaBoardProps {
   onPoint(n: number): void;
   onBar(): void;
   onOff(): void;
+  /** Drag-and-drop on top of the taps (dragPlan of this turn); missing or empty: taps only. */
+  drag?: DragEntry[];
+  /** A checker was picked up by a drag: show its targets (like tapping it). */
+  onDragStart?(from: From): void;
+  /** A dragged checker was dropped on a legal target: play that move. True when it went out. */
+  onDrop?(from: From, to: To): boolean;
 }
+
+const NO_DRAG: DragEntry[] = [];
 
 const TRI_A = '#c9a26b';
 const TRI_B = '#8a3b27';
@@ -93,6 +103,20 @@ export function TavlaBoard(p: TavlaBoardProps) {
   const triW = g.colW - 4;
   const triH = g.pointH - 2;
   const mover = me < 0 ? viewer : me;
+  /** The place whose top checker is being dragged (drawn under the finger instead), or PLACE_NONE. */
+  const [lifted, setLifted] = useState<PlaceKey>(PLACE_NONE);
+  const { onDragStart, onDrop } = p;
+  const onLift = useCallback(
+    (k: PlaceKey) => {
+      setLifted(k);
+      onDragStart?.(fromOfKey(k));
+    },
+    [onDragStart],
+  );
+  const onDropKey = useCallback((from: PlaceKey, to: PlaceKey) => onDrop?.(fromOfKey(from), toOfKey(to)) ?? false, [onDrop]);
+  const onSettled = useCallback(() => setLifted(PLACE_NONE), []);
+  const plan = p.drag ?? NO_DRAG;
+  const boardKey = `${board.points.join(',')}|${board.bar.join(',')}|${board.off.join(',')}`;
 
   const barStack = (seat: number) => {
     const n = board.bar[seat];
@@ -102,7 +126,10 @@ export function TavlaBoard(p: TavlaBoardProps) {
       const c = slotCenter(g, viewer, { k: 'bar', seat }, i);
       const last = i === shown - 1;
       return (
-        <View key={`bar${seat}-${i}`} style={[styles.abs, { left: c.x - g.d / 2, top: c.y - g.d / 2 }]}>
+        <View
+          key={`bar${seat}-${i}`}
+          style={[styles.abs, { left: c.x - g.d / 2, top: c.y - g.d / 2 }, last && seat === me && lifted === PLACE_BAR && styles.hidden]}
+        >
           <Checker
             seat={seat}
             size={g.d}
@@ -151,7 +178,17 @@ export function TavlaBoard(p: TavlaBoardProps) {
 
   return (
     <View style={[styles.frame, { width: g.boardW + 2 * FRAME, height: g.boardH + 2 * FRAME, padding: FRAME }]}>
-      <View style={{ width: g.boardW, height: g.boardH }}>
+      <CheckerDrag
+        geom={g}
+        viewer={viewer}
+        seat={mover}
+        plan={plan}
+        enabled={p.interactive && plan.length > 0 && !!onDrop}
+        boardKey={boardKey}
+        onLift={onLift}
+        onDrop={onDropKey}
+        onSettled={onSettled}
+      >
         {/* Bar and tray backgrounds */}
         <View style={[styles.abs, styles.dark, { left: barX(g), top: 0, width: g.barW, height: g.boardH }]} />
         <View style={[styles.abs, styles.dark, { left: trayX(g), top: 0, width: g.trayW, height: g.boardH }]} />
@@ -223,7 +260,10 @@ export function TavlaBoard(p: TavlaBoardProps) {
               const c = slotCenter(g, viewer, { k: 'point', n }, i);
               const top = i === shown - 1;
               return (
-                <View key={`${n}-${i}`} style={[styles.abs, { left: c.x - g.d / 2, top: c.y - g.d / 2 }]}>
+                <View
+                  key={`${n}-${i}`}
+                  style={[styles.abs, { left: c.x - g.d / 2, top: c.y - g.d / 2 }, top && seat === me && lifted === n && styles.hidden]}
+                >
                   <Checker
                     seat={seat}
                     size={g.d}
@@ -252,7 +292,7 @@ export function TavlaBoard(p: TavlaBoardProps) {
         })}
 
         {p.flying ? <FlyingChecker key={p.flying.key} spec={p.flying} size={g.d} /> : null}
-      </View>
+      </CheckerDrag>
     </View>
   );
 }
@@ -260,6 +300,7 @@ export function TavlaBoard(p: TavlaBoardProps) {
 const styles = StyleSheet.create({
   frame: { backgroundColor: colors.woodDark, borderRadius: 10, borderWidth: 2, borderColor: colors.wood },
   abs: { position: 'absolute' },
+  hidden: { opacity: 0 },
   dark: { backgroundColor: '#24150b' },
   touch: { borderRadius: 6, borderWidth: 3, borderColor: 'transparent' },
   target: { backgroundColor: 'rgba(242,182,50,0.32)', borderColor: colors.accent },

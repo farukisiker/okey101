@@ -14,6 +14,7 @@ import { type HostTimes, msLeftNow } from '../net/localHost';
 import {
   BidDialog,
   type Card,
+  CardDropZone,
   CardOpponentPanel,
   CompactCenterRow,
   opponentOrder,
@@ -24,6 +25,8 @@ import {
   cardTakeFeedback,
   sortCards,
   suitSymbol,
+  trickDropPad,
+  useCardDropTarget,
   useCardLayout,
 } from '../components/cards';
 
@@ -146,6 +149,14 @@ export function BatakScreen({ view, viewAt, room, seat, summary: summaryProp, hu
     onAction({ type: 'play', cardId });
   };
 
+  // Drag-and-drop in addition to the taps: a legal card dropped on the trick cross plays like "Kartı Oyna".
+  const dropTarget = useCardDropTarget(trickDropPad(layout.trickCardWidth));
+  const handleDropCard = (cardId: number) => {
+    if (!isPlayingTurn || !view.legalCardIds.includes(cardId)) return false;
+    handlePlayCard(cardId);
+    return true;
+  };
+
   const handleSort = () => {
     setHandOrder((prev) => sortCards(prev));
   };
@@ -235,14 +246,16 @@ export function BatakScreen({ view, viewAt, room, seat, summary: summaryProp, hu
     />
   );
   const trickArea = (
-    <TrickArea
-      currentTrick={shownTrick}
-      players={players}
-      mySeat={seat}
-      cardWidth={layout.trickCardWidth}
-      boxWidth={layout.trickBoxWidth}
-      boxHeight={layout.trickBoxHeight}
-    />
+    <CardDropZone target={dropTarget}>
+      <TrickArea
+        currentTrick={shownTrick}
+        players={players}
+        mySeat={seat}
+        cardWidth={layout.trickCardWidth}
+        boxWidth={layout.trickBoxWidth}
+        boxHeight={layout.trickBoxHeight}
+      />
+    </CardDropZone>
   );
 
   return (
@@ -334,6 +347,8 @@ export function BatakScreen({ view, viewAt, room, seat, summary: summaryProp, hu
             playableCardIds={view.legalCardIds}
             onSelectCard={setSelectedCardId}
             onPlayCard={handlePlayCard}
+            dropTarget={dropTarget}
+            onDropCard={handleDropCard}
             bleedLeft={layout.insets.left}
             bleedRight={layout.insets.right}
             bleedBottom={layout.insets.bottom}

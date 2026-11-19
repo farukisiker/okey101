@@ -10,3 +10,4 @@ export * from './summary';
 export * from './fakeView';
 export * from './sfx';
 export * from './useOpponentAnim';
+export * from './dragHit';
