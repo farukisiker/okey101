@@ -23,7 +23,7 @@ import { batakNoteFromView } from './batakSummary';
 import { cardSummary, viewScores, viewTeams } from './cardSummary';
 import { tavlaNoteFromView, tavlaPointsFromView } from './tavlaSummary';
 import { type HostTimes, LocalHost } from './localHost';
-import { accounts, accountsEnabled } from './accounts';
+import { myTablePass } from './myTablePass';
 import { type SaidMsg, type SayMsg, parseSaid } from './social';
 import type { TokenReply } from './voice';
 
@@ -37,12 +37,6 @@ const ME = 0;
 /** Before a bot's move (tavla: the first step of its turn; the steps after it follow at the catalog's 600 ms). */
 const BOT_DELAY_MS = 1300;
 const OFFLINE_ROOM = 'YEREL';
-
-/** E2b: the signed table pass sent with room:create / join / quickPlay / handshake; null if unavailable (then I sit as a guest). */
-async function myTablePass(): Promise<string | null> {
-  if (!accountsEnabled()) return null;
-  return Promise.race([accounts.tablePass(), new Promise<null>((r) => setTimeout(() => r(null), 1500))]).catch(() => null);
-}
 
 const isEnvelope = (p: PlayerView | GameViewEnvelope): p is GameViewEnvelope =>
   typeof p === 'object' && p !== null && 'view' in p && 'game' in p;

@@ -33,6 +33,7 @@ import { RoundResult } from '../components/RoundResult';
 import { TableMelds } from '../components/TableMelds';
 import { TableOverlay } from '../components/TableOverlay';
 import { TileBack, TileView } from '../components/TileView';
+import { useSocialSheets } from '../components/TableSocialUI';
 import { buzz, feedback, isSoundOn, play, setSoundOn } from '../feedback';
 import { useDropZones } from '../game/dropZones';
 import { useGameLayout } from '../game/layout';
@@ -148,6 +149,8 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
   const [dragging, setDragging] = useState<'deck' | 'discard' | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [sound, setSound] = useState(isSoundOn());
+  // E2c: quick sayings at online tables. Inactive (nothing drawn, same widths) offline and when only bots sit with me.
+  const social = useSocialSheets();
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rackGeom = useSharedValue<RackGeom | null>(null);
   const hoverSlot = useSharedValue(-1);
@@ -440,6 +443,8 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
 
   const duzHint2 = split('duzHint2', 'btn');
   const cellW = Math.floor((L.drawW - 12) / 2);
+  // The two icon buttons take their width from the three opponent panels (only when they are drawn).
+  const oppW = social.active ? L.oppW - Math.ceil((2 * L.sesW + 12 * L.s) / 3) : L.oppW;
   const emptyFrame = <View style={[styles.emptyFrame, { width: L.pileW - 2, height: L.pileH - 2 }]} />;
 
   return (
@@ -459,8 +464,26 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
             setSoundOn(!sound);
             setSound(!sound);
           }}
-          style={{ ...fixed(L.sesW, L.headH), marginLeft: 6 * L.s, marginRight: 10 * L.s }}
+          style={{ ...fixed(L.sesW, L.headH), marginLeft: 6 * L.s, marginRight: social.active ? 6 * L.s : 10 * L.s }}
         />
+        {social.active && (
+          <>
+            <Button
+              title="💬"
+              accessibilityLabel={t('sayButton')}
+              variant="secondary"
+              onPress={social.openSay}
+              style={{ ...fixed(L.sesW, L.headH), marginRight: 6 * L.s }}
+            />
+            <Button
+              title="👥"
+              accessibilityLabel={t('tablePlayers')}
+              variant="secondary"
+              onPress={social.openPlayers}
+              style={{ ...fixed(L.sesW, L.headH), marginRight: 10 * L.s }}
+            />
+          </>
+        )}
         {[leftSeat, acrossSeat, rightSeat].map((seat, i) => (
           <View key={seat} style={{ marginLeft: i ? 8 * L.s : 0 }}>
             <OpponentPanel
@@ -470,7 +493,8 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
               unit={duz ? 'points' : undefined}
               active={view.turn === seat}
               secondsLeft={clockFor === seat ? secondsLeft : null}
-              width={L.oppW}
+              seat={seat}
+              width={oppW}
               height={L.headH}
               // The left player's pile is already the big "take" pile below; the
               // other two show theirs here, so every tile thrown this lap is visible.
@@ -791,6 +815,8 @@ function Table({ view, room, client }: { view: PlayerView; room: RoomInfo; clien
           onCancel={() => setConfirmLeave(false)}
         />
       )}
+
+      {social.layer}
     </View>
   );
 }

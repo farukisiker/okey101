@@ -347,7 +347,7 @@ export const ru: Dict = {
   tavlaPickTarget: 'Теперь коснитесь места назначения',
   tavlaPressDone: 'Ход завершён — нажмите «Готово»',
   tavlaNoMove: 'С этими костями ходов нет',
-  tavlaOpeningRoll: 'Начинает больший кубик',
+  tavlaOpeningRoll: 'Начинает тот, у кого выпало больше',
   tavlaWhite: 'Белые',
   tavlaBlack: 'Чёрные',
   tavlaPips: 'Пипсов: {n}',

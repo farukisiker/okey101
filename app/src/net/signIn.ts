@@ -17,7 +17,8 @@ export interface AppleCredential {
 }
 
 export interface SignInNative {
-  apple: { isAvailableAsync(): Promise<boolean>; signInAsync(): Promise<AppleCredential> } | null;
+  /** `nonce` is handed to Apple verbatim and comes back unchanged in the identity token's `nonce` claim. */
+  apple: { isAvailableAsync(): Promise<boolean>; signInAsync(o?: { nonce?: string }): Promise<AppleCredential> } | null;
   google: {
     configure(o: { webClientId?: string; iosClientId?: string }): void;
     signIn(): Promise<{ type: string; data: { idToken: string | null } | null }>;
@@ -37,7 +38,7 @@ function loadNative(os: string): SignInNative {
       const A = require('expo-apple-authentication') as typeof import('expo-apple-authentication');
       apple = {
         isAvailableAsync: () => A.isAvailableAsync(),
-        signInAsync: () => A.signInAsync({ requestedScopes: [A.AppleAuthenticationScope.FULL_NAME] }),
+        signInAsync: (o) => A.signInAsync({ requestedScopes: [A.AppleAuthenticationScope.FULL_NAME], ...(o?.nonce ? { nonce: o.nonce } : {}) }),
       };
     } catch {
       apple = null;
@@ -72,12 +73,14 @@ export function createSignIn(env: SignInEnv, nativeIn?: SignInNative) {
       return { apple, google: googleOn() };
     },
 
-    async apple(client: Pick<AccountsClient, 'signInApple'>): Promise<SignInOutcome> {
+    /** E1c: a single-use server nonce is fetched first, passed to Apple and sent back with the token (replay guard). */
+    async apple(client: Pick<AccountsClient, 'signInApple' | 'appleNonce'>): Promise<SignInOutcome> {
       const a = native().apple;
       if (env.os !== 'ios' || !a) return { kind: 'cancelled' };
+      const nonce = await client.appleNonce();
       let cred: AppleCredential;
       try {
-        cred = await a.signInAsync();
+        cred = await a.signInAsync(nonce ? { nonce } : undefined);
       } catch (e) {
         if (hasCode(e, 'ERR_REQUEST_CANCELED')) return { kind: 'cancelled' };
         throw e;
@@ -88,6 +91,7 @@ export function createSignIn(env: SignInEnv, nativeIn?: SignInNative) {
         identityToken: cred.identityToken,
         authorizationCode: cred.authorizationCode,
         fullName: fullName || null,
+        nonce,
       });
       return { kind: 'done', result };
     },

@@ -3,6 +3,7 @@ import { type OkeyInfo, type PublicPlayer, type SeatInfo, visibleDiscard } from 
 import { colors, font } from '../theme';
 import { t } from '../i18n';
 import { TileView } from './TileView';
+import { SeatBubble } from './TableSocialUI';
 
 interface Props {
   player: PublicPlayer;
@@ -18,10 +19,12 @@ interface Props {
   okey?: OkeyInfo;
   /** Their turn clock (people only); red in the last five seconds. */
   secondsLeft?: number | null;
+  /** Table seat, so this player's saying bubble hangs under the panel (online tables only). */
+  seat?: number;
 }
 
 /** One opponent in the header strip: name (+ AÇTI) over "N taş · puan"; lit when it's their turn. */
-export function OpponentPanel({ player, seatInfo, total, unit, active, width, height, showDiscard, okey, secondsLeft }: Props) {
+export function OpponentPanel({ player, seatInfo, total, unit, active, width, height, showDiscard, okey, secondsLeft, seat }: Props) {
   const away = seatInfo && !seatInfo.connected;
   const top = showDiscard ? visibleDiscard(player) : undefined;
   // Fits inside the panel's 3pt border with a little air above and below.
@@ -56,6 +59,7 @@ export function OpponentPanel({ player, seatInfo, total, unit, active, width, he
           )}
         </View>
       )}
+      {seat != null && <SeatBubble seat={seat} />}
     </View>
   );
 }

@@ -4,6 +4,8 @@
  * ADMIN_TOKEN (>= 16 chars, else admin is disabled), OPENAI_API_KEY, ANTHROPIC_API_KEY (missing -> that layer sends
  * every photo to human review), TRUST_PROXY (optional, e.g. "1" behind one reverse proxy).
  * Sign-in: APPLE_AUDIENCES, GOOGLE_AUDIENCES (comma separated; missing -> that provider answers 503 not_configured).
+ * GOOGLE_AUDIENCES must hold every client id that asks for tokens (web, Android, iOS): `azp` is checked against it.
+ * APPLE_NONCE_REQUIRED=1 refuses Apple sign-ins without a nonce (leave unset while older test builds are around).
  * Apple revocation: APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY_PATH (.p8) and ACCOUNTS_SECRET (>= 32 chars, seals the
  * stored refresh tokens with AES-256-GCM; changing it makes stored tokens unusable).
  */
@@ -26,6 +28,8 @@ const appleAudiences = parseList(env.APPLE_AUDIENCES);
 const googleAudiences = parseList(env.GOOGLE_AUDIENCES);
 if (!appleAudiences.length) console.warn('[accounts] APPLE_AUDIENCES missing: Apple sign-in disabled (503)');
 if (!googleAudiences.length) console.warn('[accounts] GOOGLE_AUDIENCES missing: Google sign-in disabled (503)');
+const appleNonceRequired = env.APPLE_NONCE_REQUIRED === '1';
+if (appleAudiences.length && !appleNonceRequired) console.warn('[accounts] APPLE_NONCE_REQUIRED not 1: Apple sign-ins without a nonce are still accepted');
 let appleRevoke: AppleRevokeConfig | undefined;
 if (env.APPLE_TEAM_ID && env.APPLE_KEY_ID && env.APPLE_PRIVATE_KEY_PATH) {
   try {
@@ -45,7 +49,7 @@ const app = createAccountsApp({
   moderation: [openaiModeration({ apiKey: env.OPENAI_API_KEY }), claudeVision({ apiKey: env.ANTHROPIC_API_KEY })],
   adminToken: env.ADMIN_TOKEN,
   tablePassSecret: env.TABLE_PASS_SECRET,
-  auth: { appleAudiences, googleAudiences, appleRevoke, secret: env.ACCOUNTS_SECRET },
+  auth: { appleAudiences, googleAudiences, appleRevoke, secret: env.ACCOUNTS_SECRET, appleNonceRequired },
   trustProxy: trust === undefined ? undefined : /^\d+$/.test(trust) ? Number(trust) : trust === 'true' ? true : trust,
 });
 

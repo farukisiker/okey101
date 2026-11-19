@@ -1,7 +1,7 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import express, { type Express, type NextFunction, type Request, type Response } from 'express';
 import { ADMIN_STATUSES, renderAdminPage } from './admin';
-import { AuthService, type AuthOptions } from './auth';
+import { APPLE_NONCE_RE, AuthService, type AuthOptions } from './auth';
 import { InvalidTokenError, JwksUnavailableError } from './jwt';
 import { BadJpegError, cleanJpeg } from './jpeg';
 import { runModeration, type ModerationLayer, type ModerationResult } from './moderation';
@@ -35,6 +35,9 @@ export const MAX_BLOCKS = 500;
 export const VOICE_BAN_REPORTERS = 3;
 export const VOICE_BAN_WINDOW_MS = 7 * 24 * 3600_000;
 export const VOICE_BAN_MS = 24 * 3600_000;
+/** E1c: Apple sign-in nonces one IP may ask for in NONCE_WINDOW_MS. */
+export const NONCE_PER_IP = 30;
+export const NONCE_WINDOW_MS = 10 * 60_000;
 
 /** Groups reports by target for the admin list: most reporters first, then most reports, then newest. */
 export function summarizeReports(reports: readonly ReportRecord[]): Omit<AdminReportItem, 'displayName' | 'voiceBannedUntil'>[] {
@@ -104,6 +107,7 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
   const adminHash = opts.adminToken && opts.adminToken.length >= 16 ? sha256(opts.adminToken) : null;
   const jobs = new Set<Promise<void>>();
   const guestHits = new Map<string, number[]>();
+  const nonceHits = new Map<string, number[]>();
   const auth = new AuthService(opts.auth ?? {}, { now, log: (m) => log(m) });
   const passSecret = opts.tablePassSecret && opts.tablePassSecret.length >= TABLE_PASS_MIN_SECRET ? opts.tablePassSecret : null;
 
@@ -188,21 +192,23 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
     res.status(status).json(await buildMe(acc));
   }
 
-  function guestAllowed(ip: string): boolean {
+  /** Sliding-window per-IP limiter over `map`. */
+  function hitAllowed(map: Map<string, number[]>, ip: string, limit: number, windowMs: number): boolean {
     const t = now();
-    const cutoff = t - 3600_000;
-    if (guestHits.size > 10_000) {
-      for (const [k, v] of guestHits) if (!v.some((x) => x > cutoff)) guestHits.delete(k);
+    const cutoff = t - windowMs;
+    if (map.size > 10_000) {
+      for (const [k, v] of map) if (!v.some((x) => x > cutoff)) map.delete(k);
     }
-    const hits = (guestHits.get(ip) ?? []).filter((x) => x > cutoff);
-    if (hits.length >= GUEST_PER_IP_PER_HOUR) {
-      guestHits.set(ip, hits);
+    const hits = (map.get(ip) ?? []).filter((x) => x > cutoff);
+    if (hits.length >= limit) {
+      map.set(ip, hits);
       return false;
     }
     hits.push(t);
-    guestHits.set(ip, hits);
+    map.set(ip, hits);
     return true;
   }
+  const guestAllowed = (ip: string) => hitAllowed(guestHits, ip, GUEST_PER_IP_PER_HOUR, 3600_000);
 
   function track(job: Promise<void>): void {
     jobs.add(job);
@@ -356,8 +362,8 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
     await sendMe(req, res);
   });
 
-  app.delete('/v1/me', requireUser, async (req: AuthedReq, res) => {
-    const id = req.account!.id;
+  /** Deletes an account with everything it owns (photo, sessions, links, reports, blocks), revokes Apple, runs the hook. */
+  async function deleteAccountFully(id: string): Promise<void> {
     const links = await store.listProviderLinks(id);
     await store.deleteAccount(id);
     try {
@@ -370,6 +376,10 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
     } catch (err) {
       log('onAccountDeleted hook failed', err);
     }
+  }
+
+  app.delete('/v1/me', requireUser, async (req: AuthedReq, res) => {
+    await deleteAccountFully(req.account!.id);
     res.status(204).end();
   });
 
@@ -443,6 +453,8 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
     if (code !== undefined && code !== null && (typeof code !== 'string' || !AUTH_CODE_RE.test(code))) return fail(res, 400, 'bad_request');
     const fullName = provider === 'apple' ? b.fullName : undefined;
     if (fullName !== undefined && fullName !== null && typeof fullName !== 'string') return fail(res, 400, 'bad_request');
+    const nonce = provider === 'apple' ? b.nonce : undefined;
+    if (nonce !== undefined && nonce !== null && typeof nonce !== 'string') return fail(res, 400, 'bad_request');
 
     // Optional bearer: when present it must be valid (never silently fall back to a new account).
     const authz = req.get('authorization');
@@ -455,7 +467,7 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
       currentToken = m![1];
     }
 
-    let identity: { sub: string; aud: string };
+    let identity: { sub: string; aud: string; nonce: unknown };
     try {
       identity = await auth.verify(provider, idToken);
     } catch (err) {
@@ -468,6 +480,13 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
         return fail(res, 503, 'unavailable');
       }
       throw err;
+    }
+    if (provider === 'apple') {
+      const refused = checkAppleNonce(typeof nonce === 'string' ? nonce : null, identity.nonce);
+      if (refused) {
+        log(`apple sign-in refused: ${refused}`);
+        return fail(res, 401, 'invalid_token');
+      }
     }
     const { sub } = identity;
 
@@ -505,6 +524,14 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
         const token = randomBytes(32).toString('base64url');
         await store.addSession(owner, sha256hex(token), now());
         result = { accountId: owner, token, switched: true };
+        // E1c: the guest this device used is left without a way back (no provider, token replaced): delete it now.
+        if (current && (await store.listProviderLinks(current.id)).length === 0) {
+          try {
+            await deleteAccountFully(current.id);
+          } catch (err) {
+            log('orphaned guest deletion failed', err);
+          }
+        }
       }
     }
 
@@ -523,6 +550,36 @@ export function createAccountsApp(opts: AccountsAppOptions): AccountsApp {
     res.json(result);
   }
 
+  /**
+   * Apple nonce check. The app passes our nonce verbatim to ASAuthorizationAppleIDRequest.nonce (expo-apple-authentication
+   * does not hash it), and Apple copies that string into the identity token's `nonce` claim, so the claim must equal it.
+   * Returns a log reason when refused, null when accepted.
+   */
+  function checkAppleNonce(sent: string | null, claim: unknown): string | null {
+    if (sent === null) {
+      if (auth.appleNonceRequired) return 'nonce missing';
+      if (claim !== undefined) return 'nonce in token but not in request';
+      log('apple sign-in without nonce accepted (transition; set APPLE_NONCE_REQUIRED=1 once all builds send one)');
+      return null;
+    }
+    if (!APPLE_NONCE_RE.test(sent)) return 'nonce unknown';
+    if (claim !== sent) return 'nonce mismatch';
+    if (!auth.appleNonces.take(sent)) return 'nonce unknown, expired or used';
+    return null;
+  }
+
+  app.post('/v1/auth/nonce', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    if (!auth.configured('apple')) return fail(res, 503, 'not_configured');
+    const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown';
+    if (!hitAllowed(nonceHits, ip, NONCE_PER_IP, NONCE_WINDOW_MS)) return fail(res, 429, 'rate_limited');
+    const nonce = auth.appleNonces.issue();
+    if (!nonce) {
+      log('Apple nonce store full');
+      return fail(res, 503, 'unavailable');
+    }
+    res.json({ nonce });
+  });
   app.post('/v1/auth/apple', authJson, (req, res) => signIn('apple', req, res));
   app.post('/v1/auth/google', authJson, (req, res) => signIn('google', req, res));
 

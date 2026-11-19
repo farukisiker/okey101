@@ -24,7 +24,10 @@ import {
   SAY_COOLDOWN_MS,
 } from './social';
 import { type LkModule, type VoiceSnapshot, VoiceController, loadLiveKit } from './voice';
-import type { KahveClient } from './useKahveGame';
+import type { RoomInfo } from '@okey/shared';
+import type { Result } from './tableClient';
+import type { SayMsg } from './social';
+import type { TokenReply } from './voice';
 import { type Key, t } from '../i18n';
 
 const EXPLAINED_KEY = 'kahve.voice.explained';
@@ -68,7 +71,21 @@ export const voiceAvailable = (): boolean => getLk() !== null;
 
 const IDLE_VOICE: VoiceSnapshot = { status: 'unavailable', micOn: false, speaking: [], error: null, bannedUntil: 0 };
 
-export function TableSocialProvider({ client, children }: { client: KahveClient; children: ReactNode }) {
+/**
+ * What the provider needs from a connection. The card/board client (useKahveGame) fits it as it is; the okey
+ * client is wrapped by App (E2c). `fetchVoiceToken` missing = no voice at that table (okey: sayings only).
+ */
+export interface SocialClient {
+  mode: 'online' | 'offline' | null;
+  room: RoomInfo | null;
+  session: unknown;
+  seat: number;
+  say(msg: SayMsg): Promise<Result>;
+  subscribeSaid(fn: (m: SaidMsg) => void): () => void;
+  fetchVoiceToken?: () => Promise<TokenReply>;
+}
+
+export function TableSocialProvider({ client, children }: { client: SocialClient; children: ReactNode }) {
   const online = client.mode === 'online' && client.room !== null && client.session !== null;
   const room = online ? client.room : null;
   const mySeat = client.seat;
@@ -152,10 +169,10 @@ export function TableSocialProvider({ client, children }: { client: KahveClient;
 
   // ---- voice ----
   const lk = getLk();
-  const voiceOn = online && roomVoice && lk !== null;
+  const voiceOn = online && roomVoice && lk !== null && client.fetchVoiceToken !== undefined;
   const fetchRef = useRef(client.fetchVoiceToken);
   fetchRef.current = client.fetchVoiceToken;
-  const controller = useMemo(() => new VoiceController({ lk, fetchToken: () => fetchRef.current() }), [lk]);
+  const controller = useMemo(() => new VoiceController({ lk, fetchToken: () => (fetchRef.current ? fetchRef.current() : Promise.reject(new Error('no voice'))) }), [lk]);
   const [voice, setVoice] = useState<VoiceSnapshot>(controller.snapshot);
   useEffect(() => {
     setVoice(controller.snapshot);

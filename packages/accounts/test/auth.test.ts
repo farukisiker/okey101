@@ -1,14 +1,15 @@
-import { generateKeyPairSync, verify as cryptoVerify } from 'node:crypto';
+import { createHash, generateKeyPairSync, verify as cryptoVerify } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { APPLE_REVOKE_URL, APPLE_TOKEN_URL } from '../src/apple';
-import { createAccountsApp, type AccountsApp } from '../src/app';
+import { createAccountsApp, NONCE_PER_IP, NONCE_WINDOW_MS, type AccountsApp, type AccountsAppOptions } from '../src/app';
+import { APPLE_NONCE_TTL_MS, NonceStore } from '../src/auth';
 import type { AuthOptions } from '../src/auth';
 import { APPLE_JWKS_URL, GOOGLE_JWKS_URL } from '../src/jwt';
 import { SqliteStore } from '../src/sqliteStore';
 import type { AccountStore } from '../src/store';
 import type { AuthResult, Me } from '../src/types';
 import { listen, storeFactories } from './helpers';
-import { APPLE_AUD, appleClaims, FakeIdp, GOOGLE_AUD, googleClaims, hs256Jwt, noneJwt, rsaKey, signJwt } from './idp';
+import { APPLE_AUD, appleClaims, FakeIdp, GOOGLE_AUD, GOOGLE_AUD_ANDROID, googleClaims, hs256Jwt, noneJwt, rsaKey, signJwt } from './idp';
 
 const T0 = Date.UTC(2026, 10, 18, 12, 0, 0);
 const SECRET = 'test-only-secret-0123456789abcdefghijkl';
@@ -26,7 +27,7 @@ describe.each(storeFactories)('sign in with Apple / Google on $name', (factory) 
   let idp: FakeIdp;
   let logs: string[];
 
-  async function boot(auth: Partial<AuthOptions> = {}) {
+  async function boot(auth: Partial<AuthOptions> = {}, extra: Partial<AccountsAppOptions> = {}) {
     if (close) {
       await app.whenIdle();
       await close();
@@ -36,7 +37,8 @@ describe.each(storeFactories)('sign in with Apple / Google on $name', (factory) 
       moderation: [],
       now: () => clock,
       log: (m, e) => logs.push(`${m} ${e === undefined ? '' : String((e as Error)?.message ?? e)}`),
-      auth: { appleAudiences: [APPLE_AUD], googleAudiences: [GOOGLE_AUD], fetch: idp.fetch, ...auth },
+      auth: { appleAudiences: [APPLE_AUD], googleAudiences: [GOOGLE_AUD, GOOGLE_AUD_ANDROID], fetch: idp.fetch, ...auth },
+      ...extra,
     });
     ({ url, close } = await listen(app));
   }
@@ -112,7 +114,7 @@ describe.each(storeFactories)('sign in with Apple / Google on $name', (factory) 
     expect(m.providers).toEqual(['google']);
   });
 
-  it('linked identity from another device switches to the existing account (guest kept, not merged)', async () => {
+  it('linked identity from another device switches to the existing account (provider-less guest deleted, not merged)', async () => {
     const owner = await guest();
     await ok(await apple({ identityToken: appleToken() }, owner.token));
     const other = await guest(); // e.g. reinstalled app
@@ -123,7 +125,9 @@ describe.each(storeFactories)('sign in with Apple / Google on $name', (factory) 
     expect(res.token).not.toBe(other.token);
     expect((await me(res.token)).accountId).toBe(owner.accountId);
     expect((await me(owner.token)).accountId).toBe(owner.accountId); // old device keeps its session
-    expect((await me(other.token)).providers).toEqual([]); // guest left alone
+    // E1c: the guest had no provider and its token was replaced on this device -> deleted right away
+    expect((await fetch(url + '/v1/me', { headers: { authorization: `Bearer ${other.token}` } })).status).toBe(401);
+    expect(await store.getAccount(other.accountId)).toBeNull();
     // without a Bearer too
     const res2 = await ok(await apple({ identityToken: appleToken() }));
     expect(res2).toMatchObject({ accountId: owner.accountId, switched: true });
@@ -333,5 +337,123 @@ describe.each(storeFactories)('sign in with Apple / Google on $name', (factory) 
     await app.whenIdle();
     expect(idp.count(APPLE_REVOKE_URL)).toBe(0);
     expect(logs.join('\n')).toContain('cannot be decrypted');
+  });
+
+  // ---------------------------------------------------------------- E1c: Apple nonce
+  async function getNonce(): Promise<string> {
+    const r = await post('/v1/auth/nonce', {});
+    expect(r.status).toBe(200);
+    expect(r.headers.get('cache-control')).toBe('no-store');
+    const j = (await r.json()) as { nonce: string };
+    expect(j.nonce).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    return j.nonce;
+  }
+
+  it('nonce: issued fresh each time; the token carrying it verbatim signs in once, a replay is refused', async () => {
+    const n = await getNonce();
+    expect(await getNonce()).not.toBe(n);
+    const identityToken = appleToken({ nonce: n, nonce_supported: true });
+    const res = await ok(await apple({ identityToken, nonce: n }));
+    expect(res.switched).toBe(false);
+    await expectError(await apple({ identityToken, nonce: n }), 401, 'invalid_token'); // used
+    expect(logs.join('\n')).toContain('nonce unknown, expired or used');
+  });
+
+  it('nonce: mismatch, hashed claim, unknown, expired or malformed -> refused; a mismatch does not burn the nonce', async () => {
+    const n = await getNonce();
+    const hashed = createHash('sha256').update(n).digest('hex');
+    await expectError(await apple({ identityToken: appleToken({ nonce: hashed }), nonce: n }), 401, 'invalid_token');
+    await expectError(await apple({ identityToken: appleToken(), nonce: n }), 401, 'invalid_token'); // token without nonce
+    const forged = 'A'.repeat(43); // never issued
+    await expectError(await apple({ identityToken: appleToken({ nonce: forged }), nonce: forged }), 401, 'invalid_token');
+    await expectError(await apple({ identityToken: appleToken({ nonce: 'short' }), nonce: 'short' }), 401, 'invalid_token');
+    await expectError(await apple({ identityToken: appleToken(), nonce: 42 }), 400, 'bad_request');
+    expect(await store.accountByProvider('apple', 'apple-sub-1')).toBeNull();
+    await ok(await apple({ identityToken: appleToken({ nonce: n }), nonce: n })); // still usable
+    const old = await getNonce();
+    clock += APPLE_NONCE_TTL_MS + 1;
+    await expectError(await apple({ identityToken: appleToken({ nonce: old, sub: 'late' }), nonce: old }), 401, 'invalid_token');
+  });
+
+  it('nonce: a request without nonce is accepted only in transition mode, and never when the token has one', async () => {
+    await ok(await apple({ identityToken: appleToken() }));
+    expect(logs.join('\n')).toContain('without nonce accepted');
+    await expectError(await apple({ identityToken: appleToken({ nonce: 'x'.repeat(43) }) }), 401, 'invalid_token');
+    await boot({ appleNonceRequired: true });
+    await expectError(await apple({ identityToken: appleToken() }), 401, 'invalid_token');
+    expect(logs.join('\n')).toContain('nonce missing');
+    const n = await getNonce();
+    await ok(await apple({ identityToken: appleToken({ nonce: n }), nonce: n }));
+  });
+
+  it('nonce endpoint: 503 when Apple is off, per-IP limit, and the Google endpoint ignores nonces', async () => {
+    for (let i = 0; i < NONCE_PER_IP; i++) await getNonce();
+    await expectError(await post('/v1/auth/nonce', {}), 429, 'rate_limited');
+    clock += NONCE_WINDOW_MS + 1;
+    await getNonce();
+    await ok(await post('/v1/auth/google', { idToken: googleToken(), nonce: 5 }));
+    await boot({ appleAudiences: [] });
+    await expectError(await post('/v1/auth/nonce', {}), 503, 'not_configured');
+  });
+
+  // ---------------------------------------------------------------- E1c: Google azp
+  it('Google azp must be an allowed client id when present', async () => {
+    await expectError(await google(googleToken({ azp: 'someone-else.apps.googleusercontent.com' })), 401, 'invalid_token');
+    await expectError(await google(googleToken({ azp: 7 })), 401, 'invalid_token');
+    expect(logs.join('\n')).toContain('google sign-in refused: azp');
+    expect(await store.accountByProvider('google', '1000001')).toBeNull();
+    await ok(await google(googleToken({ azp: GOOGLE_AUD })));
+    await ok(await google(googleToken({ azp: undefined, sub: 'no-azp' })));
+    await boot({ googleAudiences: [GOOGLE_AUD] }); // Android client id missing from the list -> its tokens are refused
+    await expectError(await google(googleToken({ sub: 'android-user' })), 401, 'invalid_token');
+  });
+
+  // ---------------------------------------------------------------- E1c: orphaned guests
+  it('switching away from a provider-less guest deletes it with its photo and runs the deletion hook', async () => {
+    const deleted: string[] = [];
+    await boot({}, { onAccountDeleted: (id) => void deleted.push(id) });
+    const owner = await ok(await google(googleToken()));
+    const g = await guest();
+    await store.putPhoto(g.accountId, { jpeg: Buffer.from([0xff, 0xd8, 0xff, 0xd9]), sha256: 'h', status: 'approved', uploadedAt: clock });
+    expect(await store.getPhotoMeta(g.accountId)).not.toBeNull();
+    const res = await ok(await google(googleToken(), g.token));
+    expect(res).toMatchObject({ accountId: owner.accountId, switched: true });
+    expect(await store.getAccount(g.accountId)).toBeNull();
+    expect(await store.getPhotoMeta(g.accountId)).toBeNull();
+    expect(deleted).toEqual([g.accountId]);
+    expect((await me(res.token)).accountId).toBe(owner.accountId);
+    expect((await me(owner.token)).accountId).toBe(owner.accountId);
+  });
+
+  it('a guest that has its own provider link is kept when switching; no Bearer or same account deletes nothing', async () => {
+    const deleted: string[] = [];
+    await boot({}, { onAccountDeleted: (id) => void deleted.push(id) });
+    const owner = await ok(await google(googleToken()));
+    const other = await ok(await apple({ identityToken: appleToken({ sub: 'apple-other' }) }));
+    const res = await ok(await google(googleToken(), other.token));
+    expect(res).toMatchObject({ accountId: owner.accountId, switched: true });
+    expect((await me(other.token)).providers).toEqual(['apple']);
+    await ok(await google(googleToken())); // no Bearer
+    await ok(await google(googleToken(), owner.token)); // own account
+    expect(deleted).toEqual([]);
+  });
+});
+
+describe('NonceStore', () => {
+  it('single use, expires after the TTL, purges expired entries and refuses when full of live ones', () => {
+    let t = 0;
+    const s = new NonceStore(() => t, 1000, 2);
+    const a = s.issue()!;
+    const b = s.issue()!;
+    expect(a).not.toBe(b);
+    expect(s.issue()).toBeNull(); // full
+    expect(s.take(a)).toBe(true);
+    expect(s.take(a)).toBe(false); // used
+    expect(s.issue()).not.toBeNull();
+    t = 1000; // b and the third one expired
+    expect(s.take(b)).toBe(false);
+    expect(s.issue()).not.toBeNull(); // purge made room
+    expect(s.size).toBe(1);
+    expect(s.take('never-issued')).toBe(false);
   });
 });

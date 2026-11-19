@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, StyleSheet } from 'react-native';
 import { useKeepAwake } from 'expo-keep-awake';
 import { StatusBar } from 'expo-status-bar';
@@ -28,7 +28,7 @@ import type { GameId, TableGroup } from '@kahve/core';
 import { loadName } from './feedback';
 import { WaitingRoom } from './screens/WaitingRoom';
 import { colors } from './theme';
-import { TableSocialProvider } from './net/TableSocial';
+import { type SocialClient, TableSocialProvider } from './net/TableSocial';
 import { initAds } from './ads/consent';
 import { adGate } from './ads/interstitial';
 import { initPurchases, syncOnce } from './purchases';
@@ -104,6 +104,18 @@ export default function App() {
   const client: OkeyClient = local.active
     ? { ...online, ...local, start: online.start, connected: true }
     : { ...online, quickPlay: local.begin };
+  // E2c: quick sayings at online okey tables. Only the server connection counts (an offline okey game has no room here).
+  const okeySocial = useMemo<SocialClient>(
+    () => ({
+      mode: online.session ? 'online' : null,
+      room: online.room,
+      session: online.session,
+      seat: online.session?.seat ?? -1,
+      say: online.say,
+      subscribeSaid: online.subscribeSaid,
+    }),
+    [online.session, online.room, online.say, online.subscribeSaid],
+  );
   // Keep completion accounting above GameScreen so transient view loss and
   // result-screen remounts cannot count the same hand twice.
   const completedHands = useRef(new Set<number>());
@@ -247,7 +259,7 @@ export default function App() {
       <SafeAreaProvider>
         <SafeAreaView style={styles.root} edges={['left', 'right']}>
           <StatusBar hidden />
-          <TableSocialProvider client={kahve}>
+          <TableSocialProvider client={kahve.mode ? kahve : okeySocial}>
             <DropZoneProvider>{screen}</DropZoneProvider>
           </TableSocialProvider>
         </SafeAreaView>

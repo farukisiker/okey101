@@ -122,15 +122,18 @@ export function createAccountsClient(deps: AccountsDeps) {
     }
   }
 
-  async function fail(res: Response): Promise<never> {
-    let code: AccountsErrorCode = 'unknown';
+  async function errorCode(res: Response): Promise<AccountsErrorCode> {
     try {
       const j = (await res.json()) as { error?: string };
-      if (j.error && (KNOWN as string[]).includes(j.error)) code = j.error as AccountsErrorCode;
+      if (j.error && (KNOWN as string[]).includes(j.error)) return j.error as AccountsErrorCode;
     } catch {
       // body was not JSON
     }
-    throw new AccountsError(code, res.status);
+    return 'unknown';
+  }
+
+  async function fail(res: Response): Promise<never> {
+    throw new AccountsError(await errorCode(res), res.status);
   }
 
   async function createGuest(): Promise<string> {
@@ -187,7 +190,10 @@ export function createAccountsClient(deps: AccountsDeps) {
     const saved = token ?? (await deps.storage.getItem(TOKEN_KEY).catch(() => null));
     let res = await send('POST', path, saved, json(body), 'application/json');
     if (res.status === 401 && saved) {
-      // Stale guest token: drop it and sign in without it.
+      // Only a stale guest token (unauthorized) is dropped and the sign-in retried without it. A refused provider
+      // token or nonce (invalid_token) keeps the guest token: that account is still fine.
+      const code = await errorCode(res);
+      if (code !== 'unauthorized') throw new AccountsError(code, res.status);
       token = null;
       await deps.storage.removeItem(TOKEN_KEY).catch(() => {});
       res = await send('POST', path, null, json(body), 'application/json');
@@ -232,9 +238,23 @@ export function createAccountsClient(deps: AccountsDeps) {
     async deletePhoto(): Promise<Me> {
       return (await call('DELETE', '/v1/me/photo')).json() as Promise<Me>;
     },
+    /**
+     * E1c: a single-use nonce for the next Apple sign-in (lives 10 minutes on the server). No account token is sent
+     * and no guest is created. A server without the endpoint (404) -> null, so the sign-in goes on without a nonce.
+     */
+    async appleNonce(): Promise<string | null> {
+      if (!enabled()) throw new AccountsError('unknown');
+      const res = await send('POST', '/v1/auth/nonce', null, '{}', 'application/json');
+      if (res.status === 404) return null;
+      if (!res.ok) return fail(res);
+      const j = (await res.json().catch(() => null)) as { nonce?: unknown } | null;
+      if (!j || typeof j.nonce !== 'string' || !j.nonce) throw new AccountsError('unknown', res.status);
+      return j.nonce;
+    },
     /** Links an Apple identity to this account (or returns to the account it already belongs to). */
-    async signInApple(p: { identityToken: string; authorizationCode?: string | null; fullName?: string | null }): Promise<AuthResult> {
+    async signInApple(p: { identityToken: string; authorizationCode?: string | null; fullName?: string | null; nonce?: string | null }): Promise<AuthResult> {
       const body: Record<string, unknown> = { identityToken: p.identityToken };
+      if (p.nonce) body.nonce = p.nonce;
       if (p.authorizationCode) body.authorizationCode = p.authorizationCode;
       const name = p.fullName?.trim();
       if (name) body.fullName = name;

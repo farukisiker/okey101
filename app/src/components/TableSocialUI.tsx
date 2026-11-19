@@ -30,6 +30,8 @@ export function useSocialSheets() {
   const active = s !== null && s.others.length > 0;
   return {
     active,
+    openSay: () => setSheet('say'),
+    openPlayers: () => setSheet('players'),
     bar: <TableSocialBar onOpenSay={() => setSheet('say')} onOpenPlayers={() => setSheet('players')} />,
     layer: s ? <TableSocialLayer social={s} sheet={active ? sheet : null} onClose={() => setSheet(null)} /> : null,
   };

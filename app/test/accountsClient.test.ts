@@ -250,8 +250,39 @@ describe('sign-in calls', () => {
       const { fetchImpl } = fakeFetch(() => ({ status: code === 'already_linked' ? 409 : code === 'not_configured' ? 503 : 401, json: { error: code } }));
       const c = createAccountsClient({ baseUrl: 'https://x', storage, fetchImpl });
       await expect(c.signInGoogle('t')).rejects.toMatchObject({ code });
-      if (code !== 'invalid_token') expect(storage.data.get(TOKEN_KEY)).toBe('g');
+      expect(storage.data.get(TOKEN_KEY)).toBe('g');
     }
+  });
+
+  it('E1c: a refused token (401 invalid_token) keeps the guest token and is not retried', async () => {
+    const storage = memStorage('g');
+    const { calls, fetchImpl } = fakeFetch(() => ({ status: 401, json: { error: 'invalid_token' } }));
+    const c = createAccountsClient({ baseUrl: 'https://x', storage, fetchImpl });
+    await expect(c.signInApple({ identityToken: 'i', nonce: 'n' })).rejects.toMatchObject({ code: 'invalid_token', status: 401 });
+    expect(calls).toHaveLength(1);
+    expect(storage.data.get(TOKEN_KEY)).toBe('g');
+  });
+
+  it('E1c: Apple nonce is fetched without a Bearer (no guest created) and sent back with the token', async () => {
+    const storage = memStorage();
+    const { calls, fetchImpl } = fakeFetch((c) =>
+      c.url.endsWith('/v1/auth/nonce') ? { status: 200, json: { nonce: 'N1' } } : { status: 200, json: { accountId: 'a', token: 't', switched: false } },
+    );
+    const c = createAccountsClient({ baseUrl: 'https://x', storage, fetchImpl });
+    expect(await c.appleNonce()).toBe('N1');
+    expect(calls[0]).toMatchObject({ method: 'POST', url: 'https://x/v1/auth/nonce', auth: null });
+    expect(storage.data.get(TOKEN_KEY)).toBeUndefined();
+    await c.signInApple({ identityToken: 'idt', nonce: 'N1' });
+    expect(JSON.parse(calls[1].body as string)).toEqual({ identityToken: 'idt', nonce: 'N1' });
+  });
+
+  it('E1c: nonce endpoint missing (404) -> null; other failures and bad answers throw', async () => {
+    const make = (status: number, json: unknown) => createAccountsClient({ baseUrl: 'https://x', storage: memStorage(), fetchImpl: fakeFetch(() => ({ status, json })).fetchImpl });
+    expect(await make(404, { error: 'not_found' }).appleNonce()).toBeNull();
+    await expect(make(503, { error: 'not_configured' }).appleNonce()).rejects.toMatchObject({ code: 'not_configured' });
+    await expect(make(429, { error: 'rate_limited' }).appleNonce()).rejects.toMatchObject({ code: 'rate_limited' });
+    await expect(make(200, { nonce: 5 }).appleNonce()).rejects.toMatchObject({ code: 'unknown' });
+    await expect(createAccountsClient({ baseUrl: '', storage: memStorage() }).appleNonce()).rejects.toMatchObject({ code: 'unknown' });
   });
 
   it('rejects an answer without a token', async () => {

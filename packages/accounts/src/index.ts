@@ -1,6 +1,6 @@
 export * from './types';
 export type { AccountRecord, AccountStore, BlockResult, LinkResult, PhotoMeta, PhotoRecord, ProviderLink, ReportRecord } from './store';
-export { AuthService, parseList, type AuthOptions } from './auth';
+export { APPLE_NONCE_TTL_MS, AuthService, NonceStore, parseList, type AuthOptions } from './auth';
 export { AppleApiError, AppleClient, appleClientSecret, loadApplePrivateKey, APPLE_REVOKE_URL, APPLE_TOKEN_URL, type AppleRevokeConfig } from './apple';
 export {
   APPLE_ISSUERS,

@@ -10,14 +10,17 @@ interface Props {
   /** Small second line under the title, e.g. "21 sayı daha". */
   subtitle?: string;
   style?: ViewStyle;
+  /** For icon-only buttons: what a screen reader says (default: the title). */
+  accessibilityLabel?: string;
 }
 
 /** Big, high-contrast buttons: at least 56pt tall, 20pt text. */
-export function Button({ title, onPress, disabled, variant = 'primary', size = 'normal', subtitle, style }: Props) {
+export function Button({ title, onPress, disabled, variant = 'primary', size = 'normal', subtitle, style, accessibilityLabel }: Props) {
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityLabel={accessibilityLabel}
       style={({ pressed }) => [
         styles.btn,
         size === 'large' && styles.large,

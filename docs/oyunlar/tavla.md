@@ -93,6 +93,7 @@ Pullarının hepsini önce kendi evine getirip sonra toplayan oyuncu oyunu kazan
 - Zarların hepsi oynanamıyorsa **olabildiği kadarını** oynarsınız; artan zar yanar. Çift zarda
   da dört hamlın hepsi oynanabiliyorsa dördünü de oynamalısınız, bir kısmı oynanamıyorsa
   oynayabildiklerinizi oynarsınız.
+- Son pulu iki zarla da toplayabiliyorsanız zarlardan istediğinizi kullanabilirsiniz (oyun biter).
 - Hiç yasal hamle yoksa tur **Pas** ile kapanır.
 
 ## Toplama (Pul Toplama)

@@ -18,7 +18,7 @@ function natives(over: Partial<{ appleOk: boolean; appleErr: unknown; googleRes:
   };
   const apple = {
     isAvailableAsync: vi.fn(async () => over.appleOk ?? true),
-    signInAsync: vi.fn(async () => {
+    signInAsync: vi.fn(async (_o?: { nonce?: string }) => {
       if (over.appleErr) throw over.appleErr;
       return { identityToken: 'idt', authorizationCode: 'code', fullName: { givenName: 'Ayşe', familyName: 'Y' } };
     }),
@@ -50,15 +50,47 @@ describe('sign-in availability', () => {
 });
 
 describe('Apple flow', () => {
-  it('sends token, code and the joined name to the client', async () => {
-    const client = { signInApple: vi.fn(async () => result({ switched: true })) };
-    const out = await createSignIn({ os: 'ios' }, natives().native).apple(client);
-    expect(client.signInApple).toHaveBeenCalledWith({ identityToken: 'idt', authorizationCode: 'code', fullName: 'Ayşe Y' });
+  it('fetches a nonce first, passes it to Apple and sends token, code, joined name and nonce to the client', async () => {
+    const n = natives();
+    const order: string[] = [];
+    const client = {
+      appleNonce: vi.fn(async () => {
+        order.push('nonce');
+        return 'N1';
+      }),
+      signInApple: vi.fn(async () => {
+        order.push('server');
+        return result({ switched: true });
+      }),
+    };
+    n.apple.signInAsync.mockImplementationOnce(async (o?: { nonce?: string }) => {
+      order.push('apple:' + o?.nonce);
+      return { identityToken: 'idt', authorizationCode: 'code', fullName: { givenName: 'Ayşe', familyName: 'Y' } };
+    });
+    const out = await createSignIn({ os: 'ios' }, n.native).apple(client);
+    expect(order).toEqual(['nonce', 'apple:N1', 'server']);
+    expect(client.signInApple).toHaveBeenCalledWith({ identityToken: 'idt', authorizationCode: 'code', fullName: 'Ayşe Y', nonce: 'N1' });
     expect(out).toEqual({ kind: 'done', result: result({ switched: true }) });
   });
 
+  it('an older server without the nonce endpoint (null) signs in without a nonce', async () => {
+    const n = natives();
+    const client = { appleNonce: vi.fn(async () => null), signInApple: vi.fn(async () => result()) };
+    await createSignIn({ os: 'ios' }, n.native).apple(client);
+    expect(n.apple.signInAsync).toHaveBeenCalledWith(undefined);
+    expect(client.signInApple).toHaveBeenCalledWith(expect.objectContaining({ nonce: null }));
+  });
+
+  it('a failed nonce fetch stops before the Apple sheet opens', async () => {
+    const n = natives();
+    const client = { appleNonce: vi.fn(async (): Promise<string | null> => Promise.reject(new Error('network'))), signInApple: vi.fn() };
+    await expect(createSignIn({ os: 'ios' }, n.native).apple(client)).rejects.toThrow('network');
+    expect(n.apple.signInAsync).not.toHaveBeenCalled();
+    expect(client.signInApple).not.toHaveBeenCalled();
+  });
+
   it('a cancelled sheet is not an error and calls no server', async () => {
-    const client = { signInApple: vi.fn() };
+    const client = { appleNonce: vi.fn(async () => 'N'), signInApple: vi.fn() };
     const out = await createSignIn({ os: 'ios' }, natives({ appleErr: { code: 'ERR_REQUEST_CANCELED' } }).native).apple(client);
     expect(out).toEqual({ kind: 'cancelled' });
     expect(client.signInApple).not.toHaveBeenCalled();
@@ -66,7 +98,7 @@ describe('Apple flow', () => {
 
   it('other native errors are thrown', async () => {
     const s = createSignIn({ os: 'ios' }, natives({ appleErr: { code: 'ERR_REQUEST_FAILED' } }).native);
-    await expect(s.apple({ signInApple: vi.fn() })).rejects.toBeDefined();
+    await expect(s.apple({ appleNonce: vi.fn(async () => 'N'), signInApple: vi.fn() })).rejects.toBeDefined();
   });
 });
 

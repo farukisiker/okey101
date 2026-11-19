@@ -173,6 +173,30 @@ describe('bearing off', () => {
     expect(err(a, step(3, a.remaining[0]))).toBe('Önce kırık pulunuzu oyuna sokmalısınız');
   });
 
+  it('exact die bears off even while a checker remains further back', () => {
+    const s = position(board({ w: { 6: 1, 3: 1 }, b: { 24: 15 } }), 0, [3, 2]);
+    expect(err(s, step(3, 3))).toBeNull();
+    const a = play(s, step(3, 3));
+    expect(a.board.off[0]).toBe(14);
+  });
+
+  it('black bears off the farthest checker with a larger die', () => {
+    const s = position(board({ b: { 21: 1, 22: 1, 23: 1 }, w: { 1: 15 } }), 1, [6, 5]);
+    expect(err(s, step(21, 6))).toBeNull();
+    const a = play(s, step(21, 6));
+    expect(a.board.off[1]).toBe(13);
+    expect(a.board.points[21]).toBe(0);
+  });
+
+  it('last checker with dice [1,2]: bearing off with the 1 is accepted and wins', () => {
+    const s = position(board({ w: { 1: 1 }, b: { 24: 15 } }), 0, [1, 2]);
+    expect(err(s, step(1, 1))).toBeNull();
+    expect(err(s, step(1, 2))).toBeNull();
+    const a = play(s, step(1, 1));
+    expect(a.phase).toBe('finished');
+    expect(a.result?.winner).toBe(0);
+  });
+
   it('bearing off the last checker wins at once, even with a die left', () => {
     const s = position(board({ w: { 3: 1 }, b: { 24: 15 } }), 0, [2, 5]);
     const a = play(s, step(3, 5));
@@ -213,6 +237,21 @@ describe('game end and scoring', () => {
     expect(s.result).toEqual({ winner: 1, kind: 'koncina', points: 3 });
     expect(tavlaDef.scoreRound(s)).toEqual([0, 3]);
     expect(tavlaDef.scoreRound(position(board({ b: { 24: 1 }, w: { 6: 15 } }), 1, [1, 2]))).toEqual([0, 0]);
+  });
+
+  it('tek beats the bar/konçina condition when black has borne off one checker', () => {
+    const s = play(position(board({ w: { 1: 1 }, b: { 24: 13 }, barB: 1, offB: 1 }), 0, [2, 3]), step(1, 2));
+    expect(s.result).toEqual({ winner: 0, kind: 'tek', points: 1 });
+    expect(tavlaDef.scoreRound(s)).toEqual([1, 0]);
+  });
+
+  it('match target overshoot: a mars on [4,0] with target 5 gives [6,0] and the match is over', () => {
+    const s = finish(board({ w: { 1: 1 }, b: { 24: 5, 18: 5, 7: 5 } }));
+    expect(s.result?.points).toBe(2);
+    const sc = tavlaDef.scoreRound(s);
+    const totals = [4 + sc[0], 0 + sc[1]];
+    expect(totals).toEqual([6, 0]);
+    expect(tavlaDef.matchOver(totals, 5, tavlaDef.normalizeOptions({ targetScore: 5 }))).toBe(true);
   });
 
   it('matchOver at the target score', () => {

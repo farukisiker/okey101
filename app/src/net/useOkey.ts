@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { t } from '../i18n';
+import { myTablePass } from './myTablePass';
+import { type SaidMsg, type SayMsg, parseSaid } from './social';
 import {
   type Action,
   type GameId,
@@ -46,10 +48,16 @@ export function useOkey(serverUrl: string) {
   const [view, setView] = useState<PlayerView | null>(null);
   const [salon, setSalon] = useState<TableSummary[]>([]);
   const watchingSalon = useRef(false);
+  const saidListeners = useRef(new Set<(m: SaidMsg) => void>());
 
   useEffect(() => {
     // auth.v tells a v2 server we understand the { game, view } envelope; old servers ignore it.
-    const socket: OkeySocket = io(serverUrl, { transports: ['websocket'], reconnection: true, auth: { v: PROTOCOL_VERSION } });
+    // E2c: the signed table pass rides along (asked on every (re)connect); a server without it ignores the extra key.
+    const socket: OkeySocket = io(serverUrl, {
+      transports: ['websocket'],
+      reconnection: true,
+      auth: (cb) => void myTablePass().then((tablePass) => cb({ v: PROTOCOL_VERSION, ...(tablePass ? { tablePass } : {}) })),
+    });
     socketRef.current = socket;
     socket.on('connect', () => {
       setConnected(true);
@@ -57,11 +65,14 @@ export function useOkey(serverUrl: string) {
       // Reclaim our seat after a dropped connection.
       const s = sessionRef.current;
       if (s)
-        socket.emit('room:join', { roomId: s.roomId, name: s.name, password: s.password }, (res) => {
-          if (res.ok && res.seat !== s.seat) {
-            sessionRef.current = { ...s, seat: res.seat };
-            setSession(sessionRef.current);
-          }
+        void myTablePass().then((tablePass) => {
+          if (socketRef.current !== socket || !socket.connected) return;
+          socket.emit('room:join', { roomId: s.roomId, name: s.name, password: s.password, ...(tablePass ? { tablePass } : {}) }, (res) => {
+            if (res.ok && res.seat !== s.seat) {
+              sessionRef.current = { ...s, seat: res.seat };
+              setSession(sessionRef.current);
+            }
+          });
         });
     });
     socket.on('disconnect', () => setConnected(false));
@@ -75,6 +86,10 @@ export function useOkey(serverUrl: string) {
       if (isOkeyGame(p.game)) setView(p.view as PlayerView);
     });
     socket.on('salon:list', setSalon);
+    socket.on('table:said', (m) => {
+      const said = parseSaid(m);
+      if (said) for (const fn of saidListeners.current) fn(said);
+    });
     return () => {
       socket.removeAllListeners();
       socket.close();
@@ -97,12 +112,14 @@ export function useOkey(serverUrl: string) {
       if (!socket?.connected) return { ok: false, error: t('cantReachServer') };
       // `mode` is still sent: an old server only reads that. `options` (house rules) only when given.
       const extra = options === undefined ? {} : { options };
+      const tablePass = await myTablePass();
+      const who = tablePass ? { tablePass } : {};
       const res =
         kind === 'room:join'
-          ? await socket.timeout(5000).emitWithAck('room:join', { roomId, name, password })
+          ? await socket.timeout(5000).emitWithAck('room:join', { roomId, name, password, ...who })
           : kind === 'room:create'
-            ? await socket.timeout(5000).emitWithAck(kind, { name, mode, game, isPublic, password, ...extra })
-            : await socket.timeout(5000).emitWithAck(kind, { name, mode, game, ...extra });
+            ? await socket.timeout(5000).emitWithAck(kind, { name, mode, game, isPublic, password, ...extra, ...who })
+            : await socket.timeout(5000).emitWithAck(kind, { name, mode, game, ...extra, ...who });
       if (!res.ok) return res;
       // An old server ignores `game` and seats us at an okey table (its room:state arrives before the ack).
       if (kind !== 'room:join' && !isOkeyGame(game) && roomRef.current?.game !== game) {
@@ -131,6 +148,13 @@ export function useOkey(serverUrl: string) {
     }
   }, []);
 
+  /** E2c: quick sayings / emoji at an online table (v2 server; an old one has no such event and the ack times out). */
+  const say = useCallback((msg: SayMsg) => call((s) => s.timeout(5000).emitWithAck('table:say', msg)), [call]);
+  const subscribeSaid = useCallback((fn: (m: SaidMsg) => void) => {
+    saidListeners.current.add(fn);
+    return () => void saidListeners.current.delete(fn);
+  }, []);
+
   /** Follow the salon's table list while the salon screen is open. */
   const watchSalon = useCallback((on: boolean) => {
     watchingSalon.current = on;
@@ -152,6 +176,8 @@ export function useOkey(serverUrl: string) {
       enter('room:create', name, '', mode, isPublic, password, gameOfMode(mode), options),
     salon,
     watchSalon,
+    say,
+    subscribeSaid,
     joinRoom: (name: string, roomId: string, password?: string) => enter('room:join', name, roomId, '101', false, password),
     start: () => call((s) => s.timeout(5000).emitWithAck('room:start')),
     nextRound: () => call((s) => s.timeout(5000).emitWithAck('room:nextRound')),
